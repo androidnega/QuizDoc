@@ -104,6 +104,14 @@
                             </label>
                             <p class="text-xs text-gray-500 mt-1">When on, coordinators can delete any Docu Mentor project (and delete a group that has a project). When off, only Super Admin can delete projects or groups with a project. Applies regardless of group members, approval status, or supervisor assignment.</p>
                         </div>
+                        <div class="pt-4 mt-4 border-t border-gray-200">
+                            <p class="text-sm font-medium text-gray-700 mb-2">Staff account creation – SMS</p>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="send_sms_on_staff_creation" value="1" {{ old('send_sms_on_staff_creation', $send_sms_on_staff_creation ?? false) ? 'checked' : '' }} class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+                                <span class="text-sm text-gray-700">Send SMS to examiner/coordinator on account creation (username, password, login URL)</span>
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1">When on, new examiners and coordinators receive an SMS with their username, password and login URL (quizsnap.online/login). Requires phone number and Arkesel API key in Settings. When off, admin sets the password manually.</p>
+                        </div>
                     </div>
 
                     <div class="pt-4 mt-4 border-t border-gray-200">

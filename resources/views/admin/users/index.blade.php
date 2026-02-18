@@ -44,6 +44,18 @@
             </div>
         </div>
         @endif
+        @if(session('sms_failed') && session('generated_password'))
+        <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p class="text-sm text-amber-800 font-medium mb-2">User was created but SMS could not be sent. Please give this password to the user manually.</p>
+            @if(session('created_username'))<p class="text-xs text-amber-700 mb-2">Username: <strong>{{ session('created_username') }}</strong></p>@endif
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-sm text-amber-800">Password:</span>
+                <input type="text" id="generated-password-display" value="{{ session('generated_password') }}" readonly class="flex-1 min-w-0 font-mono text-sm bg-white border border-amber-300 rounded px-2 py-1">
+                <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('generated-password-display').value); this.textContent='Copied!'; setTimeout(function(){ this.textContent='Copy'; }.bind(this), 1500);" class="inline-flex items-center justify-center rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700">Copy</button>
+            </div>
+            <p class="text-xs text-amber-600 mt-2">{{ session('sms_failed') }}</p>
+        </div>
+        @endif
 
         <div class="card overflow-hidden min-w-0">
             <div class="overflow-x-auto">

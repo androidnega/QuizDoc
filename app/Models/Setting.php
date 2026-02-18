@@ -102,6 +102,9 @@ class Setting extends Model
     /** Docu Mentor: allow coordinators to delete projects (and groups that have a project). 1 = allowed, 0 = only Super Admin can delete. */
     public const KEY_ALLOW_COORDINATOR_DELETE_PROJECT = 'allow_coordinator_delete_project';
 
+    /** Send SMS to examiner/coordinator on account creation (username, password, login URL). 1 = enabled. Requires phone and Arkesel API key. */
+    public const KEY_SEND_SMS_ON_STAFF_CREATION = 'send_sms_on_staff_creation';
+
     /** Admin: disable strict per-IP/per-device quiz session restrictions (1 = disabled). */
     public const KEY_DISABLE_IP_DEVICE_RESTRICTIONS = 'disable_ip_device_restrictions';
 

@@ -8,8 +8,11 @@ use App\Models\Course;
 use App\Models\Institution;
 use App\Models\Faculty;
 use App\Models\Department;
+use App\Models\Setting;
 use App\Models\User;
+use App\Services\ArkeselService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Hash;
@@ -78,7 +81,8 @@ class UserManagementController extends Controller
         $institutions = Institution::orderBy('name')->get();
         $faculties = collect();
         $departments = collect();
-        return view('admin.users.create', compact('institutions', 'faculties', 'departments', 'isSuperAdmin', 'canCreateSuperAdmin'));
+        $sendSmsOnStaffCreation = Setting::getValue(Setting::KEY_SEND_SMS_ON_STAFF_CREATION, '0') === '1';
+        return view('admin.users.create', compact('institutions', 'faculties', 'departments', 'isSuperAdmin', 'canCreateSuperAdmin', 'sendSmsOnStaffCreation'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -94,26 +98,34 @@ class UserManagementController extends Controller
         $canCreateSuperAdmin = $isSuperAdmin && $user && $user->id === $primarySuperAdminId;
         
         $courseIds = $user ? $user->assignedCourseIds() : [];
+        $role = $request->role;
+        $isStaffRole = in_array($role, [User::ROLE_EXAMINER, User::DM_ROLE_COORDINATOR], true);
+        $sendSmsOnStaffCreation = Setting::getValue(Setting::KEY_SEND_SMS_ON_STAFF_CREATION, '0') === '1';
+        $useSmsFlow = $isStaffRole && $sendSmsOnStaffCreation && ArkeselService::hasApiKey();
+
         $rules = [
             'username' => 'required|string|max:255|unique:users,username',
             'email' => 'nullable|email|max:255',
             'name' => 'nullable|string|max:255',
-            // Admin UI only creates Super Admin / Examiner / Coordinator (no Docu Mentor student/leader)
             'role' => $canCreateSuperAdmin
                 ? 'required|in:super_admin,examiner,coordinator'
                 : 'required|in:examiner,coordinator',
-            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
         ];
-        
-        // Only Super Admin can assign institution, faculty, department, and SMS allocation (no courses)
+        if ($useSmsFlow) {
+            $rules['phone'] = 'required|string|max:20';
+            $rules['password'] = 'nullable';
+            $rules['password_confirmation'] = 'nullable';
+        } else {
+            $rules['password'] = ['required', 'confirmed', Password::min(8)->letters()->numbers()];
+            $rules['phone'] = 'nullable|string|max:20';
+        }
         if ($isSuperAdmin) {
             $rules['institution_id'] = 'nullable|exists:institutions,id';
             $rules['faculty_id'] = 'nullable|exists:faculties,id';
             $rules['department_id'] = 'nullable|exists:departments,id';
             $rules['sms_allocation'] = 'nullable|integer|min:0';
             $rules['ai_quiz_tokens_allocation'] = 'nullable|integer|min:0';
-            // Examiners and coordinators must have institution, faculty, and department
-            if (in_array($request->role, [User::ROLE_EXAMINER, User::DM_ROLE_COORDINATOR], true)) {
+            if ($isStaffRole) {
                 $rules['institution_id'] = 'required|exists:institutions,id';
                 $rules['faculty_id'] = 'required|exists:faculties,id';
                 $rules['department_id'] = 'required|exists:departments,id';
@@ -126,19 +138,38 @@ class UserManagementController extends Controller
             'password.min' => 'The password must be at least 8 characters.',
             'password.letters' => 'The password must contain at least one letter.',
             'password.numbers' => 'The password must contain at least one number.',
+            'phone.required' => 'Phone is required when sending login credentials by SMS (Settings → Send SMS on staff creation).',
             'institution_id.required' => 'Institution is required for examiners and coordinators.',
             'faculty_id.required' => 'Faculty is required for examiners and coordinators.',
             'department_id.required' => 'Department is required for examiners and coordinators.',
         ]);
 
+        $plainPassword = null;
+        if ($useSmsFlow) {
+            $plainPassword = Str::password(10);
+        } else {
+            $plainPassword = $request->password;
+        }
+
         $attrs = [
             'username' => $request->username,
             'name' => $request->name ?: $request->username,
-            'role' => $request->role,
-            'password' => Hash::make($request->password),
+            'role' => $role,
+            'password' => Hash::make($plainPassword),
         ];
         if (Schema::hasColumn('users', 'email')) {
             $attrs['email'] = $request->filled('email') ? trim($request->email) : null;
+        }
+        if (Schema::hasColumn('users', 'phone')) {
+            $phone = $request->filled('phone') ? preg_replace('/\D/', '', trim($request->phone)) : null;
+            if ($phone !== null && $phone !== '') {
+                if (strlen($phone) >= 10 && substr($phone, 0, 1) === '0') {
+                    $phone = '233' . substr($phone, 1);
+                } elseif (strlen($phone) >= 9 && substr($phone, 0, 3) !== '233') {
+                    $phone = '233' . $phone;
+                }
+                $attrs['phone'] = $phone;
+            }
         }
         if ($isSuperAdmin && $request->filled('institution_id')) {
             $attrs['institution_id'] = $request->institution_id;
@@ -146,7 +177,7 @@ class UserManagementController extends Controller
         if ($isSuperAdmin && $request->has('sms_allocation') && $request->input('sms_allocation') !== null && $request->input('sms_allocation') !== '') {
             $attrs['sms_allocation'] = max(0, (int) $request->sms_allocation);
         }
-        if ($isSuperAdmin && $request->role === User::ROLE_EXAMINER) {
+        if ($isSuperAdmin && $role === User::ROLE_EXAMINER) {
             $attrs['ai_quiz_tokens_allocation'] = max(0, (int) ($request->ai_quiz_tokens_allocation ?? 10));
         }
         $newUser = User::create($attrs);
@@ -163,6 +194,25 @@ class UserManagementController extends Controller
                 }
                 $newUser->save();
             }
+        }
+
+        if ($useSmsFlow && $newUser->phone) {
+            $loginUrl = 'https://quizsnap.online/login';
+            $message = sprintf(
+                "QuizSnap login. URL: %s Username: %s Password: %s",
+                $loginUrl,
+                $newUser->username,
+                $plainPassword
+            );
+            $result = ArkeselService::sendSms($newUser->phone, $message);
+            if ($result['success']) {
+                return redirect()->route('dashboard.users.index')
+                    ->with('success', 'User created. Login credentials have been sent by SMS.');
+            }
+            return redirect()->route('dashboard.users.index')
+                ->with('sms_failed', $result['message'] ?? 'SMS could not be sent.')
+                ->with('generated_password', $plainPassword)
+                ->with('created_username', $newUser->username);
         }
 
         return redirect()->route('dashboard.users.index')

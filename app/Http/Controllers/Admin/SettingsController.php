@@ -55,6 +55,7 @@ class SettingsController extends Controller
             'lock_examiner_create_group' => Setting::getValue(Setting::KEY_LOCK_EXAMINER_CREATE_GROUP, '0') === '1',
             'allow_examiner_create_course' => Setting::getValue(Setting::KEY_ALLOW_EXAMINER_CREATE_COURSE, '0') === '1',
             'allow_coordinator_delete_project' => Setting::getValue(Setting::KEY_ALLOW_COORDINATOR_DELETE_PROJECT, '1') === '1',
+            'send_sms_on_staff_creation' => Setting::getValue(Setting::KEY_SEND_SMS_ON_STAFF_CREATION, '0') === '1',
             'disable_ip_device_restrictions' => Setting::getValue(Setting::KEY_DISABLE_IP_DEVICE_RESTRICTIONS, '0') === '1',
             'otp_arkesel_key_set' => (bool) Setting::getValue(Setting::KEY_OTP_ARKESEL_API_KEY),
             'otp_arkesel_key_masked' => ($k = Setting::getValue(Setting::KEY_OTP_ARKESEL_API_KEY)) ? (strlen($k) > 8 ? substr($k, 0, 4) . '…' . substr($k, -4) : '••••') : null,
@@ -102,6 +103,7 @@ class SettingsController extends Controller
             'cloudinary_folder' => 'nullable|string|max:128',
             'lock_examiner_create_group' => 'nullable|boolean',
             'allow_examiner_create_course' => 'nullable|boolean',
+            'send_sms_on_staff_creation' => 'nullable|boolean',
             'disable_ip_device_restrictions' => 'nullable|boolean',
             'otp_arkesel_api_key' => 'nullable|string|max:512',
             'clear_otp_arkesel_key' => 'nullable|boolean',
@@ -171,7 +173,9 @@ class SettingsController extends Controller
         Setting::setValue(Setting::KEY_ALLOW_EXAMINER_CREATE_COURSE, $request->boolean('allow_examiner_create_course') ? '1' : '0');
         if (session('admin_role') === 'super_admin') {
             Setting::setValue(Setting::KEY_ALLOW_COORDINATOR_DELETE_PROJECT, $request->boolean('allow_coordinator_delete_project') ? '1' : '0');
+            Setting::setValue(Setting::KEY_SEND_SMS_ON_STAFF_CREATION, $request->boolean('send_sms_on_staff_creation') ? '1' : '0');
             Cache::forget('setting:' . Setting::KEY_ALLOW_COORDINATOR_DELETE_PROJECT);
+            Cache::forget('setting:' . Setting::KEY_SEND_SMS_ON_STAFF_CREATION);
         }
         Setting::setValue(Setting::KEY_DISABLE_IP_DEVICE_RESTRICTIONS, $request->boolean('disable_ip_device_restrictions') ? '1' : '0');
 

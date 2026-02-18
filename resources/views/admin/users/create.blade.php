@@ -34,6 +34,12 @@
                         <input type="text" name="name" id="name" value="{{ old('name') }}" class="input w-full max-w-full min-w-0 @error('name') border-danger-500 @enderror">
                         @error('name')<p class="mt-1 text-sm text-danger-600">{{ $message }}</p>@enderror
                     </div>
+                    <div id="phone-field-for-sms">
+                        <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone <span id="phone-required-star" class="text-red-500" style="display: none;">*</span></label>
+                        <input type="text" name="phone" id="phone" value="{{ old('phone') }}" class="input w-full max-w-full min-w-0 @error('phone') border-danger-500 @enderror" placeholder="e.g. 0544919953 or 233544919953">
+                        <p class="mt-1 text-xs text-gray-500">For examiner/coordinator: used to send login by SMS when enabled in Settings.</p>
+                        @error('phone')<p class="mt-1 text-sm text-danger-600">{{ $message }}</p>@enderror
+                    </div>
                     <div>
                         <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
                         <select name="role" id="role" required class="input w-full max-w-full min-w-0 @error('role') border-danger-500 @enderror">
@@ -92,23 +98,28 @@
                         </div>
                     </div>
                 </div>
-                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+                <div id="password-section" class="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
                     <p class="text-sm font-semibold text-gray-800">Password</p>
-                    <div>
-                        <label for="password" class="block text-xs font-medium text-gray-700 mb-1">Password</label>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <input type="password" name="password" id="password" required class="input flex-1 min-w-0 max-w-full bg-white @error('password') border-danger-500 @enderror" minlength="8" autocomplete="new-password">
-                            <button type="button" id="generate-password" class="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 shrink-0">Generate</button>
-                            <button type="button" id="copy-password" class="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-400 shrink-0" title="Copy password">
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                            </button>
+                    <div id="password-fields">
+                        <div>
+                            <label for="password" class="block text-xs font-medium text-gray-700 mb-1">Password</label>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <input type="password" name="password" id="password" class="input flex-1 min-w-0 max-w-full bg-white @error('password') border-danger-500 @enderror" minlength="8" autocomplete="new-password">
+                                <button type="button" id="generate-password" class="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 shrink-0">Generate</button>
+                                <button type="button" id="copy-password" class="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-400 shrink-0" title="Copy password">
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                </button>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">At least 8 characters, including one letter and one number.</p>
+                            @error('password')<p class="mt-1 text-sm text-danger-600">{{ $message }}</p>@enderror
                         </div>
-                        <p class="mt-1 text-xs text-gray-500">At least 8 characters, including one letter and one number.</p>
-                        @error('password')<p class="mt-1 text-sm text-danger-600">{{ $message }}</p>@enderror
+                        <div>
+                            <label for="password_confirmation" class="block text-xs font-medium text-gray-700 mb-1">Confirm password</label>
+                            <input type="password" name="password_confirmation" id="password_confirmation" class="input w-full max-w-full min-w-0 bg-white">
+                        </div>
                     </div>
-                    <div>
-                        <label for="password_confirmation" class="block text-xs font-medium text-gray-700 mb-1">Confirm password</label>
-                        <input type="password" name="password_confirmation" id="password_confirmation" required class="input w-full max-w-full min-w-0 bg-white">
+                    <div id="sms-password-notice" class="hidden text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded p-3">
+                        Password will be generated and sent by SMS to the phone number above. Leave password fields empty.
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-3 pt-3">
@@ -161,13 +172,22 @@
         });
     });
 
-    // Show institution/faculty/department for Examiner and Coordinator
+    // Show institution/faculty/department for Examiner and Coordinator; password vs SMS
+    var sendSmsOnStaffCreation = {{ json_encode($sendSmsOnStaffCreation ?? false) }};
     var roleSelect = document.getElementById('role');
     var institutionField = document.getElementById('institution-field');
     var facultyField = document.getElementById('faculty-field');
     var departmentField = document.getElementById('department-field');
     var smsField = document.getElementById('sms-field');
     var aiTokensField = document.getElementById('ai-tokens-field');
+    var phoneField = document.getElementById('phone-field-for-sms');
+    var phoneInput = document.getElementById('phone');
+    var phoneRequiredStar = document.getElementById('phone-required-star');
+    var passwordSection = document.getElementById('password-section');
+    var passwordFields = document.getElementById('password-fields');
+    var smsPasswordNotice = document.getElementById('sms-password-notice');
+    var passwordInput = document.getElementById('password');
+    var passwordConfirmation = document.getElementById('password_confirmation');
     if (roleSelect) {
         function toggleInstFacDept() {
             var role = roleSelect.value;
@@ -188,12 +208,22 @@
                 var deptSelect = document.getElementById('department_id');
                 if (deptSelect) deptSelect.required = required;
             }
-
-            // SMS for Examiner & Coordinator; AI tokens only for Examiner
             var showSms = (role === 'examiner' || role === 'coordinator');
             var showAi = (role === 'examiner');
             if (smsField) smsField.style.display = showSms ? '' : 'none';
             if (aiTokensField) aiTokensField.style.display = showAi ? '' : 'none';
+            var useSmsPassword = sendSmsOnStaffCreation && showSms;
+            if (phoneField) {
+                phoneField.style.display = showSms ? '' : 'none';
+                if (phoneRequiredStar) phoneRequiredStar.style.display = useSmsPassword ? '' : 'none';
+                if (phoneInput) phoneInput.required = useSmsPassword;
+            }
+            if (passwordSection) {
+                if (passwordFields) passwordFields.style.display = useSmsPassword ? 'none' : '';
+                if (smsPasswordNotice) smsPasswordNotice.classList.toggle('hidden', !useSmsPassword);
+                if (passwordInput) passwordInput.required = !useSmsPassword;
+                if (passwordConfirmation) passwordConfirmation.required = !useSmsPassword;
+            }
         }
         roleSelect.addEventListener('change', toggleInstFacDept);
         toggleInstFacDept();
