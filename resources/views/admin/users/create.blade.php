@@ -38,7 +38,7 @@
                         <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
                         <select name="role" id="role" required class="input w-full max-w-full min-w-0 @error('role') border-danger-500 @enderror">
                             @if($canCreateSuperAdmin ?? false)
-                            <option value="super_admin" {{ old('role') === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
+                            <option value="super_admin" {{ old('role') === 'super_admin' ? 'selected' : '' }}>Super Admin (secondary)</option>
                             @endif
                             <option value="examiner" {{ old('role') === 'examiner' ? 'selected' : '' }}>Examiner</option>
                             <option value="coordinator" {{ old('role') === 'coordinator' ? 'selected' : '' }}>Coordinator (Docu Mentor)</option>
@@ -189,10 +189,11 @@
                 if (deptSelect) deptSelect.required = required;
             }
 
-            // SMS & AI tokens only for Examiners
-            var showSmsAi = (role === 'examiner');
-            if (smsField) smsField.style.display = showSmsAi ? '' : 'none';
-            if (aiTokensField) aiTokensField.style.display = showSmsAi ? '' : 'none';
+            // SMS for Examiner & Coordinator; AI tokens only for Examiner
+            var showSms = (role === 'examiner' || role === 'coordinator');
+            var showAi = (role === 'examiner');
+            if (smsField) smsField.style.display = showSms ? '' : 'none';
+            if (aiTokensField) aiTokensField.style.display = showAi ? '' : 'none';
         }
         roleSelect.addEventListener('change', toggleInstFacDept);
         toggleInstFacDept();
