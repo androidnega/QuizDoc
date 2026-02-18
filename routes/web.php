@@ -25,8 +25,9 @@ Route::get('/run-migrations', RunMigrationsController::class)->name('migrate.run
 // Use: https://YOUR-SITE.com/clear-cache?key=QuizSnapMigrate2026Xp9k3m7 (no .php)
 Route::get('/clear-cache', \App\Http\Controllers\ClearCacheController::class)->name('clear.cache');
 Route::get('/clear-cache.php', \App\Http\Controllers\ClearCacheController::class);
+// Maintenance: list helper URLs (no key) – use to verify routes are deployed on live
+Route::get('/maintenance', [\App\Http\Controllers\FixPullController::class, 'maintenance'])->name('maintenance');
 // Fix git pull merge error (same key as run-migrations)
-// Run fix in browser (no SSH): https://quizsnap.online/fix-pull/run?key=QuizSnapMigrate2026Xp9k3m7
 Route::get('/fix-pull', [\App\Http\Controllers\FixPullController::class, 'show'])->name('fix.pull');
 Route::get('/fix-pull/run', [\App\Http\Controllers\FixPullController::class, 'run'])->name('fix.pull.run');
 Route::get('/fix-pull/script', [\App\Http\Controllers\FixPullController::class, 'script'])->name('fix.pull.script');

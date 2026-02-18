@@ -70,6 +70,29 @@ class FixPullController extends Controller
     }
 
     /**
+     * Show maintenance helper links (no key required). Use to verify routes are deployed.
+     * Visit: https://quizsnap.online/maintenance
+     */
+    public function maintenance(Request $request): Response
+    {
+        $base = $request->getSchemeAndHttpHost();
+        $key = 'QuizSnapMigrate2026Xp9k3m7';
+        $clearCache = $base . '/clear-cache?key=' . urlencode($key);
+        $fixPullRun = $base . '/fix-pull/run?key=' . urlencode($key);
+        $fixPullPage = $base . '/fix-pull?key=' . urlencode($key);
+
+        $body = "QuizSnap maintenance routes are active.\n\n";
+        $body .= "Use these URLs (same key in .env: MIGRATION_RUN_KEY):\n\n";
+        $body .= "1. Clear caches (after deploy):\n   {$clearCache}\n\n";
+        $body .= "2. Fix git pull conflict (discard local changes to create.blade.php):\n   {$fixPullRun}\n\n";
+        $body .= "3. Fix-pull instructions + script download:\n   {$fixPullPage}\n";
+
+        return response($body, 200, [
+            'Content-Type' => 'text/plain; charset=utf-8',
+        ]);
+    }
+
+    /**
      * Show fix-pull instructions and link to download script.
      * Visit: https://quizsnap.online/fix-pull?key=YOUR_SECRET
      */
