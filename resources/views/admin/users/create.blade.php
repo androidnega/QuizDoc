@@ -37,7 +37,9 @@
                     <div>
                         <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Role</label>
                         <select name="role" id="role" required class="input w-full max-w-full min-w-0 @error('role') border-danger-500 @enderror">
+                            @if($canCreateSuperAdmin ?? false)
                             <option value="super_admin" {{ old('role') === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
+                            @endif
                             <option value="examiner" {{ old('role') === 'examiner' ? 'selected' : '' }}>Examiner</option>
                             <option value="coordinator" {{ old('role') === 'coordinator' ? 'selected' : '' }}>Coordinator (Docu Mentor)</option>
                             <option value="student" {{ old('role') === 'student' ? 'selected' : '' }}>Student (Docu Mentor)</option>
@@ -45,13 +47,13 @@
                         </select>
                         @error('role')<p class="mt-1 text-sm text-danger-600">{{ $message }}</p>@enderror
                     </div>
-                    <div>
+                    <div id="sms-field">
                         <label for="sms_allocation" class="block text-sm font-medium text-gray-700 mb-1">SMS allocation (for Examiner)</label>
                         <input type="number" name="sms_allocation" id="sms_allocation" value="{{ old('sms_allocation', 0) }}" min="0" step="1" class="input w-full max-w-full min-w-0 @error('sms_allocation') border-danger-500 @enderror" placeholder="0">
                         <p class="mt-1 text-xs text-gray-500">Number of SMS the examiner can use to send login tokens to students (e.g. 20).</p>
                         @error('sms_allocation')<p class="mt-1 text-sm text-danger-600">{{ $message }}</p>@enderror
                     </div>
-                    <div>
+                    <div id="ai-tokens-field">
                         <label for="ai_quiz_tokens_allocation" class="block text-sm font-medium text-gray-700 mb-1">AI quiz tokens (for Examiner)</label>
                         <input type="number" name="ai_quiz_tokens_allocation" id="ai_quiz_tokens_allocation" value="{{ old('ai_quiz_tokens_allocation', 10) }}" min="0" step="1" class="input w-full max-w-full min-w-0 @error('ai_quiz_tokens_allocation') border-danger-500 @enderror" placeholder="10">
                         <p class="mt-1 text-xs text-gray-500">AI generations per period. When exhausted, examiner waits for cooldown (Settings → AI) before refill.</p>
@@ -166,25 +168,33 @@
     var institutionField = document.getElementById('institution-field');
     var facultyField = document.getElementById('faculty-field');
     var departmentField = document.getElementById('department-field');
+    var smsField = document.getElementById('sms-field');
+    var aiTokensField = document.getElementById('ai-tokens-field');
     if (roleSelect) {
         function toggleInstFacDept() {
-            var show = ['examiner', 'coordinator'].indexOf(roleSelect.value) !== -1;
-            var required = show;
+            var role = roleSelect.value;
+            var showInstFacDept = ['examiner', 'coordinator'].indexOf(role) !== -1;
+            var required = showInstFacDept;
             if (institutionField) {
-                institutionField.style.display = show ? '' : 'none';
+                institutionField.style.display = showInstFacDept ? '' : 'none';
                 var instSelect = document.getElementById('institution_id');
                 if (instSelect) instSelect.required = required;
             }
             if (facultyField) {
-                facultyField.style.display = show ? '' : 'none';
+                facultyField.style.display = showInstFacDept ? '' : 'none';
                 var facSelect = document.getElementById('faculty_id');
                 if (facSelect) facSelect.required = required;
             }
             if (departmentField) {
-                departmentField.style.display = show ? '' : 'none';
+                departmentField.style.display = showInstFacDept ? '' : 'none';
                 var deptSelect = document.getElementById('department_id');
                 if (deptSelect) deptSelect.required = required;
             }
+
+            // SMS & AI tokens only for Examiners
+            var showSmsAi = (role === 'examiner');
+            if (smsField) smsField.style.display = showSmsAi ? '' : 'none';
+            if (aiTokensField) aiTokensField.style.display = showSmsAi ? '' : 'none';
         }
         roleSelect.addEventListener('change', toggleInstFacDept);
         toggleInstFacDept();

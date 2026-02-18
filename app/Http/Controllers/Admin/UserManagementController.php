@@ -24,19 +24,33 @@ class UserManagementController extends Controller
     {
         $user = $this->adminUser();
         $isSuperAdmin = $user && $user->isSuperAdmin();
-        
-        // Super Admin sees all users (single system user table). Examiners only see themselves.
+
+        // Super Admin sees staff; Examiners only see themselves.
         $query = User::query()->with('courses');
-        
+
         if (!$isSuperAdmin && $user) {
+            // Examiner (or non-super admin): only themselves
             $query->where('id', $user->id);
-        } else {
-            // Super Admin: staff only (no students or group leaders)
-            $query->whereIn('role', [
-                User::ROLE_SUPER_ADMIN,
-                User::ROLE_EXAMINER,
-                User::DM_ROLE_COORDINATOR,
-            ]);
+        } elseif ($isSuperAdmin && $user) {
+            $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
+
+            if ($user->id === $primarySuperAdminId) {
+                // Primary Super Admin: all staff (super admins, examiners, coordinators)
+                $query->whereIn('role', [
+                    User::ROLE_SUPER_ADMIN,
+                    User::ROLE_EXAMINER,
+                    User::DM_ROLE_COORDINATOR,
+                ]);
+            } else {
+                // Secondary Super Admin: see themselves + all non-super-admin staff
+                $query->where(function ($q) use ($user) {
+                    $q->where('id', $user->id)
+                      ->orWhereIn('role', [
+                          User::ROLE_EXAMINER,
+                          User::DM_ROLE_COORDINATOR,
+                      ]);
+                });
+            }
         }
         
         $users = $query->with('institution')
@@ -58,11 +72,13 @@ class UserManagementController extends Controller
         if (!$isSuperAdmin) {
             abort(403, 'Only Super Administrators can create users.');
         }
+        $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
+        $canCreateSuperAdmin = $isSuperAdmin && $user && $user->id === $primarySuperAdminId;
         
         $institutions = Institution::orderBy('name')->get();
         $faculties = collect();
         $departments = collect();
-        return view('admin.users.create', compact('institutions', 'faculties', 'departments', 'isSuperAdmin'));
+        return view('admin.users.create', compact('institutions', 'faculties', 'departments', 'isSuperAdmin', 'canCreateSuperAdmin'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -74,13 +90,17 @@ class UserManagementController extends Controller
         if (!$isSuperAdmin) {
             abort(403, 'Only Super Administrators can create users.');
         }
+        $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
+        $canCreateSuperAdmin = $isSuperAdmin && $user && $user->id === $primarySuperAdminId;
         
         $courseIds = $user ? $user->assignedCourseIds() : [];
         $rules = [
             'username' => 'required|string|max:255|unique:users,username',
             'email' => 'nullable|email|max:255',
             'name' => 'nullable|string|max:255',
-            'role' => 'required|in:super_admin,examiner,coordinator,student,leader',
+            'role' => $canCreateSuperAdmin
+                ? 'required|in:super_admin,examiner,coordinator,student,leader'
+                : 'required|in:examiner,coordinator,student,leader',
             'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
         ];
         
