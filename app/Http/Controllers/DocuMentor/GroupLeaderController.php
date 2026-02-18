@@ -87,21 +87,36 @@ class GroupLeaderController extends Controller
         $departmentId = $user->department_id;
         $nameOptions = GroupName::twoRandomForDepartment($departmentId);
         if (count($nameOptions) < 2) {
-            $nameOptions = array_slice(
-                array_merge($nameOptions, GroupName::twoRandomForDepartment(null)),
-                0,
-                2
-            );
+            $seen = array_column(array_map(fn ($o) => ['k' => $o->genz_word . ' ' . $o->tech_word], $nameOptions), 'k');
+            $global = GroupName::twoRandomForDepartment(null);
+            foreach ($global as $g) {
+                $display = $g->genz_word . ' ' . $g->tech_word;
+                if (!in_array($display, $seen, true)) {
+                    $nameOptions[] = $g;
+                    $seen[] = $display;
+                    if (count($nameOptions) >= 2) {
+                        break;
+                    }
+                }
+            }
         }
         if (count($nameOptions) < 2) {
             $nameOptions[] = new GroupName(['genz_word' => 'Group', 'tech_word' => $user->name ?: 'Team']);
         }
         $nameOptions = array_slice($nameOptions, 0, 2);
+        $emojis = ['🔥', '💻', '⚡', '🚀', '✨', '🎯', '💡', '🛠️', '🌟', '📱'];
+        $nameOptionsWithEmojis = [];
+        foreach ($nameOptions as $i => $opt) {
+            $nameOptionsWithEmojis[] = (object)[
+                'display_name' => $opt->display_name,
+                'emoji' => $emojis[$i % count($emojis)],
+            ];
+        }
         $pendingMemberId = $request->session()->get('pending_member_id');
         $pendingMember = $pendingMemberId ? User::find($pendingMemberId) : null;
 
         return view('docu-mentor.students.group-create', [
-            'nameOptions' => $nameOptions,
+            'nameOptions' => $nameOptionsWithEmojis,
             'pendingMember' => $pendingMember,
             'phone' => old('phone', $request->session()->get('_old_input.phone')),
         ]);

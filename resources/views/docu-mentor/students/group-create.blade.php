@@ -28,8 +28,9 @@
                 <span class="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-3">Choose a name for your group</span>
                 <div class="space-y-3">
                     @foreach($nameOptions as $option)
-                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                    <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors">
                         <input type="radio" name="group_name" value="{{ $option->display_name }}" required {{ old('group_name') === $option->display_name ? 'checked' : '' }} class="text-slate-600 border-slate-300 focus:ring-slate-400">
+                        <span class="text-lg" aria-hidden="true">{{ $option->emoji ?? '✨' }}</span>
                         <span class="text-sm font-medium text-slate-800">{{ $option->display_name }}</span>
                     </label>
                     @endforeach

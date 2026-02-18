@@ -101,7 +101,7 @@
         else if (step === 'otp') stepOtp.classList.remove('hidden');
     }
 
-    var whatsappNumber = '2332541069241';
+    var whatsappNumber = '233552477942';
     function supportMessage(errorText, indexNumber) {
         var msg = 'Hi, I\'m having trouble with QuizSnap login. I got this message: ' + (errorText || '') + '.';
         if (indexNumber) msg += ' My index number: ' + indexNumber + '.';
@@ -259,6 +259,7 @@
             resendBtn.textContent = 'Resend code';
             if (data.success) {
                 document.getElementById('otp-step-message').textContent = 'A new code has been sent. Enter it above.';
+                initOtpBoxes();
             } else {
                 showError('otp-error', data.message || 'Could not resend. Please try again.');
             }

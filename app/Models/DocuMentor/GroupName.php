@@ -24,7 +24,8 @@ class GroupName extends Model
     }
 
     /**
-     * Get two random group names for a department (or global if department_id null).
+     * Get two random, distinct group names for a department (or global if department_id null).
+     * Always returns two different display names.
      */
     public static function twoRandomForDepartment(?int $departmentId): array
     {
@@ -36,6 +37,19 @@ class GroupName extends Model
         } else {
             $query->whereNull('department_id');
         }
-        return $query->inRandomOrder()->limit(2)->get()->all();
+        $pool = $query->inRandomOrder()->limit(20)->get();
+        $seen = [];
+        $result = [];
+        foreach ($pool as $row) {
+            $display = $row->genz_word . ' ' . $row->tech_word;
+            if (!isset($seen[$display])) {
+                $seen[$display] = true;
+                $result[] = $row;
+                if (count($result) === 2) {
+                    break;
+                }
+            }
+        }
+        return $result;
     }
 }
