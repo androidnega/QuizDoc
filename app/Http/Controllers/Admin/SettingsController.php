@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Models\User;
 use App\Services\AiQuestionService;
 use App\Services\ArkeselService;
 use App\Services\CloudinaryService;
@@ -24,6 +25,10 @@ class SettingsController extends Controller
         $deepseekKey = Setting::getValue(Setting::KEY_DEEPSEEK_API);
         $geminiKeyMasked = $geminiKey ? substr($geminiKey, 0, 8) . '…' . substr($geminiKey, -4) : null;
         $deepseekKeyMasked = $deepseekKey ? substr($deepseekKey, 0, 8) . '…' . substr($deepseekKey, -4) : null;
+
+        $currentUser = auth()->user() ?? User::find(session('admin_user_id'));
+        $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
+        $canManageProctoring = $currentUser && $currentUser->isSuperAdmin() && $currentUser->id === $primarySuperAdminId;
 
         return view('admin.settings.index', [
             'gemini_key_set' => (bool) $geminiKey,
@@ -63,6 +68,7 @@ class SettingsController extends Controller
             'ai_quiz_cooldown_hours' => Setting::getValue(Setting::KEY_AI_QUIZ_COOLDOWN_HOURS, '24'),
             'landing_hero_image' => Setting::getValue(Setting::KEY_LANDING_HERO_IMAGE),
             'landing_hero_enabled' => Setting::getValue(Setting::KEY_LANDING_HERO_ENABLED, '1') === '1',
+            'can_manage_proctoring' => $canManageProctoring,
         ]);
     }
 
@@ -111,6 +117,10 @@ class SettingsController extends Controller
             'landing_hero_image_file' => 'nullable|image|max:5120',
             'landing_hero_enabled' => 'nullable|boolean',
         ]);
+
+        $currentUser = auth()->user() ?? User::find(session('admin_user_id'));
+        $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
+        $canManageProctoring = $currentUser && $currentUser->isSuperAdmin() && $currentUser->id === $primarySuperAdminId;
 
         Setting::setValue(Setting::KEY_APP_NAME, $request->filled('app_name') ? trim($request->app_name) : null);
         Setting::setValue(Setting::KEY_APP_TIMEZONE, $request->filled('app_timezone') ? trim($request->app_timezone) : null);
@@ -170,7 +180,7 @@ class SettingsController extends Controller
             Cache::forget('setting:' . Setting::KEY_OTP_ARKESEL_API_KEY);
             Cache::forget('setting:' . Setting::KEY_OTP_ARKESEL_SENDER_ID);
         }
-        if (session('admin_role') === 'super_admin') {
+        if ($canManageProctoring) {
             Setting::setValue(Setting::KEY_LIVE_PROCTOR_ENABLED, $request->boolean('live_proctor_enabled') ? '1' : '0');
             Setting::setValue(Setting::KEY_PROCTORING_CAMERA_REQUIRED, $request->boolean('proctoring_camera_required') ? '1' : '0');
             Setting::setValue(Setting::KEY_PROCTORING_FACE_MONITOR, $request->boolean('proctoring_face_monitor') ? '1' : '0');
@@ -201,7 +211,7 @@ class SettingsController extends Controller
                 }
             }
         }
-        if (session('admin_role') === 'super_admin') {
+        if ($canManageProctoring) {
             foreach ([
                 Setting::KEY_LIVE_PROCTOR_ENABLED,
                 Setting::KEY_PROCTORING_CAMERA_REQUIRED,

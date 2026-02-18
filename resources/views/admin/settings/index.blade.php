@@ -44,7 +44,7 @@
                             <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                             OTP (SMS)
                         </button>
-                        @if(session('admin_role') === 'super_admin')
+                        @if($can_manage_proctoring ?? false)
                         <button type="button" class="settings-tab-btn px-6 py-3 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="proctoring" id="tab-btn-proctoring">
                             <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                             Proctoring
@@ -344,7 +344,7 @@
                 </div>
                 </div>
 
-                @if(session('admin_role') === 'super_admin')
+                @if($can_manage_proctoring ?? false)
                 <!-- Tab: Proctoring (Super Admin only) -->
                 <div class="settings-tab-content p-6 hidden" data-tab-content="proctoring" id="tab-content-proctoring">
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Quiz Proctoring &amp; Live View</p>
