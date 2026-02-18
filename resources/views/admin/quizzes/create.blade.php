@@ -303,10 +303,11 @@
             if (String(c.id) === String(oldCourseId)) o.selected = true;
             courseSelect.appendChild(o);
         });
+        syncCourseId();
     }
     function syncCourseId() {
         if (!courseIdInput) return;
-        var v = courseSelect.value || document.getElementById('course_id_quizsnap')?.value || '';
+        var v = courseSelect && courseSelect.value ? courseSelect.value : (document.getElementById('course_id_quizsnap') && document.getElementById('course_id_quizsnap').value) || '';
         courseIdInput.value = v;
     }
     if (classGroupSelect) {
@@ -318,6 +319,8 @@
         updateCourses();
     }
     if (courseSelect) courseSelect.addEventListener('change', syncCourseId);
+    var form = document.getElementById('quiz-create-form');
+    if (form) form.addEventListener('submit', function() { syncCourseId(); });
 })();
 
 @if(isset($quizCategories))
@@ -365,7 +368,7 @@
         }).catch(function() { courseQuizsnap.innerHTML = '<option value="">Select Category, Level, Semester</option>'; });
     }
     function syncCourseFromQuizsnap() {
-        if (courseIdInput) courseIdInput.value = courseQuizsnap ? courseQuizsnap.value : '';
+        if (courseIdInput && courseQuizsnap && courseQuizsnap.value) courseIdInput.value = courseQuizsnap.value;
     }
     if (cat) cat.addEventListener('change', function() { loadClasses(); loadCourses(); });
     if (level) level.addEventListener('change', function() { loadClasses(); loadCourses(); });
