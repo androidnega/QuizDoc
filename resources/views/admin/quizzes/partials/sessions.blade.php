@@ -17,25 +17,25 @@
         </form>
     </div>
 
-    {{-- Compact summary stats --}}
+    {{-- Compact summary stats (soft single-tone cards) --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div class="bg-white rounded-lg border border-gray-200 p-3">
-            <p class="text-xs font-medium text-gray-500 mb-1">Students</p>
-            <p class="text-2xl font-bold text-gray-900 tabular-nums">{{ $sessionsStats['total_students'] }}</p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
+            <p class="text-xs font-medium text-slate-500 mb-1">Students</p>
+            <p class="text-2xl font-bold text-slate-800 tabular-nums">{{ $sessionsStats['total_students'] }}</p>
         </div>
-        <div class="bg-white rounded-lg border border-gray-200 p-3">
-            <p class="text-xs font-medium text-gray-500 mb-1">Average</p>
-            <p class="text-2xl font-bold text-gray-900 tabular-nums">{{ $sessionsStats['average_score'] }}<span class="text-base">%</span></p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
+            <p class="text-xs font-medium text-slate-500 mb-1">Average</p>
+            <p class="text-2xl font-bold text-slate-800 tabular-nums">{{ $sessionsStats['average_score'] }}<span class="text-base">%</span></p>
         </div>
-        <div class="bg-white rounded-lg border border-gray-200 p-3">
-            <p class="text-xs font-medium text-gray-500 mb-1">Range</p>
-            <p class="text-2xl font-bold text-gray-900 tabular-nums">{{ $sessionsStats['lowest_score'] }}-{{ $sessionsStats['highest_score'] }}<span class="text-base">%</span></p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
+            <p class="text-xs font-medium text-slate-500 mb-1">Range</p>
+            <p class="text-2xl font-bold text-slate-800 tabular-nums">{{ $sessionsStats['lowest_score'] }}-{{ $sessionsStats['highest_score'] }}<span class="text-base">%</span></p>
         </div>
-        <div class="bg-white rounded-lg border border-gray-200 p-3">
-            <p class="text-xs font-medium text-gray-500 mb-1">Violations</p>
-            <p class="text-2xl font-bold {{ $sessionsStats['total_violations'] > 0 ? 'text-danger-600' : 'text-gray-900' }} tabular-nums">{{ $sessionsStats['total_violations'] }}</p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
+            <p class="text-xs font-medium text-slate-500 mb-1">Violations</p>
+            <p class="text-2xl font-bold text-slate-800 tabular-nums">{{ $sessionsStats['total_violations'] }}</p>
             @if($sessionsStats['students_with_violations'] > 0)
-                <p class="text-xs text-danger-600">{{ $sessionsStats['students_with_violations'] }} student(s)</p>
+                <p class="text-xs text-slate-600">{{ $sessionsStats['students_with_violations'] }} student(s)</p>
             @endif
         </div>
     </div>
