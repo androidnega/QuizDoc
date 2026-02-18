@@ -42,8 +42,6 @@
                             @endif
                             <option value="examiner" {{ old('role') === 'examiner' ? 'selected' : '' }}>Examiner</option>
                             <option value="coordinator" {{ old('role') === 'coordinator' ? 'selected' : '' }}>Coordinator (Docu Mentor)</option>
-                            <option value="student" {{ old('role') === 'student' ? 'selected' : '' }}>Student (Docu Mentor)</option>
-                            <option value="leader" {{ old('role') === 'leader' ? 'selected' : '' }}>Leader (Docu Mentor)</option>
                         </select>
                         @error('role')<p class="mt-1 text-sm text-danger-600">{{ $message }}</p>@enderror
                     </div>

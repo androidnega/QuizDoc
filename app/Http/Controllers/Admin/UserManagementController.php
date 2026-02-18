@@ -98,9 +98,10 @@ class UserManagementController extends Controller
             'username' => 'required|string|max:255|unique:users,username',
             'email' => 'nullable|email|max:255',
             'name' => 'nullable|string|max:255',
+            // Admin UI only creates Super Admin / Examiner / Coordinator (no Docu Mentor student/leader)
             'role' => $canCreateSuperAdmin
-                ? 'required|in:super_admin,examiner,coordinator,student,leader'
-                : 'required|in:examiner,coordinator,student,leader',
+                ? 'required|in:super_admin,examiner,coordinator'
+                : 'required|in:examiner,coordinator',
             'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
         ];
         
