@@ -1,0 +1,47 @@
+# Laravel
+/vendor/
+/node_modules/
+/public/build/
+/public/hot
+/public/storage
+/storage/*.key
+.env
+.env.example
+.env.backup
+.env.production
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+/.fleet
+/.idea
+/.vscode
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Storage & logs (keep structure via storage/**/.gitignore)
+/storage/logs/*
+!/storage/logs/.gitignore
+/storage/framework/cache/data/*
+!/storage/framework/cache/data/.gitignore
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
+/storage/framework/views/*
+!/storage/framework/views/.gitignore
+
+# SQLite DB (do not commit; may contain sensitive data)
+/database/*.sqlite
+
+# Exported schema for phpMyAdmin import (one-time use, do not commit)
+/schema.sql
+
+# Server-side Git reset script (not tracked, upload manually to server)
+/public/reset-git-repo.php
+public/reset-git-repo.php
+
+# PhpWord install wrapper (created by install script, do not commit)
+.composer-wrapper.sh

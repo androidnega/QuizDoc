@@ -1,0 +1,92 @@
+<?php
+
+namespace App\Http\Controllers\DocuMentor;
+
+use App\Http\Controllers\Controller;
+use App\Models\DocuMentor\Chapter;
+use App\Models\DocuMentor\Project;
+use App\Models\DocuMentor\Submission;
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
+
+/**
+ * Supervisor submissions: same file rules as student flow.
+ * Ch 1–5 = PDF, DOCX, TXT, ≤ 1MB; Ch 6 = ZIP only, no size restriction.
+ */
+class SupervisorSubmissionController extends Controller
+{
+    public function store(Request $request, Project $project, Chapter $chapter): RedirectResponse
+    {
+        $user = request()->attributes->get('dm_user');
+        if ($chapter->project_id !== $project->id) {
+            abort(404);
+        }
+        $this->authorize('createSubmission', [$project, $chapter]);
+
+        $isChapter6 = $chapter->order === 6;
+        if ($isChapter6) {
+            $request->validate([
+                'file' => 'required|file|mimes:zip',
+                'comment' => 'nullable|string|max:1000',
+            ]);
+        } else {
+            $request->validate([
+                'file' => 'required|file|mimes:pdf,docx,txt|max:1024',
+                'comment' => 'nullable|string|max:1000',
+            ]);
+        }
+
+        $path = $request->file('file')->store('docu-mentor/submissions', 'public');
+
+        Submission::create([
+            'file' => $path,
+            'comment' => $request->comment,
+            'submitted_at' => now(),
+            'is_open' => true,
+            'chapter_id' => $chapter->id,
+            'uploaded_by_id' => $user->id,
+        ]);
+
+        return back()->with('success', 'Submission created.');
+    }
+
+    public function update(Request $request, Project $project, Chapter $chapter, Submission $submission): RedirectResponse
+    {
+        $user = request()->attributes->get('dm_user');
+        if ($chapter->project_id !== $project->id || $submission->chapter_id !== $chapter->id) {
+            abort(404);
+        }
+        $this->authorize('update', $submission);
+
+        $request->validate([
+            'score' => 'nullable|integer|min:0',
+            'comment' => 'nullable|string|max:1000',
+            'is_open' => 'boolean',
+        ]);
+
+        $submission->update([
+            'score' => $request->input('score'),
+            'comment' => $request->comment,
+            'is_open' => $request->boolean('is_open'),
+        ]);
+
+        return back()->with('success', 'Submission updated.');
+    }
+
+    public function destroy(Project $project, Chapter $chapter, Submission $submission): RedirectResponse
+    {
+        $user = request()->attributes->get('dm_user');
+        if ($chapter->project_id !== $project->id || $submission->chapter_id !== $chapter->id) {
+            abort(404);
+        }
+        $this->authorize('delete', $submission);
+
+        if ($submission->file) {
+            Storage::disk('public')->delete($submission->file);
+        }
+        $submission->delete();
+
+        return back()->with('success', 'Submission deleted.');
+    }
+}
