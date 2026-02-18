@@ -36,11 +36,11 @@
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                     @if(!$quiz->hasStarted())
-                        <a href="{{ route('dashboard.quizzes.edit', $quiz) }}" class="btn btn-primary text-xs px-3 py-1.5">Edit</a>
+                        <a href="{{ route('dashboard.quizzes.edit', $quiz) }}" class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-primary-500">Edit</a>
                         <form action="{{ route('dashboard.quizzes.destroy', $quiz) }}" method="post" class="inline" onsubmit="return confirm('Delete this quiz?');">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn bg-danger-100 text-danger-700 hover:bg-danger-200 text-xs px-3 py-1.5">Delete</button>
+                            <button type="submit" class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:ring-2 focus:ring-red-500">Delete</button>
                         </form>
                     @endif
                 </div>

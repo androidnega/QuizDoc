@@ -3,8 +3,8 @@
 @section('title', 'Edit Quiz')
 @section('dashboard_heading', 'Edit Quiz')
 @section('dashboard_content')
-<div class="w-full space-y-6">
-    <div class="bg-white rounded-lg border border-gray-200 p-6 md:p-8">
+<div class="w-full max-w-4xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 md:p-8">
             @if(session('error'))
                 <div class="alert alert-error mb-6" role="alert">
                     <strong>Error:</strong> {{ session('error') }}
@@ -26,16 +26,19 @@
                 @csrf
                 @method('PUT')
 
+                @php
+                    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm';
+                @endphp
                 <!-- Title -->
                 <div>
-                    <label for="title" class="block text-sm font-medium text-gray-700 mb-2">Quiz Title *</label>
+                    <label for="title" class="block text-sm font-medium text-gray-700 mb-1.5">Quiz Title *</label>
                     <input type="text" id="title" name="title" required value="{{ old('title', $quiz->title) }}" 
-                        class="input" placeholder="e.g., Midterm Exam - Mathematics">
+                        class="{{ $inputClass }}" placeholder="e.g., Midterm Exam - Mathematics">
                 </div>
                 <!-- Exam type (for PDF reports) -->
                 <div>
-                    <label for="exam_type" class="block text-sm font-medium text-gray-700 mb-2">Exam type</label>
-                    <select id="exam_type" name="exam_type" class="input">
+                    <label for="exam_type" class="block text-sm font-medium text-gray-700 mb-1.5">Exam type</label>
+                    <select id="exam_type" name="exam_type" class="{{ $inputClass }}">
                         <option value="">— Select —</option>
                         @foreach(\App\Models\Quiz::examTypeOptions() as $value => $label)
                             <option value="{{ $value }}" {{ old('exam_type', $quiz->exam_type) === $value ? 'selected' : '' }}>{{ $label }}</option>
@@ -45,15 +48,15 @@
                 </div>
 
                 <!-- Class group (read-only); Course (within class group) -->
-                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 mb-6">
+                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50/80 mb-6">
                     <p class="text-sm font-medium text-gray-700 mb-1">Class group</p>
                     <p class="text-gray-900">{{ $quiz->classGroup?->name ?? '—' }}</p>
                     <p class="text-xs text-gray-500 mt-1">Class group cannot be changed. You can only change the course below (from this class group’s attached courses).</p>
                 </div>
                 <div class="grid md:grid-cols-2 gap-6">
                     <div>
-                        <label for="course_id" class="block text-sm font-medium text-gray-700 mb-2">Course *</label>
-                        <select id="course_id" name="course_id" required class="input">
+                        <label for="course_id" class="block text-sm font-medium text-gray-700 mb-1.5">Course *</label>
+                        <select id="course_id" name="course_id" required class="{{ $inputClass }}">
                             @foreach($courses as $c)
                                 <option value="{{ $c->id }}" {{ old('course_id', $quiz->course_id) == $c->id ? 'selected' : '' }}>
                                     {{ $c->name }}
@@ -65,15 +68,15 @@
 
                     <p class="text-sm font-semibold text-gray-800 mb-3 md:col-span-2">Question pool &amp; per student</p>
                     <div>
-                        <label for="number_of_questions" class="block text-sm font-medium text-gray-700 mb-2">Number of Questions (pool / AI target) *</label>
+                        <label for="number_of_questions" class="block text-sm font-medium text-gray-700 mb-1.5">Number of Questions (pool / AI target) *</label>
                         <input type="number" id="number_of_questions" name="number_of_questions" min="1" max="250" 
-                            value="{{ old('number_of_questions', $quiz->number_of_questions) }}" class="input">
+                            value="{{ old('number_of_questions', $quiz->number_of_questions) }}" class="{{ $inputClass }}">
                         <p class="text-xs text-gray-500 mt-1">Used for AI generation. Approved pool can be larger.</p>
                     </div>
                     <div>
-                        <label for="questions_per_student" class="block text-sm font-medium text-gray-700 mb-2">Questions per student (from approved pool) *</label>
+                        <label for="questions_per_student" class="block text-sm font-medium text-gray-700 mb-1.5">Questions per student (from approved pool) *</label>
                         <input type="number" id="questions_per_student" name="questions_per_student" min="1" max="250" 
-                            value="{{ old('questions_per_student', $quiz->questions_per_student ?? $quiz->number_of_questions) }}" class="input">
+                            value="{{ old('questions_per_student', $quiz->questions_per_student ?? $quiz->number_of_questions) }}" class="{{ $inputClass }}">
                         <p class="text-xs text-gray-500 mt-1">How many questions each student receives, randomly drawn from the approved pool. Approved count must be ≥ this.</p>
                     </div>
                 </div>
@@ -81,13 +84,13 @@
                 <!-- Duration and Topics Grid -->
                 <div class="grid md:grid-cols-2 gap-6">
                     <div>
-                        <label for="duration_minutes" class="block text-sm font-medium text-gray-700 mb-2">Duration (minutes) *</label>
+                        <label for="duration_minutes" class="block text-sm font-medium text-gray-700 mb-1.5">Duration (minutes) *</label>
                         <input type="number" id="duration_minutes" name="duration_minutes" min="1" 
-                            value="{{ old('duration_minutes', $quiz->duration_minutes) }}" class="input">
+                            value="{{ old('duration_minutes', $quiz->duration_minutes) }}" class="{{ $inputClass }}">
                     </div>
 
                     <div class="md:col-span-1">
-                        <label for="topics-input" class="block text-sm font-medium text-gray-700 mb-2">Topics (for AI generation)</label>
+                        <label for="topics-input" class="block text-sm font-medium text-gray-700 mb-1.5">Topics (for AI generation)</label>
                         @if(isset($aiTokenStatus) && $aiTokenStatus && $aiTokenStatus['can_use'])
                         <p class="text-xs text-gray-600 mb-1">AI Token: <span class="font-medium">{{ $aiTokenStatus['remaining'] }}</span></p>
                         @endif
@@ -102,7 +105,7 @@
                         @endphp
                         <input type="hidden" name="topics" id="topics-value" value="{{ old('topics', $topicsStr) }}">
                         <input type="text" id="topics-input" autocomplete="off" placeholder="Type a topic, then press comma (,) to add"
-                            class="input mb-2" aria-describedby="topic-tags-hint">
+                            class="{{ $inputClass }} mb-2" aria-describedby="topic-tags-hint">
                         <div id="topic-tags" class="flex flex-wrap gap-2 min-h-[2rem]" role="list" aria-label="Added topics"></div>
                         <p id="topic-tags-hint" class="text-xs text-gray-500 mt-1">Add topics one by one; each appears as a tag below. AI will use these precise topics to generate questions.</p>
                     </div>
@@ -129,7 +132,7 @@
                     <div id="source-paste-wrap" class="hidden mb-4">
                         <label for="source_script" class="block text-sm font-medium text-gray-700 mb-1">Paste your content (optional)</label>
                         <p class="text-xs text-gray-500 mb-2">Paste lecture notes or any text. Leave empty to use topics only.</p>
-                        <textarea id="source_script" name="source_script" rows="6" class="input font-mono text-sm min-h-[8rem] max-h-80 overflow-y-auto resize-y w-full break-words whitespace-pre-wrap" placeholder="Paste your script or notes here...">{{ old('source_script') }}</textarea>
+                        <textarea id="source_script" name="source_script" rows="6" class="{{ $inputClass }} font-mono text-sm min-h-[8rem] max-h-80 overflow-y-auto resize-y break-words whitespace-pre-wrap" placeholder="Paste your script or notes here...">{{ old('source_script') }}</textarea>
                     </div>
                     <div id="source-file-wrap" class="hidden">
                         @if(!empty($quiz->script_url))
@@ -142,7 +145,7 @@
                         <label for="source_file" class="block text-sm font-medium text-gray-700 mb-1">Upload file (optional)</label>
                         <p class="text-xs text-gray-500 mb-2">.txt, .pdf, or .docx. File is stored on Cloudinary and used for AI. Leave empty to use topics only.</p>
                         <input type="file" id="source_file" name="source_file" accept=".txt,.pdf,.docx" 
-                            class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border file:border-primary-300 file:bg-primary-50 file:text-primary-700 file:font-medium hover:file:bg-primary-100">
+                            class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border file:border-gray-300 file:bg-gray-100 file:text-gray-800 file:font-medium hover:file:bg-gray-200">
                         <div id="source-file-progress-wrap" class="hidden mt-4 flex flex-col items-center">
                             <div class="relative w-32 h-32" aria-hidden="true">
                                 <svg class="w-32 h-32 rotate-90" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -167,18 +170,18 @@
 
                 <!-- Scheduling -->
                 <div class="border-t border-gray-200 pt-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Quiz Scheduling</h3>
+                    <h3 class="text-base font-semibold text-gray-900 mb-3">Quiz Scheduling</h3>
                     <div class="grid md:grid-cols-2 gap-6">
                         <div>
-                            <label for="starts_at" class="block text-sm font-medium text-gray-700 mb-2">Starts At (optional)</label>
+                            <label for="starts_at" class="block text-sm font-medium text-gray-700 mb-1.5">Starts At (optional)</label>
                             <input type="datetime-local" id="starts_at" name="starts_at" 
-                                value="{{ old('starts_at', $quiz->starts_at?->format('Y-m-d\TH:i')) }}" class="input">
+                                value="{{ old('starts_at', $quiz->starts_at?->format('Y-m-d\TH:i')) }}" class="{{ $inputClass }}">
                         </div>
 
                         <div>
-                            <label for="ends_at" class="block text-sm font-medium text-gray-700 mb-2">Ends At (optional)</label>
+                            <label for="ends_at" class="block text-sm font-medium text-gray-700 mb-1.5">Ends At (optional)</label>
                             <input type="datetime-local" id="ends_at" name="ends_at" 
-                                value="{{ old('ends_at', $quiz->ends_at?->format('Y-m-d\TH:i')) }}" class="input">
+                                value="{{ old('ends_at', $quiz->ends_at?->format('Y-m-d\TH:i')) }}" class="{{ $inputClass }}">
                         </div>
                     </div>
                 </div>
@@ -198,8 +201,8 @@
 
                 <!-- Result visibility (review / score after quiz) -->
                 <div class="border-t border-gray-200 pt-6">
-                    <label for="result_visibility" class="block text-sm font-medium text-gray-700 mb-2">Result visibility</label>
-                    <select id="result_visibility" name="result_visibility" class="input">
+                    <label for="result_visibility" class="block text-sm font-medium text-gray-700 mb-1.5">Result visibility</label>
+                    <select id="result_visibility" name="result_visibility" class="{{ $inputClass }} max-w-xs">
                         @foreach(\App\Models\Quiz::resultVisibilityOptions() as $value => $label)
                             <option value="{{ $value }}" {{ old('result_visibility', $quiz->result_visibility ?? 'full_review_after_end') === $value ? 'selected' : '' }}>{{ $label }}</option>
                         @endforeach
@@ -208,14 +211,14 @@
                 </div>
 
                 <!-- Actions -->
-                <div class="flex items-center gap-4 pt-6">
-                    <button type="submit" class="btn btn-primary">
+                <div class="flex flex-wrap items-center gap-3 pt-6 border-t border-gray-200">
+                    <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 shadow-sm">
                         <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
                         Update Quiz
                     </button>
-                    <a href="{{ route('dashboard.quizzes.show', $quiz) }}" class="btn btn-secondary">
+                    <a href="{{ route('dashboard.quizzes.show', $quiz) }}" class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
                         Cancel
                     </a>
                 </div>

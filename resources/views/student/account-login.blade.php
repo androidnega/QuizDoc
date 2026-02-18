@@ -14,7 +14,7 @@
             <div id="step-index" class="space-y-4">
                 <div>
                     <label for="index_number" class="block text-sm font-medium text-gray-700 mb-1">Index number</label>
-                    <input type="text" id="index_number" name="index_number" required placeholder="e.g. BC/ITS/24/047" class="input w-full" style="text-transform: uppercase;" autocomplete="off">
+                    <input type="text" id="index_number" name="index_number" required placeholder="e.g. BC/ITS/24/047" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" style="text-transform: uppercase;" autocomplete="off">
                 </div>
                 <div id="index-error" class="hidden">
                     <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800" id="index-error-text"></div>
@@ -22,7 +22,7 @@
                         <a id="index-error-support" href="#" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline font-medium">Get in touch</a>
                     </p>
                 </div>
-                <button type="button" id="btn-index" class="btn btn-action w-full py-2.5 text-sm font-semibold">Continue</button>
+                <button type="button" id="btn-index" class="w-full py-2.5 px-4 text-sm font-semibold rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">Continue</button>
             </div>
 
             {{-- Step 2: Phone (first-time or unregistered) --}}
@@ -30,32 +30,38 @@
                 <p class="text-sm text-gray-600" id="phone-step-message">Enter your active phone number to receive a one-time code (e.g. 233XXXXXXXXX).</p>
                 <div>
                     <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone number</label>
-                    <input type="tel" id="phone" name="phone" placeholder="233XXXXXXXXX" class="input w-full" autocomplete="tel">
+                    <input type="tel" id="phone" name="phone" placeholder="233XXXXXXXXX" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" autocomplete="tel">
                 </div>
                 <div id="phone-error" class="hidden">
                     <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800" id="phone-error-text"></div>
                 </div>
-                <button type="button" id="btn-send-otp" class="btn btn-action w-full py-2.5 text-sm font-semibold">Send code</button>
-                <button type="button" id="btn-back-to-index" class="w-full py-2 text-sm text-gray-600 hover:text-gray-800">← Back</button>
+                <button type="button" id="btn-send-otp" class="w-full py-2.5 px-4 text-sm font-semibold rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">Send code</button>
+                <button type="button" id="btn-back-to-index" class="w-full py-2 px-4 text-sm font-medium rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300">← Back</button>
             </div>
 
-            {{-- Step 3: OTP --}}
+            {{-- Step 3: OTP (6 separate boxes; auto sign-in when last digit entered) --}}
             <div id="step-otp" class="space-y-4 hidden">
                 <p class="text-sm text-gray-600" id="otp-step-message">Enter the 6-digit code sent to your phone.</p>
                 <div>
-                    <label for="otp_code" class="block text-sm font-medium text-gray-700 mb-1">Code</label>
-                    <input type="text" id="otp_code" name="code" placeholder="000000" maxlength="6" pattern="[0-9]*" inputmode="numeric" class="input w-full text-center tracking-widest text-lg" autocomplete="one-time-code">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Code</label>
+                    <div class="flex justify-center gap-2" id="otp-boxes-wrap">
+                        @for($i = 0; $i < 6; $i++)
+                        <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" data-otp-index="{{ $i }}" autocomplete="off"
+                            class="w-11 h-12 text-center text-xl font-semibold border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 otp-digit">
+                        @endfor
+                    </div>
+                    <input type="hidden" id="otp_code" name="code" value="">
                 </div>
                 <div>
                     <label for="otp_name" class="block text-sm font-medium text-gray-700 mb-1">Your name (optional)</label>
-                    <input type="text" id="otp_name" name="student_name" placeholder="Full name" class="input w-full" autocomplete="name" style="text-transform: capitalize;">
+                    <input type="text" id="otp_name" name="student_name" placeholder="Full name" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" autocomplete="name" style="text-transform: capitalize;">
                 </div>
                 <div id="otp-error" class="hidden">
                     <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800" id="otp-error-text"></div>
                 </div>
-                <button type="button" id="btn-verify-otp" class="btn btn-action w-full py-2.5 text-sm font-semibold">Verify and sign in</button>
+                <button type="button" id="btn-verify-otp" class="w-full py-2.5 px-4 text-sm font-semibold rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">Verify and sign in</button>
                 <p class="text-center text-sm text-gray-500">Didn't get the code? <button type="button" id="btn-resend-otp" class="text-primary-600 hover:underline font-medium">Resend code</button></p>
-                <button type="button" id="btn-back-to-phone" class="w-full py-2 text-sm text-gray-600 hover:text-gray-800">← Back</button>
+                <button type="button" id="btn-back-to-phone" class="w-full py-2 px-4 text-sm font-medium rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300">← Back</button>
             </div>
         </div>
     </div>
@@ -156,7 +162,7 @@
                     nameInput.closest('div').style.display = 'none';
                 }
                 showStep('otp');
-                if (otpInput) { otpInput.value = ''; otpInput.focus(); }
+                initOtpBoxes();
             }
         })
         .catch(function() {
@@ -204,7 +210,7 @@
                 nameInput.closest('div').style.display = 'none';
             }
             showStep('otp');
-            if (otpInput) { otpInput.value = ''; otpInput.focus(); }
+            initOtpBoxes();
             showError('otp-error', '');
         })
         .catch(function() {
@@ -257,8 +263,67 @@
         });
     });
 
+    function getOtpCode() {
+        var boxes = document.querySelectorAll('.otp-digit');
+        var code = '';
+        for (var i = 0; i < (boxes.length || 6); i++) {
+            if (boxes[i]) code += (boxes[i].value || '').trim();
+        }
+        return code;
+    }
+    function setOtpHidden(val) {
+        var h = document.getElementById('otp_code');
+        if (h) h.value = val;
+    }
+    function initOtpBoxes() {
+        var boxes = document.querySelectorAll('.otp-digit');
+        setOtpHidden('');
+        boxes.forEach(function(b) { b.value = ''; });
+        if (boxes[0]) boxes[0].focus();
+
+        function syncAndMaybeSubmit() {
+            var code = getOtpCode();
+            setOtpHidden(code);
+            if (code.length === 6) {
+                var btn = document.getElementById('btn-verify-otp');
+                if (btn && !btn.disabled) btn.click();
+            }
+        }
+        boxes.forEach(function(box, i) {
+            box.onkeydown = function(e) {
+                if (/^[0-9]$/.test(e.key)) {
+                    e.preventDefault();
+                    this.value = e.key;
+                    if (boxes[i + 1]) boxes[i + 1].focus();
+                    else this.blur();
+                    syncAndMaybeSubmit();
+                    return;
+                }
+                if (e.key === 'Backspace' && !this.value && boxes[i - 1]) {
+                    e.preventDefault();
+                    boxes[i - 1].focus();
+                }
+            };
+            box.oninput = function() {
+                var v = this.value.replace(/\D/g, '').slice(0, 1);
+                this.value = v;
+                if (v && boxes[i + 1]) boxes[i + 1].focus();
+                syncAndMaybeSubmit();
+            };
+            box.onpaste = function(e) {
+                e.preventDefault();
+                var pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+                for (var j = 0; j < pasted.length && j < boxes.length; j++) {
+                    boxes[j].value = pasted[j];
+                }
+                if (pasted.length > 0 && boxes[pasted.length - 1]) boxes[pasted.length - 1].focus();
+                syncAndMaybeSubmit();
+            };
+        });
+    }
+
     document.getElementById('btn-verify-otp').addEventListener('click', function() {
-        var code = (otpInput && otpInput.value) ? otpInput.value.trim() : '';
+        var code = getOtpCode();
         if (!code || code.length !== 6) {
             showError('otp-error', 'Please enter the 6-digit code.');
             return;

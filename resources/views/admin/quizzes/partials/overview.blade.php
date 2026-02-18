@@ -3,6 +3,42 @@
     $neededCount = $quiz->getQuestionsPerStudent();
     $shortBy = max(0, $neededCount - $approvedCount);
 @endphp
+
+{{-- Questions summary bar (top of page) --}}
+<section class="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+    <div class="px-5 py-4">
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-4">
+            <div class="flex items-baseline gap-2">
+                <h2 class="text-lg font-semibold text-gray-900">Questions</h2>
+                <span class="text-sm text-gray-500">{{ $approvedQuestionsTotal ?? 0 }} question(s) in quiz (showing {{ $approvedQuestions->count() ?? 0 }} on this page)</span>
+            </div>
+            <a href="{{ route('dashboard.quizzes.questions.export.txt', $quiz) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 transition-colors" download>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                Download questions TXT
+            </a>
+            <div class="flex-1 min-w-[200px] max-w-sm">
+                <label for="questions-search" class="sr-only">Search questions</label>
+                <input type="text" id="questions-search" placeholder="Type to filter by question text, topic, type…" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" autocomplete="off">
+            </div>
+            @if($unapprovedPoolsTotal > 0)
+            <div class="flex flex-wrap items-center gap-3">
+                <p class="text-sm text-gray-600">You have <strong>{{ $unapprovedPoolsTotal }}</strong> question(s) in the pool below.</p>
+                <span class="text-sm text-gray-500">Click Approve All to add them to the quiz.</span>
+                @if(!$quiz->hasStarted())
+                <form action="{{ route('dashboard.quizzes.approve-all-pool', $quiz) }}" method="post" class="inline" onsubmit="return confirm('This will approve ALL {{ $unapprovedPoolsTotal }} pending questions. Continue?');">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-lg shadow-sm transition-colors">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Approve All ({{ $unapprovedPoolsTotal }})
+                    </button>
+                </form>
+                @endif
+            </div>
+            @endif
+        </div>
+    </div>
+</section>
+
 {{-- Action Required: unapproved questions in pool --}}
 @if(!$quiz->is_published && !$quiz->hasEnoughApprovedQuestions() && $unapprovedPoolsTotal > 0)
     <div class="bg-primary-50 border-2 border-primary-300 rounded-lg p-4 flex items-start gap-3">
@@ -36,7 +72,7 @@
                 <li><strong>Use {{ $approvedCount }} questions:</strong> Edit the quiz and set "Questions per student" to {{ $approvedCount }} (or less) so you can publish with what you have.</li>
             </ul>
             <div class="flex flex-wrap gap-2">
-                <a href="{{ route('dashboard.quizzes.edit', $quiz) }}" class="btn btn-primary text-sm">Edit quiz (add more or change required number)</a>
+                <a href="{{ route('dashboard.quizzes.edit', $quiz) }}" class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700">Edit quiz (add more or change required number)</a>
             </div>
         </div>
     </div>
@@ -54,12 +90,12 @@
             @php $shareUrl = route('student.rules.show.quiz', ['token' => $quiz->link_token]); @endphp
             <span class="text-xs font-medium text-primary-800 shrink-0">Token:</span>
             <input type="text" readonly value="{{ $quiz->link_token }}" id="quiz-token-{{ $quiz->id }}" class="w-36 text-xs font-mono font-semibold text-gray-800 bg-white border border-primary-300 rounded px-1.5 py-0.5" />
-            <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('quiz-token-{{ $quiz->id }}').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 1500)" class="btn btn-primary text-xs py-0.5 px-2">Copy</button>
+            <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('quiz-token-{{ $quiz->id }}').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 1500)" class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded text-white bg-primary-600 hover:bg-primary-700">Copy</button>
             <details class="text-xs ml-1">
                 <summary class="cursor-pointer text-primary-600 hover:text-primary-800">link</summary>
                 <div class="flex items-center gap-1 mt-0.5 flex-wrap">
                     <input type="text" readonly value="{{ $shareUrl }}" id="quiz-share-url-{{ $quiz->id }}" class="flex-1 min-w-0 max-w-xs text-xs font-mono text-gray-600 bg-white border border-primary-200 rounded px-1.5 py-0.5" />
-                    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('quiz-share-url-{{ $quiz->id }}').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 1500)" class="btn btn-secondary text-xs py-0.5 px-1.5">Copy</button>
+                    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('quiz-share-url-{{ $quiz->id }}').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 1500)" class="inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded text-gray-700 bg-gray-200 hover:bg-gray-300">Copy</button>
                 </div>
             </details>
             <span class="flex-1"></span>
@@ -69,21 +105,21 @@
                 <form action="{{ route('dashboard.quizzes.extend-time', $quiz) }}" method="post" class="inline flex items-center gap-1" onsubmit="return confirm('Extend quiz time? This will add time to all active student sessions.');">
                     @csrf
                     <input type="number" name="additional_minutes" min="1" max="120" value="10" required class="w-16 text-xs border border-gray-300 rounded px-1.5 py-0.5" placeholder="min">
-                    <button type="submit" class="btn bg-success-100 text-success-700 hover:bg-success-200 text-xs py-0.5 px-2">Extend Time</button>
+                    <button type="submit" class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700">Extend Time</button>
                 </form>
             </div>
             @endif
             @if($showEndQuiz)
             <form action="{{ route('dashboard.quizzes.end', $quiz) }}" method="post" class="inline" onsubmit="return confirm('End this quiz now? Students will no longer be able to start or submit.');">
                 @csrf
-                <button type="submit" class="btn bg-danger-100 text-danger-700 hover:bg-danger-200 text-xs py-0.5 px-2">End quiz</button>
+                <button type="submit" class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700">End quiz</button>
             </form>
             @elseif($quizEnded)
             <span class="text-xs font-medium text-gray-600 py-0.5 px-2">Quiz ended — token and link are no longer available. You can still view questions, sessions, scores, and analytics below.</span>
             @else
             <form action="{{ route('dashboard.quizzes.unpublish', $quiz) }}" method="post" class="inline">
                 @csrf
-                <button type="submit" class="btn btn-secondary text-xs py-0.5 px-2">Unpublish</button>
+                <button type="submit" class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded text-gray-700 bg-gray-200 hover:bg-gray-300">Unpublish</button>
             </form>
             @endif
         </div>
@@ -106,7 +142,7 @@
             <div class="flex flex-col items-end gap-2">
                 <form action="{{ route('dashboard.quizzes.publish', $quiz) }}" method="post" class="inline">
                     @csrf
-                    <button type="submit" class="btn text-sm {{ $quiz->hasEnoughApprovedQuestions() ? 'btn-primary' : 'bg-gray-300 text-gray-500 cursor-not-allowed' }}" @if(!$quiz->hasEnoughApprovedQuestions()) disabled onclick="event.preventDefault(); alert('Please approve at least {{ $quiz->getQuestionsPerStudent() }} questions first. Scroll down to see the \'Approve All\' button.');" @endif>Publish Quiz</button>
+                    <button type="submit" class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg {{ $quiz->hasEnoughApprovedQuestions() ? 'text-white bg-primary-600 hover:bg-primary-700' : 'text-gray-500 bg-gray-300 cursor-not-allowed' }}" @if(!$quiz->hasEnoughApprovedQuestions()) disabled onclick="event.preventDefault(); alert('Please approve at least {{ $quiz->getQuestionsPerStudent() }} questions first. Scroll down to see the \'Approve All\' button.');" @endif>Publish Quiz</button>
                 </form>
                 @if(!$quiz->hasEnoughApprovedQuestions() && $unapprovedPoolsTotal > 0)
                     <p class="text-xs text-gray-600 text-right">👇 Scroll down &amp; click "Approve All ({{ $unapprovedPoolsTotal }})"</p>
@@ -143,12 +179,12 @@
             </div>
             <div class="w-full sm:w-auto sm:min-w-[200px]">
                 <label for="pool-search" class="block text-xs font-medium text-gray-600 mb-1">Search pool</label>
-                <input type="text" id="pool-search" placeholder="Type to filter questions…" class="input w-full text-sm py-2 px-3" autocomplete="off">
+                <input type="text" id="pool-search" placeholder="Type to filter questions…" class="w-full text-sm py-2 px-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" autocomplete="off">
             </div>
             @if(!$quiz->hasStarted())
             <form action="{{ route('dashboard.quizzes.approve-all-pool', $quiz) }}" method="post" class="inline" onsubmit="return confirm('This will approve ALL {{ $unapprovedPoolsTotal }} pending questions. Continue?');">
                 @csrf
-                <button type="submit" class="btn btn-primary flex items-center gap-2 {{ $unapprovedPoolsTotal > 0 ? 'animate-pulse' : '' }}">
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 {{ $unapprovedPoolsTotal > 0 ? 'animate-pulse' : '' }}">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     <span>Approve All ({{ $unapprovedPoolsTotal }})</span>
                 </button>
@@ -190,9 +226,9 @@
                     </div>
                     @if(!$quiz->hasStarted())
                     <div class="flex items-center gap-2 flex-shrink-0">
-                        <a href="{{ route('dashboard.quizzes.pool.edit', [$quiz, $pool]) }}" class="btn btn-secondary text-sm">Edit</a>
-                        <form action="{{ route('dashboard.quizzes.pool.approve', [$quiz, $pool]) }}" method="post" class="inline">@csrf<button type="submit" class="btn btn-primary text-sm">Approve</button></form>
-                        <form action="{{ route('dashboard.quizzes.pool.reject', [$quiz, $pool]) }}" method="post" class="inline" onsubmit="return confirm('Remove this question from the pool?');">@csrf @method('DELETE')<button type="submit" class="btn bg-danger-100 text-danger-700 hover:bg-danger-200 text-sm">Reject</button></form>
+                        <a href="{{ route('dashboard.quizzes.pool.edit', [$quiz, $pool]) }}" class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300">Edit</a>
+                        <form action="{{ route('dashboard.quizzes.pool.approve', [$quiz, $pool]) }}" method="post" class="inline">@csrf<button type="submit" class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700">Approve</button></form>
+                        <form action="{{ route('dashboard.quizzes.pool.reject', [$quiz, $pool]) }}" method="post" class="inline" onsubmit="return confirm('Remove this question from the pool?');">@csrf @method('DELETE')<button type="submit" class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700">Reject</button></form>
                     </div>
                     @endif
                 </div>
@@ -205,36 +241,15 @@
     @endif
 
     <section class="card p-6">
-        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
-                <div>
-                    <h2 class="text-xl font-semibold text-gray-900">Questions</h2>
-                    <p class="text-sm text-gray-600">{{ $approvedQuestionsTotal ?? 0 }} question(s) in quiz (showing {{ $approvedQuestions->count() ?? 0 }} on this page)</p>
-                </div>
-            </div>
-            <div class="flex-shrink-0">
-                <a href="{{ route('dashboard.quizzes.questions.export.txt', $quiz) }}" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-gray-900 bg-yellow-400 hover:bg-yellow-500 rounded-lg shadow-lg border-2 border-yellow-600 transition-colors" download>
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                    Download questions TXT
-                </a>
-            </div>
-        </div>
-        <div class="mb-4 pb-4 border-b border-gray-200">
-            <label for="questions-search" class="block text-sm font-medium text-gray-700 mb-2">Search questions</label>
-            <input type="text" id="questions-search" placeholder="Type to filter by question text, topic, type…" class="input w-full max-w-md text-sm py-2 px-3" autocomplete="off">
-        </div>
         @if($approvedQuestions->isEmpty())
             <div class="text-center py-12">
                 <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 @if($unapprovedPoolsTotal > 0)
-                    <p class="text-gray-700 mb-2">You have <strong>{{ $unapprovedPoolsTotal }}</strong> question(s) in the pool above.</p>
-                    <p class="text-sm text-gray-600 mb-4">Click <strong>Approve All</strong> to add them to the quiz.</p>
+                    <p class="text-gray-700 mb-2">You have <strong>{{ $unapprovedPoolsTotal }}</strong> question(s) in the pool below.</p>
+                    <p class="text-sm text-gray-600">Use <strong>Approve All</strong> at the top to add them to the quiz.</p>
                 @else
                     <p class="text-gray-500 mb-4">No questions added yet</p>
-                    <p class="text-sm text-gray-600">Add questions manually or generate them with AI</p>
+                    <p class="text-sm text-gray-600">Add questions manually or generate them with AI (edit quiz).</p>
                 @endif
             </div>
         @else
@@ -273,8 +288,8 @@
                         </div>
                         <div class="flex items-center gap-2 justify-end">
                             @if(!$quiz->hasStarted())
-                            <a href="{{ route('dashboard.quizzes.questions.edit', [$quiz, $q]) }}" class="btn btn-secondary text-sm">Edit</a>
-                            <form action="{{ route('dashboard.quizzes.questions.destroy', [$quiz, $q]) }}" method="post" class="inline" onsubmit="return confirm('Remove this question from the quiz?');">@csrf @method('DELETE')<button type="submit" class="btn bg-danger-100 text-danger-700 hover:bg-danger-200 text-sm">Delete</button></form>
+                            <a href="{{ route('dashboard.quizzes.questions.edit', [$quiz, $q]) }}" class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300">Edit</a>
+                            <form action="{{ route('dashboard.quizzes.questions.destroy', [$quiz, $q]) }}" method="post" class="inline" onsubmit="return confirm('Remove this question from the quiz?');">@csrf @method('DELETE')<button type="submit" class="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700">Delete</button></form>
                             @else
                             <span class="text-xs text-gray-500">Locked</span>
                             @endif

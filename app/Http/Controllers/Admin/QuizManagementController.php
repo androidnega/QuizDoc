@@ -699,13 +699,13 @@ class QuizManagementController extends Controller
     {
         $this->authorize('update', $quiz);
         if ($quiz->hasStarted()) {
-            return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', $quiz)->with('error', 'Error');
+            return $this->redirectQuizOverview($quiz, 'error', 'Error');
         }
         if ($pool->quiz_id !== $quiz->id) {
             abort(404);
         }
         if ($pool->is_approved) {
-            return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', $quiz)->with('info', 'Already approved.');
+            return $this->redirectQuizOverview($quiz, 'info', 'Already approved.');
         }
         Question::create([
             'quiz_id' => $quiz->id,
@@ -720,7 +720,16 @@ class QuizManagementController extends Controller
             'explanation_correct' => $pool->explanation_correct ?? null,
         ]);
         $pool->update(['is_approved' => true]);
-        return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', $quiz)->with('success', 'Saved');
+        return $this->redirectQuizOverview($quiz, 'success', 'Saved');
+    }
+
+    /**
+     * Redirect to quiz overview tab with 303 See Other so refresh never resubmits the approve POST.
+     */
+    private function redirectQuizOverview(Quiz $quiz, string $flashKey = 'success', string $flashMessage = 'Saved'): RedirectResponse
+    {
+        $url = route($this->staffRoutePrefix() . '.quizzes.show', [$quiz]) . '?tab=overview';
+        return redirect()->to($url)->with($flashKey, $flashMessage)->setStatusCode(303);
     }
 
     /**
@@ -730,10 +739,9 @@ class QuizManagementController extends Controller
     {
         $this->authorize('update', $quiz);
         if ($quiz->hasStarted()) {
-            return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', $quiz)->with('error', 'Error');
+            return $this->redirectQuizOverview($quiz, 'error', 'Error');
         }
         $pools = $quiz->questionPools()->where('is_approved', false)->get();
-        $count = 0;
         foreach ($pools as $pool) {
             Question::create([
                 'quiz_id' => $quiz->id,
@@ -748,9 +756,8 @@ class QuizManagementController extends Controller
                 'explanation_correct' => $pool->explanation_correct ?? null,
             ]);
             $pool->update(['is_approved' => true]);
-            $count++;
         }
-        return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', $quiz)->with('success', 'Saved');
+        return $this->redirectQuizOverview($quiz, 'success', 'Saved');
     }
 
     /**
