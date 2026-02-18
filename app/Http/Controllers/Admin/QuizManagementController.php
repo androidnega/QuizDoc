@@ -148,6 +148,9 @@ class QuizManagementController extends Controller
                 'starts_at' => 'nullable|date',
                 'ends_at' => 'nullable|date|after_or_equal:starts_at',
                 'result_visibility' => 'nullable|in:score_only,full_review_after_end,disabled',
+            ], [
+                'course_id.required' => 'Please select a course (from Class Group or QuizSnap section).',
+                'course_id.exists' => 'The selected course is invalid or no longer exists.',
             ]);
 
             $requestClassGroupId = $request->filled('class_group_id') ? (int) $request->class_group_id : null;

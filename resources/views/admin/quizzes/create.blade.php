@@ -65,6 +65,13 @@
                 </div>
             @endif
 
+            <div id="quiz-create-course-required" class="alert alert-error mb-6 quiz-create-feedback" role="alert" style="{{ $errors->has('course_id') ? '' : 'display: none;' }}">
+                <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z" clip-rule="evenodd"/>
+                </svg>
+                <strong>Please select a course</strong> {{ $errors->has('course_id') ? $errors->first('course_id') : '(from Class Group or QuizSnap section) before creating the quiz.' }}
+            </div>
+
             <form action="{{ route('dashboard.quizzes.store') }}" method="post" class="space-y-6" id="quiz-create-form">
                 @csrf
 
@@ -290,8 +297,12 @@
     function updateCourses() {
         var opt = classGroupSelect && classGroupSelect.options[classGroupSelect.selectedIndex];
         courseSelect.innerHTML = '<option value="">Select course</option>';
-        if (courseIdInput) courseIdInput.value = '';
-        if (!opt || !opt.value) return;
+        if (!opt || !opt.value) {
+            // No class group selected: only clear hidden if we're not using QuizSnap course (preserve old/QuizSnap value)
+            var quizsnapEl = document.getElementById('course_id_quizsnap');
+            if (!quizsnapEl || !quizsnapEl.value) { if (courseIdInput) courseIdInput.value = ''; }
+            return;
+        }
         var courses = [];
         try {
             courses = JSON.parse(opt.getAttribute('data-courses') || '[]');
@@ -320,7 +331,22 @@
     }
     if (courseSelect) courseSelect.addEventListener('change', syncCourseId);
     var form = document.getElementById('quiz-create-form');
-    if (form) form.addEventListener('submit', function() { syncCourseId(); });
+    if (form) form.addEventListener('submit', function(e) {
+        syncCourseId();
+        var quizsnap = document.getElementById('course_id_quizsnap');
+        if (quizsnap && quizsnap.value) {
+            if (courseIdInput) courseIdInput.value = quizsnap.value;
+        }
+        var val = courseIdInput ? courseIdInput.value.trim() : '';
+        if (!val) {
+            e.preventDefault();
+            var msg = document.getElementById('quiz-create-course-required');
+            if (msg) { msg.style.display = 'block'; msg.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+            else { alert('Please select a course.'); }
+            return false;
+        }
+        document.getElementById('quiz-create-course-required') && (document.getElementById('quiz-create-course-required').style.display = 'none');
+    });
 })();
 
 @if(isset($quizCategories))
