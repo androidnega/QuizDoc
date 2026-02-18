@@ -88,25 +88,32 @@
                     </select>
                     @error('department_id')<p class="mt-1 text-sm text-danger-600">{{ $message }}</p>@enderror
                 </div>
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <input type="password" name="password" id="password" required class="input flex-1 min-w-0 max-w-full @error('password') border-danger-500 @enderror" minlength="8" autocomplete="new-password">
-                        <button type="button" id="generate-password" class="btn btn-secondary shrink-0 text-sm">Generate</button>
-                        <button type="button" id="copy-password" class="p-2 rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-400 shrink-0" title="Copy password">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                        </button>
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+                    <p class="text-sm font-semibold text-gray-800">Password</p>
+                    <div>
+                        <label for="password" class="block text-xs font-medium text-gray-700 mb-1">Password</label>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <input type="password" name="password" id="password" required class="input flex-1 min-w-0 max-w-full bg-white @error('password') border-danger-500 @enderror" minlength="8" autocomplete="new-password">
+                            <button type="button" id="generate-password" class="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 shrink-0">Generate</button>
+                            <button type="button" id="copy-password" class="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-400 shrink-0" title="Copy password">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            </button>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">At least 8 characters, including one letter and one number.</p>
+                        @error('password')<p class="mt-1 text-sm text-danger-600">{{ $message }}</p>@enderror
                     </div>
-                    <p class="mt-1 text-xs text-gray-500">At least 8 characters, including one letter and one number.</p>
-                    @error('password')<p class="mt-1 text-sm text-danger-600">{{ $message }}</p>@enderror
+                    <div>
+                        <label for="password_confirmation" class="block text-xs font-medium text-gray-700 mb-1">Confirm password</label>
+                        <input type="password" name="password_confirmation" id="password_confirmation" required class="input w-full max-w-full min-w-0 bg-white">
+                    </div>
                 </div>
-                <div>
-                    <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
-                    <input type="password" name="password_confirmation" id="password_confirmation" required class="input w-full max-w-full min-w-0">
-                </div>
-                <div class="flex flex-wrap gap-3 pt-2">
-                    <button type="submit" class="btn btn-primary shrink-0">Create user</button>
-                    <a href="{{ route('dashboard.users.index') }}" class="btn btn-secondary shrink-0">Cancel</a>
+                <div class="flex flex-wrap gap-3 pt-3">
+                    <button type="submit" class="inline-flex items-center justify-center rounded-md bg-yellow-500 px-4 py-2.5 text-sm font-semibold text-yellow-900 shadow-sm hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-1 shrink-0">
+                        Create user
+                    </button>
+                    <a href="{{ route('dashboard.users.index') }}" class="inline-flex items-center justify-center rounded-md bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 shrink-0">
+                        Cancel
+                    </a>
                 </div>
             </form>
         </div>
