@@ -3,6 +3,7 @@
 namespace App\Policies\DocuMentor;
 
 use App\Models\DocuMentor\Project;
+use App\Models\Setting;
 use App\Models\User;
 
 class ProjectPolicy
@@ -60,7 +61,13 @@ class ProjectPolicy
 
     public function delete(User $user, Project $project): bool
     {
-        return $user->isDocuMentorCoordinator();
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+        if ($user->isDocuMentorCoordinator()) {
+            return Setting::getValue(Setting::KEY_ALLOW_COORDINATOR_DELETE_PROJECT, '1') === '1';
+        }
+        return false;
     }
 
     /** Authorization for creating a submission on this project's chapter. */

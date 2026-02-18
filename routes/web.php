@@ -365,6 +365,7 @@ Route::middleware('admin.auth')->group(function () {
             Route::get('projects', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'index'])->name('projects.index');
             Route::get('projects/{project}', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'show'])->name('projects.show');
             Route::put('projects/{project}', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'update'])->name('projects.update');
+            Route::delete('projects/{project}', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'destroy'])->name('projects.destroy');
             Route::post('projects/{project}/alert', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'alertProject'])->name('projects.alert');
             Route::post('projects/{project}/chapters', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'storeChapter'])->name('projects.chapters.store');
             Route::post('projects/{project}/proposals/{proposal}/comment', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'commentProposal'])->name('projects.proposals.comment');

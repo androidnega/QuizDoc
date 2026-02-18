@@ -54,6 +54,7 @@ class SettingsController extends Controller
             'cloudinary_folder' => Setting::getValue(Setting::KEY_CLOUDINARY_FOLDER, 'quizsnap'),
             'lock_examiner_create_group' => Setting::getValue(Setting::KEY_LOCK_EXAMINER_CREATE_GROUP, '0') === '1',
             'allow_examiner_create_course' => Setting::getValue(Setting::KEY_ALLOW_EXAMINER_CREATE_COURSE, '0') === '1',
+            'allow_coordinator_delete_project' => Setting::getValue(Setting::KEY_ALLOW_COORDINATOR_DELETE_PROJECT, '1') === '1',
             'disable_ip_device_restrictions' => Setting::getValue(Setting::KEY_DISABLE_IP_DEVICE_RESTRICTIONS, '0') === '1',
             'otp_arkesel_key_set' => (bool) Setting::getValue(Setting::KEY_OTP_ARKESEL_API_KEY),
             'otp_arkesel_key_masked' => ($k = Setting::getValue(Setting::KEY_OTP_ARKESEL_API_KEY)) ? (strlen($k) > 8 ? substr($k, 0, 4) . '…' . substr($k, -4) : '••••') : null,
@@ -168,6 +169,10 @@ class SettingsController extends Controller
         Setting::setValue(Setting::KEY_CLOUDINARY_FOLDER, $request->filled('cloudinary_folder') ? trim($request->cloudinary_folder) : 'quizsnap');
         Setting::setValue(Setting::KEY_LOCK_EXAMINER_CREATE_GROUP, $request->boolean('lock_examiner_create_group') ? '1' : '0');
         Setting::setValue(Setting::KEY_ALLOW_EXAMINER_CREATE_COURSE, $request->boolean('allow_examiner_create_course') ? '1' : '0');
+        if (session('admin_role') === 'super_admin') {
+            Setting::setValue(Setting::KEY_ALLOW_COORDINATOR_DELETE_PROJECT, $request->boolean('allow_coordinator_delete_project') ? '1' : '0');
+            Cache::forget('setting:' . Setting::KEY_ALLOW_COORDINATOR_DELETE_PROJECT);
+        }
         Setting::setValue(Setting::KEY_DISABLE_IP_DEVICE_RESTRICTIONS, $request->boolean('disable_ip_device_restrictions') ? '1' : '0');
 
         if ($request->boolean('clear_otp_arkesel_key')) {

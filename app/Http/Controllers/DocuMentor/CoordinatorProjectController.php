@@ -252,6 +252,17 @@ class CoordinatorProjectController extends Controller
         }, 'docu-mentor-report-' . $year . '.csv', ['Content-Type' => 'text/csv']);
     }
 
+    /**
+     * Coordinator: delete a project and all related data.
+     */
+    public function destroy(Project $project): RedirectResponse
+    {
+        $this->authorize('delete', $project);
+        $project->deleteWithRelated();
+        return redirect()->route('dashboard.coordinators.projects.index')
+            ->with('success', 'Project deleted.');
+    }
+
     /** Section 4: Automatically create 6 chapters when supervisor is assigned. */
     private function ensureSixChapters(Project $project): void
     {

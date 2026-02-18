@@ -57,6 +57,16 @@
                                         <i class="fas fa-external-link-alt text-xs"></i>
                                     </a>
 
+                                    @can('delete', $project)
+                                    <form action="{{ route('dashboard.coordinators.projects.destroy', $project) }}" method="post" class="inline" onsubmit="return confirm('Delete this project and all its data? This cannot be undone.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="inline-flex items-center justify-center rounded-full p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50" title="Delete project">
+                                            <i class="fas fa-trash text-xs"></i>
+                                        </button>
+                                    </form>
+                                    @endcan
+
                                     {{-- Quick comment on latest proposal (opens modal) --}}
                                     @php
                                         $latestProposal = $project->proposals->sortByDesc('uploaded_at')->first();

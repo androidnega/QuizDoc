@@ -51,14 +51,20 @@
         @endif
     </div>
 
-    @if(!$group->project)
+    @can('delete', $group)
     <div class="rounded-lg border border-gray-200 bg-white p-6">
-        <form action="{{ route('dashboard.coordinators.groups.destroy', $group) }}" method="post" onsubmit="return confirm('Delete this group? This cannot be undone.');">
+        <form action="{{ route('dashboard.coordinators.groups.destroy', $group) }}" method="post" onsubmit="return confirm('{{ $group->project ? 'Delete this group and its project? This cannot be undone.' : 'Delete this group? This cannot be undone.' }}');">
             @csrf
             @method('DELETE')
-            <button type="submit" class="btn border border-red-300 text-red-700 hover:bg-red-50">Delete group</button>
+            <button type="submit" class="btn border border-red-300 text-red-700 hover:bg-red-50">{{ $group->project ? 'Delete group and project' : 'Delete group' }}</button>
         </form>
     </div>
+    @else
+    @if($group->project)
+    <div class="rounded-lg border border-gray-200 bg-gray-50 p-6">
+        <p class="text-sm text-gray-600">Only Super Admin can delete groups that have a project. Your administrator can enable coordinator delete in Settings → General.</p>
+    </div>
     @endif
+    @endcan
 </div>
 @endsection

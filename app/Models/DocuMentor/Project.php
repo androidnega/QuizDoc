@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Docu Mentor project. Table: projects (group_id, title, description, approved, approved_by_id, approval_date,
@@ -176,5 +177,46 @@ class Project extends Model
     public function studentScores(): HasMany
     {
         return $this->hasMany(ProjectStudentScore::class);
+    }
+
+    /**
+     * Delete this project and all related data (chapters, submissions, proposals, files, scores, etc.).
+     * Used by coordinators when deleting a project or a group that has a project.
+     */
+    public function deleteWithRelated(): void
+    {
+        $this->load(['chapters.submissions', 'proposals', 'projectFiles', 'studentScores', 'supervisorApprovals']);
+        foreach ($this->chapters as $chapter) {
+            foreach ($chapter->submissions as $sub) {
+                if ($sub->file && Storage::disk('public')->exists($sub->file)) {
+                    Storage::disk('public')->delete($sub->file);
+                }
+                $sub->delete();
+            }
+            $chapter->delete();
+        }
+        foreach ($this->proposals as $proposal) {
+            if ($proposal->file && Storage::disk('public')->exists($proposal->file)) {
+                Storage::disk('public')->delete($proposal->file);
+            }
+            $proposal->delete();
+        }
+        foreach ($this->projectFiles as $pf) {
+            foreach (['file', 'file_2', 'file_3'] as $field) {
+                if (!empty($pf->$field) && Storage::disk('public')->exists($pf->$field)) {
+                    Storage::disk('public')->delete($pf->$field);
+                }
+            }
+            $pf->delete();
+        }
+        if ($this->final_submission && Storage::disk('public')->exists($this->final_submission)) {
+            Storage::disk('public')->delete($this->final_submission);
+        }
+        $this->studentScores()->delete();
+        $this->supervisorApprovals()->delete();
+        $this->supervisors()->detach();
+        $this->features()->delete();
+        DocumentAiReview::where('project_id', $this->id)->delete();
+        $this->delete();
     }
 }

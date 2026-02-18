@@ -277,6 +277,23 @@
             </div>
         @endif
     </div>
+
+    {{-- Delete project (coordinator when allowed by setting; Super Admin always) --}}
+    @can('delete', $project)
+    <div class="rounded-lg border border-red-200 bg-red-50/50 p-6">
+        <h2 class="text-sm font-semibold text-red-800 mb-2">Delete project</h2>
+        <p class="text-xs text-red-700 mb-3">This will permanently delete this project and all related data (chapters, submissions, proposals, scores). The group will remain.</p>
+        <form action="{{ route('dashboard.coordinators.projects.destroy', $project) }}" method="post" onsubmit="return confirm('Delete this project and all its data? This cannot be undone.');">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="btn border border-red-400 text-red-700 bg-white hover:bg-red-50">Delete project</button>
+        </form>
+    </div>
+    @else
+    <div class="rounded-lg border border-gray-200 bg-gray-50 p-6">
+        <p class="text-sm text-gray-600">Only Super Admin can delete projects. Your administrator can allow coordinators to delete in Settings → General.</p>
+    </div>
+    @endcan
 </div>
 
 {{-- Modal for coordinator comments on a proposal (show page) --}}

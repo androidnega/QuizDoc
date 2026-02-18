@@ -99,6 +99,9 @@ class Setting extends Model
     /** Admin: allow examiners to create courses (1 = allowed). */
     public const KEY_ALLOW_EXAMINER_CREATE_COURSE = 'allow_examiner_create_course';
 
+    /** Docu Mentor: allow coordinators to delete projects (and groups that have a project). 1 = allowed, 0 = only Super Admin can delete. */
+    public const KEY_ALLOW_COORDINATOR_DELETE_PROJECT = 'allow_coordinator_delete_project';
+
     /** Admin: disable strict per-IP/per-device quiz session restrictions (1 = disabled). */
     public const KEY_DISABLE_IP_DEVICE_RESTRICTIONS = 'disable_ip_device_restrictions';
 

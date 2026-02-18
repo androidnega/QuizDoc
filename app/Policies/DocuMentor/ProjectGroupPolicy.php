@@ -3,6 +3,7 @@
 namespace App\Policies\DocuMentor;
 
 use App\Models\DocuMentor\ProjectGroup;
+use App\Models\Setting;
 use App\Models\User;
 
 class ProjectGroupPolicy
@@ -27,11 +28,17 @@ class ProjectGroupPolicy
     }
 
     /**
-     * 9. SECURITY: Leader cannot delete group after project created. Only coordinator can delete a group that has a project.
+     * 9. SECURITY: Leader cannot delete group after project created. Coordinator can delete group (and its project) only when Super Admin allows via setting.
      */
     public function delete(User $user, ProjectGroup $group): bool
     {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
         if ($user->isDocuMentorCoordinator()) {
+            if ($group->project()->exists()) {
+                return Setting::getValue(Setting::KEY_ALLOW_COORDINATOR_DELETE_PROJECT, '1') === '1';
+            }
             return true;
         }
         if ($group->leader_id === $user->id) {

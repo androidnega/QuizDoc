@@ -122,13 +122,17 @@ class ProjectGroupController extends Controller
 
     public function destroy(ProjectGroup $group): RedirectResponse
     {
-        if ($group->project()->exists()) {
-            return back()->with('error', 'Cannot delete group with a project.');
+        $this->authorize('delete', $group);
+
+        $project = $group->project;
+        if ($project) {
+            $project->fresh()->deleteWithRelated();
         }
         $group->members()->detach();
         $group->delete();
+
         return redirect()->route('dashboard.coordinators.groups.index')
-            ->with('success', 'Group deleted.');
+            ->with('success', $project ? 'Project and group deleted.' : 'Group deleted.');
     }
 
     /**

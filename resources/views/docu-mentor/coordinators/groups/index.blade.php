@@ -26,15 +26,17 @@
                             <td class="px-3 py-2 text-sm text-gray-600">{{ $g->leader?->name ?? $g->leader?->username ?? '—' }}</td>
                             <td class="px-3 py-2 text-right">
                                 <a href="{{ route('dashboard.coordinators.groups.show', $g) }}" class="text-primary-600 hover:text-primary-800 text-sm">View</a>
-                                @if(!$g->project)
-                                <form action="{{ route('dashboard.coordinators.groups.destroy', $g) }}" method="post" class="inline ml-2" onsubmit="return confirm('Delete this group?');">
+                                @can('delete', $g)
+                                <form action="{{ route('dashboard.coordinators.groups.destroy', $g) }}" method="post" class="inline ml-2" onsubmit="return confirm('{{ $g->project ? 'Delete this group and its project? This cannot be undone.' : 'Delete this group?' }}');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-600 hover:text-red-800 text-sm">Delete</button>
                                 </form>
                                 @else
-                                <span class="text-gray-400 text-sm ml-2" title="Cannot delete: group has a project">Delete</span>
+                                @if($g->project)
+                                <span class="text-gray-400 text-sm ml-2" title="Only Super Admin can delete groups that have a project. Enable in Settings → General if you are coordinator.">Delete</span>
                                 @endif
+                                @endcan
                             </td>
                         </tr>
                     @empty

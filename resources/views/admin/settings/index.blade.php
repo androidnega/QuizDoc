@@ -95,6 +95,15 @@
                             </label>
                             <p class="text-xs text-gray-500 mt-1">When enabled, students can take the same quiz from the same network or reused computers. This also disables session IP mismatch blocking during the quiz.</p>
                         </div>
+
+                        <div class="pt-4 mt-4 border-t border-gray-200">
+                            <p class="text-sm font-medium text-gray-700 mb-2">Docu Mentor – Coordinator permissions</p>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="allow_coordinator_delete_project" value="1" {{ old('allow_coordinator_delete_project', $allow_coordinator_delete_project ?? true) ? 'checked' : '' }} class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+                                <span class="text-sm text-gray-700">Allow coordinators to delete projects and groups that have a project</span>
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1">When on, coordinators can delete any Docu Mentor project (and delete a group that has a project). When off, only Super Admin can delete projects or groups with a project. Applies regardless of group members, approval status, or supervisor assignment.</p>
+                        </div>
                     </div>
 
                     <div class="pt-4 mt-4 border-t border-gray-200">
