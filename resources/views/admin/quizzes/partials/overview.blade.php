@@ -80,11 +80,15 @@
             </p>
             <p class="text-sm text-warning-800 mb-2">You can:</p>
             <ul class="text-sm text-warning-800 list-disc list-inside space-y-1 mb-3">
-                <li><strong>Add {{ $shortBy }} more:</strong> Edit the quiz and use AI to generate {{ $shortBy }} more questions (or add manually), then approve them.</li>
-                <li><strong>Use {{ $approvedCount }} questions:</strong> Edit the quiz and set "Questions per student" to {{ $approvedCount }} (or less) so you can publish with what you have.</li>
+                <li><strong>Add {{ $shortBy }} more:</strong> Use AI to generate questions below (or add manually), then approve them.</li>
+                <li><strong>Use {{ $approvedCount }} questions:</strong> Edit the quiz and set "Questions per student" to {{ $approvedCount }} (or 0) so you can publish with what you have.</li>
             </ul>
             <div class="flex flex-wrap gap-2">
-                <a href="{{ route('dashboard.quizzes.edit', $quiz) }}" class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700">Edit quiz (add more or change required number)</a>
+                <a href="{{ route('dashboard.quizzes.edit', $quiz) }}#ai-generation" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                    Generate questions with AI
+                </a>
+                <a href="{{ route('dashboard.quizzes.edit', $quiz) }}" class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">Edit quiz (topics, required number)</a>
             </div>
         </div>
     </div>

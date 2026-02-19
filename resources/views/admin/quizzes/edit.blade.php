@@ -210,8 +210,8 @@
                     <p class="text-xs text-gray-500 mt-1">Score only, full review after quiz end, or disabled (no score/review).</p>
                 </div>
 
-                <div class="border-t border-gray-200 pt-6">
-                    <h3 class="text-base font-semibold text-gray-900 mb-2">AI question generation (Gemini, browser-safe)</h3>
+                <div id="ai-generation" class="border-t border-gray-200 pt-6">
+                    <h3 class="text-base font-semibold text-gray-900 mb-2">AI question generation (Gemini / DeepSeek)</h3>
                     <p class="text-sm text-gray-600 mb-3">Generates in safe chunks to avoid timeout and support larger pools (for example 120 to 150 questions).</p>
                     <div class="inline-flex flex-wrap items-end gap-3">
                         <div>

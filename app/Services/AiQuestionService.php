@@ -172,6 +172,7 @@ class AiQuestionService
                 'model' => 'deepseek-chat',
                 'messages' => [['role' => 'user', 'content' => $prompt]],
                 'temperature' => 0.7,
+                'max_tokens' => 8192,
             ]);
         if (!$response->successful()) {
             $status = $response->status();
@@ -301,43 +302,48 @@ class AiQuestionService
     }
 
     /**
-     * Call AI: Gemini first, DeepSeek as fallback. Always falls through to DeepSeek when Gemini fails
-     * for any reason (quota, 429, bad key, empty response).
-     * Returns ['text' => string|null, 'provider' => string|null, 'usage' => [...] ].
+     * Call AI: try DeepSeek first when both keys exist (avoids Gemini quota blocking generation),
+     * then Gemini; if the first fails, try the other. Returns ['text' => ..., 'provider' => ..., 'usage' => ...].
      */
     private function callAiWithUsage(string $prompt): array
     {
         $empty = ['text' => null, 'provider' => null, 'usage' => ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0]];
         $geminiKey = $this->getGeminiKey();
-        $geminiError = null;
-        if ($geminiKey !== null) {
-            $result = $this->callGemini($geminiKey, $prompt);
-            if (isset($result['text']) && $result['text'] !== null && $result['text'] !== '') {
-                return ['text' => $result['text'], 'provider' => 'gemini', 'usage' => $result['usage'] ?? $empty['usage']];
-            }
-            // Save Gemini error so we can report it if DeepSeek also fails.
-            $geminiError = $this->lastApiError;
-        }
-        // Always try DeepSeek when Gemini fails (quota, 429, bad key, etc.)
         $deepseekKey = $this->getDeepSeekKey();
-        if ($deepseekKey !== null) {
-            $result = $this->callDeepSeek($deepseekKey, $prompt);
-            if (isset($result['text']) && $result['text'] !== null && $result['text'] !== '') {
-                $this->lastApiError = null; // DeepSeek succeeded — clear any Gemini error
-                return ['text' => $result['text'], 'provider' => 'deepseek', 'usage' => $result['usage'] ?? $empty['usage']];
+        $firstError = null;
+        $secondError = null;
+
+        // Try DeepSeek first when both are set so quota-limited Gemini doesn't block generation.
+        $order = $deepseekKey !== null && $geminiKey !== null
+            ? [['provider' => 'deepseek', 'key' => $deepseekKey], ['provider' => 'gemini', 'key' => $geminiKey]]
+            : ($deepseekKey !== null
+                ? [['provider' => 'deepseek', 'key' => $deepseekKey]]
+                : ($geminiKey !== null ? [['provider' => 'gemini', 'key' => $geminiKey]] : []));
+
+        foreach ($order as $item) {
+            if ($item['provider'] === 'deepseek') {
+                $result = $this->callDeepSeek($item['key'], $prompt);
+            } else {
+                $result = $this->callGemini($item['key'], $prompt);
             }
-            // Both failed — combine the errors
-            $deepseekError = $this->lastApiError;
-            $this->lastApiError = trim(
-                ($geminiError ? 'Gemini: ' . $geminiError . '.' : '')
-                . ($deepseekError ? ' DeepSeek: ' . $deepseekError . '.' : '')
-            ) ?: 'Both Gemini and DeepSeek returned no text.';
-            return $empty;
+            if (isset($result['text']) && $result['text'] !== null && $result['text'] !== '') {
+                $this->lastApiError = null;
+                return [
+                    'text' => $result['text'],
+                    'provider' => $item['provider'],
+                    'usage' => $result['usage'] ?? $empty['usage'],
+                ];
+            }
+            if ($firstError === null) {
+                $firstError = $this->lastApiError;
+            } else {
+                $secondError = $this->lastApiError;
+            }
         }
-        // No DeepSeek key — restore Gemini error as the last error
-        if ($geminiError !== null) {
-            $this->lastApiError = $geminiError;
-        }
+
+        $this->lastApiError = trim(
+            ($firstError ? $firstError . '.' : '') . ($secondError ? ' ' . $secondError : '')
+        ) ?: 'No API key set. Add a Gemini or DeepSeek key in Dashboard → Settings → AI.';
         return $empty;
     }
 
