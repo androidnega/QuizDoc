@@ -370,6 +370,19 @@ class ClassGroupController extends Controller
     {
         $this->authorize('delete', $classGroup);
         $name = $classGroup->name;
+
+        // Before deleting the class group, cascade cleanup for all students in this group
+        // so that Docu Mentor group leaders and memberships do not keep stale references.
+        $removedIndices = $classGroup->students()->pluck('index_number');
+        foreach ($removedIndices as $removedIndex) {
+            \App\Models\Student::deleteEverywhereByIndex($removedIndex);
+            $indexUpper = strtoupper(trim($removedIndex));
+            \Illuminate\Support\Facades\Cache::forget('student_otp:' . $removedIndex);
+            \Illuminate\Support\Facades\Cache::forget('student_otp:' . $indexUpper);
+        }
+        // Remove class group student rows (any remaining links are now safe to drop).
+        $classGroup->students()->delete();
+
         try {
             $classGroup->delete();
         } catch (QueryException $e) {
