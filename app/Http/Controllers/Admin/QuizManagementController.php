@@ -1299,9 +1299,8 @@ class QuizManagementController extends Controller
             ]);
         }
 
-        // Give this request enough wall-clock time for one Gemini call (≤60 s) plus DB writes.
-        // Do NOT lower this — the default XAMPP php.ini is often 30 s which kills the request.
-        @set_time_limit(90);
+        // Allow time for main AI call + simple fallback + one-question fallback (e.g. 90+45+30s).
+        @set_time_limit(180);
 
         // ONE Gemini call per chunk (≤10 questions). The JS outer loop handles retries,
         // so cascading 5-6 attempts inside a single PHP request is unnecessary and exceeds
@@ -1327,32 +1326,21 @@ class QuizManagementController extends Controller
                 $generatedThisBatch = count($generatedIds);
             }
 
-            // Hard-error detection: surface the actual API error instead of silently retrying 20 times.
+            // Only throw on definitive auth failures so the user can fix the key. Timeout/quota/empty
+            // are left to the normal message so generation can retry or user can add DeepSeek.
             if ($generatedThisBatch === 0) {
                 $apiError = $aiService->getLastApiError();
                 if ($apiError !== null) {
                     $lower = strtolower($apiError);
                     $isAuthError = str_contains($lower, 'api_key_invalid')
                         || str_contains($lower, 'permission_denied')
+                        || str_contains($lower, 'invalid api key')
                         || str_contains($lower, 'http 401')
                         || str_contains($lower, 'http 403');
-                    $isQuotaError = str_contains($lower, 'resource_exhausted')
-                        || str_contains($lower, 'quota')
-                        || str_contains($lower, 'http 429');
                     if ($isAuthError) {
-                        throw new \RuntimeException('Gemini API key error: ' . $apiError
-                            . ' — Go to Dashboard → Settings → AI and replace your Gemini API key.');
-                    }
-                    if ($isQuotaError) {
-                        // Parse "retry in Xs" hint from the error if present.
-                        $retrySeconds = 30;
-                        if (preg_match('/retry[^\d]*(\d+(?:\.\d+)?)\s*s/i', $apiError, $m)) {
-                            $retrySeconds = (int) ceil((float) $m[1]);
-                        }
                         throw new \RuntimeException(
-                            'Gemini quota exceeded (free tier limit reached). '
-                            . 'Retry in ~' . $retrySeconds . 's, or go to https://aistudio.google.com and enable billing for higher limits. '
-                            . 'Error: ' . $apiError
+                            'API key error: ' . $apiError
+                            . ' — Go to Dashboard → Settings → AI and set a valid Gemini or DeepSeek API key.'
                         );
                     }
                 }

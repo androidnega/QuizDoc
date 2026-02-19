@@ -50,7 +50,7 @@ class AiQuestionService
         foreach ([self::GEMINI_MODEL_PRIMARY, self::GEMINI_MODEL_FALLBACK] as $model) {
             $triedModels[] = $model;
             $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . urlencode($apiKey);
-            $response = Http::timeout(60)
+            $response = Http::timeout(90)
                 ->post($url, [
                     'contents' => [
                         ['parts' => [['text' => $prompt]]],
@@ -167,7 +167,7 @@ class AiQuestionService
     {
         $emptyUsage = ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0];
         $response = Http::withToken($apiKey)
-            ->timeout(60)
+            ->timeout(90)
             ->post('https://api.deepseek.com/v1/chat/completions', [
                 'model' => 'deepseek-chat',
                 'messages' => [['role' => 'user', 'content' => $prompt]],
@@ -381,7 +381,19 @@ class AiQuestionService
         }
         $json = substr($content, $start, $end - $start + 1);
         $decoded = json_decode($json, true);
-        return is_array($decoded) ? $decoded : null;
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+        // Truncated or malformed JSON: try repairing (trailing comma, missing bracket)
+        $repaired = preg_replace('/,\s*$/', '', $json);
+        if (substr(rtrim($repaired), -1) !== ']') {
+            $repaired .= ']';
+        }
+        $decoded = json_decode($repaired, true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+        return null;
     }
 
     /**
@@ -455,7 +467,18 @@ class AiQuestionService
         $content = $result['text'] ?? null;
         $decoded = ($content !== null && $content !== '') ? $this->parseJsonArray($content) : null;
         if (! is_array($decoded) || empty($decoded)) {
-            // One clean call per chunk request; retries are handled by the outer JS loop.
+            // Fallback: simpler prompt often works when the main one times out or returns bad JSON.
+            $fallbackCount = min(3, $count);
+            $ids = $this->generatePoolAndStoreSimple($quiz, $topicNames, $fallbackCount, '');
+            if (! empty($ids)) {
+                return array_slice($ids, 0, $count);
+            }
+            if ($count >= 1) {
+                $ids = $this->generateOneQuestionMinimal($quiz, $topicNames);
+                if (! empty($ids)) {
+                    return $ids;
+                }
+            }
             return [];
         }
         $ids = [];

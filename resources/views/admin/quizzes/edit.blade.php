@@ -453,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statusText.textContent = label || ('Generated ' + generated + ' / ' + target);
     }
 
-    var CHUNK_TIMEOUT_MS = 100000; // 100 s — gives PHP's 90 s set_time_limit room to respond
+    var CHUNK_TIMEOUT_MS = 190000; // 190 s — allows PHP set_time_limit(180) for main + fallback calls
 
     async function postJson(url, payload, opts) {
         opts = opts || {};
