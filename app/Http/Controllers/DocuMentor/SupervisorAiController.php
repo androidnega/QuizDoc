@@ -21,10 +21,11 @@ class SupervisorAiController extends Controller
 {
     private const MAX_AI_REVIEWS_PER_SUBMISSION = 2;
 
-    public function reviewSubmission(Request $request, Project $project, Chapter $chapter, Submission $submission): RedirectResponse
+    public function reviewSubmission(Request $request, Project $project, int $chapterRef, Submission $submission): RedirectResponse
     {
+        $chapter = $project->resolveChapterByRef($chapterRef) ?? abort(404);
         $this->authorize('view', $submission);
-        if ($submission->chapter_id !== $chapter->id || $chapter->project_id !== $project->id) {
+        if ($submission->chapter_id !== $chapter->id) {
             abort(404);
         }
 

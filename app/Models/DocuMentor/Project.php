@@ -53,6 +53,20 @@ class Project extends Model
         return $this->chapters()->where('completed', false)->doesntExist();
     }
 
+    /**
+     * Resolve chapter by URL ref: order (1–6) first, then by id. Used so .../chapters/1 (order) and .../chapters/25 (id) both work.
+     */
+    public function resolveChapterByRef(int $chapterRef): ?Chapter
+    {
+        if ($chapterRef >= 1 && $chapterRef <= 6) {
+            $chapter = $this->chapters()->where('order', $chapterRef)->first();
+            if ($chapter) {
+                return $chapter;
+            }
+        }
+        return $this->chapters()->find($chapterRef);
+    }
+
     /** True when every assigned supervisor has approved via SupervisorProjectApproval (approved = true or approved_at set). */
     public function allSupervisorsApproved(): bool
     {

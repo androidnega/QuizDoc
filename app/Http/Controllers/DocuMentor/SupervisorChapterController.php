@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
  * D. SUPERVISOR FLOW: Chapter Control Logic.
  * Rule: Only ONE chapter can be open at a time.
  * When opening a chapter: set all chapters is_open = false, then set selected chapter is_open = true.
+ * Chapter ref in URLs: order (1-6) or id; resolve so Save and actions work from page .../chapters/1.
  */
 class SupervisorChapterController extends Controller
 {
@@ -33,12 +34,9 @@ class SupervisorChapterController extends Controller
     /**
      * Chapter Control: only one chapter open at a time. If is_open = true, close all others first.
      */
-    public function update(Request $request, Project $project, Chapter $chapter): RedirectResponse
+    public function update(Request $request, Project $project, int $chapterRef): RedirectResponse
     {
-        $user = request()->attributes->get('dm_user');
-        if ($chapter->project_id !== $project->id) {
-            abort(404);
-        }
+        $chapter = $project->resolveChapterByRef($chapterRef) ?? abort(404);
         $this->authorize('update', [$chapter, $project]);
 
         $request->validate([
@@ -75,12 +73,9 @@ class SupervisorChapterController extends Controller
     /**
      * Chapter Control: only one chapter open at a time. When opening: set all chapters is_open = false, then set selected is_open = true.
      */
-    public function toggleOpen(Project $project, Chapter $chapter): RedirectResponse
+    public function toggleOpen(Project $project, int $chapterRef): RedirectResponse
     {
-        $user = request()->attributes->get('dm_user');
-        if ($chapter->project_id !== $project->id) {
-            abort(404);
-        }
+        $chapter = $project->resolveChapterByRef($chapterRef) ?? abort(404);
         $this->authorize('update', [$chapter, $project]);
 
         $newOpen = !$chapter->is_open;
@@ -99,12 +94,9 @@ class SupervisorChapterController extends Controller
      * Chapter completion (spec): When supervisor clicks "Complete Chapter", set completed = true and is_open = false.
      * When reverting to in progress, set completed = false only.
      */
-    public function markCompleted(Project $project, Chapter $chapter): RedirectResponse
+    public function markCompleted(Project $project, int $chapterRef): RedirectResponse
     {
-        $user = request()->attributes->get('dm_user');
-        if ($chapter->project_id !== $project->id) {
-            abort(404);
-        }
+        $chapter = $project->resolveChapterByRef($chapterRef) ?? abort(404);
         $this->authorize('update', [$chapter, $project]);
 
         $newCompleted = !$chapter->completed;
@@ -116,12 +108,9 @@ class SupervisorChapterController extends Controller
         return back()->with('success', 'Chapter marked as ' . ($chapter->fresh()->completed ? 'completed' : 'in progress') . '.');
     }
 
-    public function toggleAllSubmissions(Project $project, Chapter $chapter): RedirectResponse
+    public function toggleAllSubmissions(Project $project, int $chapterRef): RedirectResponse
     {
-        $user = request()->attributes->get('dm_user');
-        if ($chapter->project_id !== $project->id) {
-            abort(404);
-        }
+        $chapter = $project->resolveChapterByRef($chapterRef) ?? abort(404);
         $this->authorize('update', [$chapter, $project]);
 
         $submissions = $chapter->submissions;

@@ -16,12 +16,10 @@ use Illuminate\Support\Facades\Storage;
  */
 class SupervisorSubmissionController extends Controller
 {
-    public function store(Request $request, Project $project, Chapter $chapter): RedirectResponse
+    public function store(Request $request, Project $project, int $chapterRef): RedirectResponse
     {
+        $chapter = $project->resolveChapterByRef($chapterRef) ?? abort(404);
         $user = request()->attributes->get('dm_user');
-        if ($chapter->project_id !== $project->id) {
-            abort(404);
-        }
         $this->authorize('createSubmission', [$project, $chapter]);
 
         $isChapter6 = $chapter->order === 6;
@@ -51,10 +49,10 @@ class SupervisorSubmissionController extends Controller
         return back()->with('success', 'Submission created.');
     }
 
-    public function update(Request $request, Project $project, Chapter $chapter, Submission $submission): RedirectResponse
+    public function update(Request $request, Project $project, int $chapterRef, Submission $submission): RedirectResponse
     {
-        $user = request()->attributes->get('dm_user');
-        if ($chapter->project_id !== $project->id || $submission->chapter_id !== $chapter->id) {
+        $chapter = $project->resolveChapterByRef($chapterRef) ?? abort(404);
+        if ($submission->chapter_id !== $chapter->id) {
             abort(404);
         }
         $this->authorize('update', $submission);
@@ -74,10 +72,10 @@ class SupervisorSubmissionController extends Controller
         return back()->with('success', 'Submission updated.');
     }
 
-    public function destroy(Project $project, Chapter $chapter, Submission $submission): RedirectResponse
+    public function destroy(Project $project, int $chapterRef, Submission $submission): RedirectResponse
     {
-        $user = request()->attributes->get('dm_user');
-        if ($chapter->project_id !== $project->id || $submission->chapter_id !== $chapter->id) {
+        $chapter = $project->resolveChapterByRef($chapterRef) ?? abort(404);
+        if ($submission->chapter_id !== $chapter->id) {
             abort(404);
         }
         $this->authorize('delete', $submission);
