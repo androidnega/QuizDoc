@@ -160,7 +160,8 @@ class AiQuestionService
     }
 
     /**
-     * Call DeepSeek API (OpenAI-compatible). Returns ['text' => string|null, 'usage' => [...]].
+     * Call DeepSeek API (OpenAI-compatible). Sets $this->lastApiError on failure.
+     * Returns ['text' => string|null, 'usage' => [...]].
      */
     private function callDeepSeek(string $apiKey, string $prompt): array
     {
@@ -173,10 +174,15 @@ class AiQuestionService
                 'temperature' => 0.7,
             ]);
         if (!$response->successful()) {
+            $status = $response->status();
+            $parsed = $response->json() ?? [];
+            $apiMsg = $parsed['error']['message'] ?? $parsed['message'] ?? null;
+            $this->lastApiError = '[DeepSeek HTTP ' . $status . ']' . ($apiMsg ? ' ' . $apiMsg : '');
             return ['text' => null, 'usage' => $emptyUsage];
         }
         $body = $response->json();
         if (!is_array($body) || empty($body['choices'][0]['message']['content'])) {
+            $this->lastApiError = '[DeepSeek] Empty or unexpected response structure.';
             return ['text' => null, 'usage' => $emptyUsage];
         }
         $usage = $emptyUsage;
@@ -191,16 +197,20 @@ class AiQuestionService
                 $usage['total_tokens'] = $usage['prompt_tokens'] + $usage['completion_tokens'];
             }
         }
+        $this->lastApiError = null; // clear on success
         return ['text' => $body['choices'][0]['message']['content'], 'usage' => $usage];
     }
 
     /**
-     * Test AI connection: try Gemini first, then DeepSeek. Returns result for API/UI.
+     * Test AI connection: try Gemini first, then always fall through to DeepSeek as fallback.
+     * Returns result for API/UI.
      */
     public function testConnection(): array
     {
         $prompt = 'Reply with exactly: OK';
         $geminiKey = $this->getGeminiKey();
+        $geminiFailDetail = null;
+
         if ($geminiKey !== null) {
             foreach ([self::GEMINI_MODEL_PRIMARY, self::GEMINI_MODEL_FALLBACK] as $model) {
                 $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . urlencode($geminiKey);
@@ -211,23 +221,35 @@ class AiQuestionService
                 if ($response->status() === 404) {
                     continue;
                 }
+                if ($response->status() === 429) {
+                    // Rate-limited — fall through to DeepSeek fallback
+                    $parsed = $response->json() ?? [];
+                    $geminiFailDetail = 'Gemini quota exceeded (HTTP 429).'
+                        . ($parsed['error']['message'] ? ' ' . mb_substr((string)$parsed['error']['message'], 0, 200) : '');
+                    break;
+                }
                 if ($response->successful()) {
                     $body = $response->json();
                     if (is_array($body) && !empty($body['candidates'][0]['content']['parts'][0]['text'])) {
                         $text = $body['candidates'][0]['content']['parts'][0]['text'];
                         if (is_string($text) && trim($text) !== '') {
-                            return ['success' => true, 'provider' => 'gemini', 'message' => 'AI connection OK.', 'reply' => trim($text)];
+                            return ['success' => true, 'provider' => 'gemini', 'message' => 'AI connection OK (Gemini).', 'reply' => trim($text)];
                         }
                     }
-                    // HTTP 200 but empty/blocked or unexpected structure
-                    $detail = $this->geminiFailureDetail($response->body(), $response->json());
+                    $geminiFailDetail = $this->geminiFailureDetail($response->body(), $response->json());
                 } else {
-                    $detail = 'HTTP ' . $response->status() . ': ' . (strlen($response->body()) > 500 ? substr($response->body(), 0, 500) . '…' : $response->body());
+                    $geminiFailDetail = 'Gemini HTTP ' . $response->status() . ': '
+                        . (strlen($response->body()) > 300 ? substr($response->body(), 0, 300) . '…' : $response->body());
                 }
-                return ['success' => false, 'provider' => 'gemini', 'message' => 'Gemini request failed.', 'detail' => $detail];
+                break; // non-404, non-429 error — stop trying Gemini models
             }
-            return ['success' => false, 'provider' => 'gemini', 'message' => 'Gemini model not found (404). Try again later or check API updates.', 'detail' => null];
+            if ($geminiFailDetail === null) {
+                // All models returned 404
+                $geminiFailDetail = 'Gemini: all models returned 404. Check model availability.';
+            }
         }
+
+        // Always try DeepSeek as fallback when Gemini fails or has no key.
         $deepseekKey = $this->getDeepSeekKey();
         if ($deepseekKey !== null) {
             $response = Http::withToken($deepseekKey)
@@ -242,11 +264,19 @@ class AiQuestionService
                 $body = $response->json();
                 $text = $body['choices'][0]['message']['content'] ?? null;
                 if (is_string($text) && trim($text) !== '') {
-                    return ['success' => true, 'provider' => 'deepseek', 'message' => 'AI connection OK.', 'reply' => trim($text)];
+                    $msg = $geminiFailDetail
+                        ? 'DeepSeek OK (Gemini fallback active — ' . $geminiFailDetail . ').'
+                        : 'AI connection OK (DeepSeek).';
+                    return ['success' => true, 'provider' => 'deepseek', 'message' => $msg, 'reply' => trim($text)];
                 }
             }
-            $detail = $response->successful() ? null : ('HTTP ' . $response->status() . ': ' . $response->body());
-            return ['success' => false, 'provider' => 'deepseek', 'message' => 'DeepSeek request failed.', 'detail' => $detail];
+            $dsDetail = 'HTTP ' . $response->status() . ': ' . (strlen($response->body()) > 200 ? substr($response->body(), 0, 200) . '…' : $response->body());
+            $combined = trim(($geminiFailDetail ? $geminiFailDetail . ' ' : '') . 'DeepSeek: ' . $dsDetail);
+            return ['success' => false, 'provider' => 'deepseek', 'message' => 'Both Gemini and DeepSeek failed.', 'detail' => $combined];
+        }
+
+        if ($geminiFailDetail !== null) {
+            return ['success' => false, 'provider' => 'gemini', 'message' => 'Gemini failed and no DeepSeek key is configured.', 'detail' => $geminiFailDetail];
         }
         return ['success' => false, 'provider' => null, 'message' => 'No API key set. Add a Gemini or DeepSeek key in Settings.', 'detail' => null];
     }
@@ -271,24 +301,42 @@ class AiQuestionService
     }
 
     /**
-     * Call AI and return text plus provider and usage for logging. Returns ['text' => string|null, 'provider' => string|null, 'usage' => [...]].
+     * Call AI: Gemini first, DeepSeek as fallback. Always falls through to DeepSeek when Gemini fails
+     * for any reason (quota, 429, bad key, empty response).
+     * Returns ['text' => string|null, 'provider' => string|null, 'usage' => [...] ].
      */
     private function callAiWithUsage(string $prompt): array
     {
         $empty = ['text' => null, 'provider' => null, 'usage' => ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0]];
         $geminiKey = $this->getGeminiKey();
+        $geminiError = null;
         if ($geminiKey !== null) {
             $result = $this->callGemini($geminiKey, $prompt);
             if (isset($result['text']) && $result['text'] !== null && $result['text'] !== '') {
                 return ['text' => $result['text'], 'provider' => 'gemini', 'usage' => $result['usage'] ?? $empty['usage']];
             }
+            // Save Gemini error so we can report it if DeepSeek also fails.
+            $geminiError = $this->lastApiError;
         }
+        // Always try DeepSeek when Gemini fails (quota, 429, bad key, etc.)
         $deepseekKey = $this->getDeepSeekKey();
         if ($deepseekKey !== null) {
             $result = $this->callDeepSeek($deepseekKey, $prompt);
             if (isset($result['text']) && $result['text'] !== null && $result['text'] !== '') {
+                $this->lastApiError = null; // DeepSeek succeeded — clear any Gemini error
                 return ['text' => $result['text'], 'provider' => 'deepseek', 'usage' => $result['usage'] ?? $empty['usage']];
             }
+            // Both failed — combine the errors
+            $deepseekError = $this->lastApiError;
+            $this->lastApiError = trim(
+                ($geminiError ? 'Gemini: ' . $geminiError . '.' : '')
+                . ($deepseekError ? ' DeepSeek: ' . $deepseekError . '.' : '')
+            ) ?: 'Both Gemini and DeepSeek returned no text.';
+            return $empty;
+        }
+        // No DeepSeek key — restore Gemini error as the last error
+        if ($geminiError !== null) {
+            $this->lastApiError = $geminiError;
         }
         return $empty;
     }
