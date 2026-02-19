@@ -28,7 +28,7 @@ class SettingsController extends Controller
 
         $currentUser = auth()->user() ?? User::find(session('admin_user_id'));
         $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
-        $canManageProctoring = $currentUser && $currentUser->isSuperAdmin() && $currentUser->id === $primarySuperAdminId;
+        $canManageProctoring = $currentUser && $currentUser->isSuperAdmin();
         // Show Backup tab when user is super admin (from model or session – settings route is admin-only)
         $isSuperAdmin = ($currentUser && $currentUser->isSuperAdmin()) || session('admin_role') === User::ROLE_SUPER_ADMIN;
         // Primary can configure backup: match by loaded user id or by session (in case $currentUser is null on some setups)
@@ -137,7 +137,7 @@ class SettingsController extends Controller
 
         $currentUser = auth()->user() ?? User::find(session('admin_user_id'));
         $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
-        $canManageProctoring = $currentUser && $currentUser->isSuperAdmin() && $currentUser->id === $primarySuperAdminId;
+        $canManageProctoring = $currentUser && $currentUser->isSuperAdmin();
         $isPrimarySuperAdmin = $primarySuperAdminId !== null && (
             ($currentUser && (int) $currentUser->id === (int) $primarySuperAdminId)
             || ((int) session('admin_user_id') === (int) $primarySuperAdminId)
