@@ -67,4 +67,21 @@ return Application::configure(basePath: dirname(__DIR__))
             // Staff (supervisor/coordinator/etc.) hitting student-only path: show 403 instead of 404
             return \Illuminate\Support\Facades\Response::make('403 | Student access required.', 403);
         });
+        // Docu Mentor chapter URL 404: redirect to project page instead of raw 404 (e.g. stale link or chapter removed)
+        $exceptions->renderable(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, $request) {
+            if (!$request instanceof \Illuminate\Http\Request) {
+                return null;
+            }
+            $path = $request->path();
+            if (!preg_match('#^dashboard/docu-mentor/projects/(\d+)/chapters/\d+#', $path, $m)) {
+                return null;
+            }
+            $projectId = (int) $m[1];
+            $project = \App\Models\DocuMentor\Project::find($projectId);
+            if (!$project) {
+                return null; // Project missing too, let default 404 show
+            }
+            return redirect()->route('dashboard.docu-mentor.projects.show', $project)
+                ->with('error', 'Chapter not found. It may have been removed or the link is outdated. Please open the chapter from the project page.');
+        });
     })->create();

@@ -382,7 +382,7 @@ Route::middleware('admin.auth')->group(function () {
         });
 
         // Examiner (Docu Mentor supervisor): /dashboard/docu-mentor/projects — follows dashboard rules
-        Route::middleware('docu-mentor.supervisor')->prefix('docu-mentor')->name('docu-mentor.')->scopeBindings()->group(function () {
+        Route::middleware('docu-mentor.supervisor')->prefix('docu-mentor')->name('docu-mentor.')->group(function () {
             Route::get('/projects', [\App\Http\Controllers\DocuMentor\SupervisorProjectController::class, 'index'])->name('projects.index');
             Route::get('/projects/{project}', [\App\Http\Controllers\DocuMentor\SupervisorProjectController::class, 'show'])->name('projects.show');
             Route::get('/projects/{project}/chapters/{chapter}', [\App\Http\Controllers\DocuMentor\SupervisorChapterController::class, 'show'])->name('chapters.show');
