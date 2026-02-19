@@ -12,8 +12,11 @@ use Illuminate\Support\Str;
 
 class AiQuestionService
 {
-    private const GEMINI_MODEL_PRIMARY = 'gemini-2.5-flash';
-    private const GEMINI_MODEL_FALLBACK = 'gemini-2.0-flash';
+    private const GEMINI_MODEL_PRIMARY = 'gemini-2.0-flash';
+    private const GEMINI_MODEL_FALLBACK = 'gemini-1.5-flash';
+
+    /** Last API error message — set on any failure, cleared on success. */
+    private ?string $lastApiError = null;
 
     /** Prefer database (Setting) over config/env so admin dashboard keys are used for generation. */
     private function getGeminiKey(): ?string
@@ -37,12 +40,15 @@ class AiQuestionService
 
     /**
      * Call Gemini API (Google AI). Tries primary model, then fallback on 404.
-     * Returns ['text' => string|null, 'usage' => ['prompt_tokens' => int, 'completion_tokens' => int, 'total_tokens' => int]].
+     * Sets $this->lastApiError on every failure path so callers can surface the real reason.
+     * Returns ['text' => string|null, 'usage' => [...] ].
      */
     private function callGemini(string $apiKey, string $prompt): array
     {
         $emptyUsage = ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0];
+        $triedModels = [];
         foreach ([self::GEMINI_MODEL_PRIMARY, self::GEMINI_MODEL_FALLBACK] as $model) {
+            $triedModels[] = $model;
             $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . urlencode($apiKey);
             $response = Http::timeout(60)
                 ->post($url, [
@@ -54,17 +60,33 @@ class AiQuestionService
                         'maxOutputTokens' => 16384,
                     ],
                 ]);
+
             if ($response->status() === 404) {
+                $this->lastApiError = 'Model "' . $model . '" not found (404). Trying next model.';
                 continue;
             }
+
             if (!$response->successful()) {
+                $status = $response->status();
+                $parsed = $response->json() ?? [];
+                $apiMsg = $parsed['error']['message'] ?? $parsed['error']['status'] ?? null;
+                $this->lastApiError = '[' . $model . ' HTTP ' . $status . ']' . ($apiMsg ? ' ' . $apiMsg : '');
                 return ['text' => null, 'usage' => $emptyUsage];
             }
+
             $body = $response->json();
             if (!is_array($body) || empty($body['candidates'][0])) {
+                $this->lastApiError = '[' . $model . '] Unexpected response structure (no candidates).';
                 return ['text' => null, 'usage' => $emptyUsage];
             }
+
             $candidate = $body['candidates'][0];
+            $finishReason = $candidate['finishReason'] ?? $candidate['finish_reason'] ?? null;
+            if ($finishReason && strtoupper((string) $finishReason) !== 'STOP') {
+                $this->lastApiError = '[' . $model . '] finishReason=' . $finishReason . ' (response blocked or filtered).';
+                return ['text' => null, 'usage' => $emptyUsage];
+            }
+
             $text = $candidate['content']['parts'][0]['text'] ?? null;
             $usage = $emptyUsage;
             if (isset($body['usageMetadata']) && is_array($body['usageMetadata'])) {
@@ -79,11 +101,23 @@ class AiQuestionService
                 }
             }
             if (is_string($text) && $text !== '') {
+                $this->lastApiError = null; // clear on success
                 return ['text' => $text, 'usage' => $usage];
             }
+            $this->lastApiError = '[' . $model . '] Gemini returned an empty text response.';
             return ['text' => null, 'usage' => $usage];
         }
+        $this->lastApiError = 'All Gemini models returned 404 (' . implode(', ', $triedModels) . '). Check your API key or model availability.';
         return ['text' => null, 'usage' => $emptyUsage];
+    }
+
+    /**
+     * Returns the last API error message (set when any Gemini or AI call fails).
+     * Useful for surfacing the real reason why generation returned 0 questions.
+     */
+    public function getLastApiError(): ?string
+    {
+        return $this->lastApiError;
     }
 
     /**
@@ -352,20 +386,7 @@ class AiQuestionService
         $content = $result['text'] ?? null;
         $decoded = ($content !== null && $content !== '') ? $this->parseJsonArray($content) : null;
         if (! is_array($decoded) || empty($decoded)) {
-            $ids = $this->generatePoolAndStoreSimple($quiz, $topicNames, $count, '');
-            if (! empty($ids)) {
-                return $ids;
-            }
-            $ids = $this->generatePoolAndStoreSimple($quiz, $topicNames, $count, $context);
-            if (! empty($ids)) {
-                return $ids;
-            }
-            if ($count >= 1) {
-                $ids = $this->generateOneQuestionMinimal($quiz, $topicNames);
-                if (! empty($ids)) {
-                    return $ids;
-                }
-            }
+            // One clean call per chunk request; retries are handled by the outer JS loop.
             return [];
         }
         $ids = [];

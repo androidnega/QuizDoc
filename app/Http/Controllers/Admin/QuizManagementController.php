@@ -1326,6 +1326,24 @@ class QuizManagementController extends Controller
                 $generatedIds = $aiService->generatePoolAndStore($quiz, $topics, $batchSize, $sourceText);
                 $generatedThisBatch = count($generatedIds);
             }
+
+            // Hard-error detection: surface the actual API error instead of silently retrying 20 times.
+            if ($generatedThisBatch === 0) {
+                $apiError = $aiService->getLastApiError();
+                if ($apiError !== null) {
+                    $lower = strtolower($apiError);
+                    $isHardError = str_contains($lower, 'api_key_invalid')
+                        || str_contains($lower, 'resource_exhausted')
+                        || str_contains($lower, 'permission_denied')
+                        || str_contains($lower, 'quota')
+                        || str_contains($lower, 'http 401')
+                        || str_contains($lower, 'http 403')
+                        || str_contains($lower, 'http 429');
+                    if ($isHardError) {
+                        throw new \RuntimeException('Gemini API error: ' . $apiError);
+                    }
+                }
+            }
         } catch (\Throwable $e) {
             $state['status'] = 'failed';
             $state['message'] = 'Generation failed: ' . $e->getMessage();
@@ -1348,10 +1366,15 @@ class QuizManagementController extends Controller
             $state['status'] = 'completed';
             $state['message'] = 'Generation complete.';
         } elseif ((int) $state['empty_batches'] >= 20) {
+            $apiError = $aiService->getLastApiError();
             $state['status'] = 'failed';
-            $state['message'] = 'AI returned no questions after many attempts. Check Dashboard → Settings → AI: ensure a Gemini or DeepSeek API key is set and has quota. Try 1–2 short topic names (e.g. "Mathematics", "Biology") then run again.';
+            $state['message'] = 'AI returned no questions after many attempts.'
+                . ($apiError ? ' Last Gemini error: ' . $apiError . '.' : '')
+                . ' Check Dashboard → Settings → AI: ensure a Gemini or DeepSeek API key is set with valid quota. Try 1–2 short topic names (e.g. "Mathematics", "Biology") then run again.';
         } else {
-            $state['message'] = 'Generated ' . $state['generated_count'] . ' of ' . $state['target_count'] . '...';
+            $apiError = $aiService->getLastApiError();
+            $state['message'] = 'Generated ' . $state['generated_count'] . ' of ' . $state['target_count'] . '...'
+                . ($apiError ? ' (last attempt: ' . $apiError . ')' : '');
         }
 
         Cache::put($cacheKey, $state, now()->addMinutes(120));
