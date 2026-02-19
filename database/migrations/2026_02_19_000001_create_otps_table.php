@@ -13,20 +13,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('otps', function (Blueprint $table) {
-            $table->id();
-            $table->string('index_number_hash', 64)->index();
-            $table->string('type', 32)->index(); // student_login | examiner_fallback
-            $table->string('code', 10);
-            $table->string('phone', 20)->nullable(); // for first-time tie to student on verify
-            $table->timestamp('expires_at')->nullable();
-            $table->timestamp('used_at')->nullable(); // only for examiner_fallback; student_login remains reusable
-            $table->timestamps();
-        });
-
-        Schema::table('otps', function (Blueprint $table) {
-            $table->index(['index_number_hash', 'type', 'created_at']);
-        });
+        // Some environments already have an otps table from earlier work.
+        // Make this migration idempotent: if the table exists, do nothing.
+        if (! Schema::hasTable('otps')) {
+            Schema::create('otps', function (Blueprint $table) {
+                $table->id();
+                $table->string('index_number_hash', 64)->index();
+                $table->string('type', 32)->index(); // student_login | examiner_fallback
+                $table->string('code', 10);
+                $table->string('phone', 20)->nullable(); // for first-time tie to student on verify
+                $table->timestamp('expires_at')->nullable();
+                $table->timestamp('used_at')->nullable(); // only for examiner_fallback; student_login remains reusable
+                $table->timestamps();
+                $table->index(['index_number_hash', 'type', 'created_at']);
+            });
+        }
     }
 
     /**
