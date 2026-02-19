@@ -14,6 +14,7 @@ class AiQuestionService
 {
     private const GEMINI_MODEL_PRIMARY = 'gemini-2.0-flash';
     private const GEMINI_MODEL_FALLBACK = 'gemini-1.5-flash';
+    private const GEMINI_MODEL_LAST_RESORT = 'gemini-1.5-pro';
 
     /** Last API error message — set on any failure, cleared on success. */
     private ?string $lastApiError = null;
@@ -41,7 +42,8 @@ class AiQuestionService
     {
         $emptyUsage = ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0];
         $triedModels = [];
-        foreach ([self::GEMINI_MODEL_PRIMARY, self::GEMINI_MODEL_FALLBACK] as $model) {
+        $lastError = null;
+        foreach ([self::GEMINI_MODEL_PRIMARY, self::GEMINI_MODEL_FALLBACK, self::GEMINI_MODEL_LAST_RESORT] as $model) {
             $triedModels[] = $model;
             $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . urlencode($apiKey);
             $response = Http::timeout(90)
@@ -56,7 +58,7 @@ class AiQuestionService
                 ]);
 
             if ($response->status() === 404) {
-                $this->lastApiError = 'Model "' . $model . '" not found (404). Trying next model.';
+                $lastError = $this->lastApiError = 'Model "' . $model . '" not found (404). Trying next model.';
                 continue;
             }
 
@@ -69,7 +71,7 @@ class AiQuestionService
                 if ($apiMsg && preg_match('/retry[^\d]*(\d+(?:\.\d+)?)\s*s/i', $apiMsg, $m)) {
                     $retryHint = ' Retry in ' . (int) ceil((float) $m[1]) . 's.';
                 }
-                $this->lastApiError = '[' . $model . ' HTTP 429] Quota exceeded.' . $retryHint
+                $lastError = $this->lastApiError = '[' . $model . ' HTTP 429] Quota exceeded.' . $retryHint
                     . ' Trying fallback model.';
                 continue; // try next model instead of failing immediately
             }
@@ -78,20 +80,20 @@ class AiQuestionService
                 $status = $response->status();
                 $parsed = $response->json() ?? [];
                 $apiMsg = $parsed['error']['message'] ?? $parsed['error']['status'] ?? null;
-                $this->lastApiError = '[' . $model . ' HTTP ' . $status . ']' . ($apiMsg ? ' ' . $apiMsg : '');
+                $lastError = $this->lastApiError = '[' . $model . ' HTTP ' . $status . ']' . ($apiMsg ? ' ' . $apiMsg : '');
                 return ['text' => null, 'usage' => $emptyUsage];
             }
 
             $body = $response->json();
             if (!is_array($body) || empty($body['candidates'][0])) {
-                $this->lastApiError = '[' . $model . '] Unexpected response structure (no candidates).';
+                $lastError = $this->lastApiError = '[' . $model . '] Unexpected response structure (no candidates).';
                 return ['text' => null, 'usage' => $emptyUsage];
             }
 
             $candidate = $body['candidates'][0];
             $finishReason = $candidate['finishReason'] ?? $candidate['finish_reason'] ?? null;
             if ($finishReason && strtoupper((string) $finishReason) !== 'STOP') {
-                $this->lastApiError = '[' . $model . '] finishReason=' . $finishReason . ' (response blocked or filtered).';
+                $lastError = $this->lastApiError = '[' . $model . '] finishReason=' . $finishReason . ' (response blocked or filtered).';
                 return ['text' => null, 'usage' => $emptyUsage];
             }
 
@@ -112,11 +114,13 @@ class AiQuestionService
                 $this->lastApiError = null; // clear on success
                 return ['text' => $text, 'usage' => $usage];
             }
-            $this->lastApiError = '[' . $model . '] Gemini returned an empty text response.';
+            $lastError = $this->lastApiError = '[' . $model . '] Gemini returned an empty text response.';
             return ['text' => null, 'usage' => $usage];
         }
+        $hint = 'Go to https://aistudio.google.com → API key → check billing and that Generative Language API is enabled for the key\'s project.';
         $this->lastApiError = 'All Gemini models failed (' . implode(', ', $triedModels) . '). '
-            . 'This is usually a quota/billing issue. Go to https://aistudio.google.com → API key → enable billing, or wait for the free-tier quota to reset.';
+            . ($lastError ? 'Last error: ' . $lastError . '. ' : '')
+            . $hint;
         return ['text' => null, 'usage' => $emptyUsage];
     }
 

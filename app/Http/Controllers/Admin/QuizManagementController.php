@@ -1184,9 +1184,11 @@ class QuizManagementController extends Controller
         $target      = (int) $validated['target'];
         $isFirstCall = (bool) ($validated['first_call'] ?? false);
 
-        // On first call: clear any stale progress cache from a previous failed job run.
+        // On first call: clear stale caches so the latest API key and progress are used.
         if ($isFirstCall) {
             \Illuminate\Support\Facades\Cache::forget('quiz_ai_progress:' . $quiz->id);
+            \Illuminate\Support\Facades\Cache::forget('setting:' . \App\Models\Setting::KEY_GEMINI_API);
+            \Illuminate\Support\Facades\Cache::forget('setting:' . \App\Models\Setting::KEY_DEEPSEEK_API);
         }
 
         // Consume a token only on the first call of this generation run.
