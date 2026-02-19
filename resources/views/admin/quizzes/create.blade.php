@@ -35,8 +35,8 @@
 </style>
 @endpush
 @section('dashboard_content')
-<div class="w-full space-y-6">
-    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 md:p-8">
+<div class="w-full max-w-none space-y-6">
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 md:p-8 w-full">
             @if(session('success'))
                 <div class="alert alert-success mb-6">
                     <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">

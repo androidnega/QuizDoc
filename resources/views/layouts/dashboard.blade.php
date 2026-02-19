@@ -213,9 +213,12 @@
         </header>
 
         <main class="examiner-main-content flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-offwhite">
-            @php $fullBleedPage = request()->routeIs('dashboard.profile.*') || request()->routeIs('dashboard.system.reset.*') || request()->routeIs('system.reset.*') || request()->is('dashboard/system/reset*'); @endphp
+            @php
+                $fullBleedPage = request()->routeIs('dashboard.profile.*') || request()->routeIs('dashboard.system.reset.*') || request()->routeIs('system.reset.*') || request()->is('dashboard/system/reset*');
+                $fullWidthFormPage = request()->routeIs('dashboard.quizzes.create');
+            @endphp
             <div class="examiner-page w-full min-h-full {{ $fullBleedPage ? 'p-0' : 'px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 safe-area-main' }}">
-                <div class="examiner-dashboard-content {{ $fullBleedPage ? 'px-0' : 'px-0 md:px-2' }}">
+                <div class="examiner-dashboard-content w-full max-w-none {{ $fullBleedPage ? 'px-0' : ($fullWidthFormPage ? 'px-0' : 'px-0 md:px-2') }}">
                     @if($isCoordinatorOnly && (request()->routeIs('dashboard') || request()->routeIs('dashboard.coordinators.*') || request()->routeIs('dashboard.class-groups.*') || request()->routeIs('dashboard.courses.*') || request()->routeIs('dashboard.profile.*')))
                     <nav class="coordinator-breadcrumb flex items-center gap-2 text-sm text-gray-600 mb-4" aria-label="Breadcrumb">
                         <a href="{{ route('dashboard') }}" class="hover:text-primary-600">Dashboard</a>
