@@ -272,6 +272,7 @@ Route::middleware('admin.auth')->group(function () {
         Route::post('/class-groups/{classGroup}/students', [ClassGroupController::class, 'addStudent'])->name('class-groups.students.add');
         Route::post('/class-groups/{classGroup}/students/upload', [ClassGroupController::class, 'uploadStudents'])->name('class-groups.students.upload');
         Route::post('/class-groups/{classGroup}/students/clear', [ClassGroupController::class, 'clearStudents'])->name('class-groups.students.clear');
+        Route::delete('/class-groups/{classGroup}/students/bulk-destroy', [ClassGroupController::class, 'bulkDestroyStudents'])->name('class-groups.students.bulk-destroy');
         Route::put('/class-groups/{classGroupId}/students/{student}', [ClassGroupController::class, 'updateStudent'])->name('class-groups.students.update');
         Route::delete('/class-groups/{classGroupId}/students/{student}', [ClassGroupController::class, 'destroyStudent'])->name('class-groups.students.destroy');
         Route::delete('/class-groups/{classGroupId}/students/{student}/phone', [ClassGroupController::class, 'removeStudentPhone'])->name('class-groups.students.remove-phone');

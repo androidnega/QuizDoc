@@ -458,6 +458,17 @@ class ClassGroupController extends Controller
     {
         $this->authorize('update', $classGroup);
         $count = $classGroup->students()->count();
+
+        // Collect indices first so we can cascade cleanup across QuizSnap + Docu Mentor.
+        $removedIndices = $classGroup->students()->pluck('index_number');
+        foreach ($removedIndices as $removedIndex) {
+            \App\Models\Student::deleteEverywhereByIndex($removedIndex);
+            // Clear any cached OTP data for this index (legacy cache keys).
+            $indexUpper = strtoupper(trim($removedIndex));
+            \Illuminate\Support\Facades\Cache::forget('student_otp:' . $removedIndex);
+            \Illuminate\Support\Facades\Cache::forget('student_otp:' . $indexUpper);
+        }
+
         $classGroup->students()->delete();
         return redirect()->route($this->staffRoutePrefix() . '.class-groups.show', $classGroup)
             ->with('success', $count > 0 ? "All {$count} index numbers have been removed. You can re-upload or add students again." : 'Student index list is already empty.');
@@ -636,26 +647,16 @@ class ClassGroupController extends Controller
 
         if ($mode === 'replace') {
             $rowsDeleted = $classGroup->students()->count();
-            
-            // Delete ALL data for removed students (complete reset)
+
+            // Delete ALL data for removed students (complete reset across QuizSnap + Docu Mentor).
             $removedIndices = $classGroup->students()->pluck('index_number');
             foreach ($removedIndices as $removedIndex) {
+                \App\Models\Student::deleteEverywhereByIndex($removedIndex);
                 $indexUpper = strtoupper(trim($removedIndex));
-                
-                // Delete ALL quiz sessions (cascades to answers, results, violations)
-                \App\Models\QuizSession::whereRaw('UPPER(TRIM(student_index)) = ?', [$indexUpper])->delete();
-                
-                // Delete ALL quiz acceptances
-                \App\Models\QuizAcceptance::whereRaw('UPPER(TRIM(index_number)) = ?', [$indexUpper])->delete();
-                
-                // Delete student accounts (lookup by hash)
-                \App\Models\Student::where('index_number_hash', \App\Models\Student::hashIndexNumber($indexUpper))->delete();
-                
-                // Clear cached OTP data
                 \Illuminate\Support\Facades\Cache::forget('student_otp:' . $removedIndex);
                 \Illuminate\Support\Facades\Cache::forget('student_otp:' . $indexUpper);
             }
-            
+
             $classGroup->students()->delete();
         }
         
@@ -738,6 +739,46 @@ class ClassGroupController extends Controller
         return redirect()->route($this->staffRoutePrefix() . '.class-groups.students.index', $classGroup)->with('success', 'Saved');
     }
 
+    /**
+     * Bulk remove multiple students from the class group.
+     *
+     * Mirrors the cascading clean-up performed in destroyStudent()
+     * for each selected student.
+     */
+    public function bulkDestroyStudents(Request $request, ClassGroup $classGroup): RedirectResponse
+    {
+        $this->authorize('update', $classGroup);
+
+        $ids = $request->input('student_ids', []);
+        if (!is_array($ids) || count($ids) === 0) {
+            return redirect()
+                ->route($this->staffRoutePrefix() . '.class-groups.students.index', $classGroup)
+                ->with('error', 'No students selected.');
+        }
+
+        $students = ClassGroupStudent::where('class_group_id', $classGroup->id)
+            ->whereIn('id', $ids)
+            ->get();
+
+        if ($students->isEmpty()) {
+            return redirect()
+                ->route($this->staffRoutePrefix() . '.class-groups.students.index', $classGroup)
+                ->with('error', 'No valid students selected.');
+        }
+
+        foreach ($students as $student) {
+            $indexNumber = $student->index_number;
+            \App\Models\Student::deleteEverywhereByIndex($indexNumber);
+
+            // Delete class group student record
+            $student->delete();
+        }
+
+        return redirect()
+            ->route($this->staffRoutePrefix() . '.class-groups.students.index', $classGroup)
+            ->with('success', 'Selected students deleted.');
+    }
+
     /** Remove a student from the class group. */
     public function destroyStudent(string $classGroupId, ClassGroupStudent $student): RedirectResponse
     {
@@ -748,23 +789,8 @@ class ClassGroupController extends Controller
         $classGroup = $resolved;
         
         $indexNumber = $student->index_number;
-        $indexUpper = strtoupper(trim($indexNumber));
-        
-        // Delete ALL quiz sessions for this student (across all quizzes)
-        // This will cascade delete: answers, results, violations
-        \App\Models\QuizSession::whereRaw('UPPER(TRIM(student_index)) = ?', [$indexUpper])->delete();
-        
-        // Delete ALL quiz acceptances for this student (across all quizzes)
-        \App\Models\QuizAcceptance::whereRaw('UPPER(TRIM(index_number)) = ?', [$indexUpper])->delete();
-        
-        // Delete student account (phone, name, etc.) - complete reset; lookup by hash
-        \App\Models\Student::where('index_number_hash', \App\Models\Student::hashIndexNumber($indexUpper))->delete();
-        
-        // Invalidate student_login OTPs for this index (DB)
-        Otp::where('index_number_hash', \App\Models\Student::hashIndexNumber($indexUpper))
-            ->where('type', Otp::TYPE_STUDENT_LOGIN)
-            ->delete();
-        
+        \App\Models\Student::deleteEverywhereByIndex($indexNumber);
+
         // Delete class group student record
         $student->delete();
         

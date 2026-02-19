@@ -7,6 +7,11 @@
     $displayName = $displayName && trim($displayName) !== '' ? trim($displayName) : '—';
 @endphp
 <tr class="hover:bg-gray-50">
+    @can('update', $classGroup)
+    <td class="px-4 py-3">
+        <input type="checkbox" name="student_ids[]" value="{{ $s->id }}" class="h-4 w-4 text-primary-600 border-gray-300 rounded student-select-checkbox" form="bulk-delete-form">
+    </td>
+    @endcan
     <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ $s->index_number }}</td>
     <td class="px-4 py-3 text-sm text-gray-600">{{ $displayName }}</td>
     <td class="px-4 py-3 text-sm text-gray-600">{{ $phone ?? '—' }}</td>

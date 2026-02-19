@@ -84,12 +84,27 @@
                     <input type="search" name="search" id="student-search" value="{{ old('search', $search ?? '') }}" placeholder="Search index, name, phone…" class="input min-h-0 py-1.5 px-2.5 text-sm w-48 max-w-full" autocomplete="off">
                     <button type="submit" class="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Search</button>
                 </form>
+                @can('update', $classGroup)
+                <form id="bulk-delete-form" action="{{ route('dashboard.class-groups.students.bulk-destroy', $classGroup) }}" method="post" onsubmit="return confirm('Delete all selected students? This also removes their quiz data and login codes.');">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" id="bulk-delete-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-danger-600 border border-danger-600 rounded hover:bg-danger-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-trash-alt"></i>
+                        Delete selected
+                    </button>
+                </form>
+                @endcan
             </div>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-200 min-w-[500px]">
                 <thead class="bg-gray-50">
                     <tr>
+                        @can('update', $classGroup)
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider w-10">
+                            <input type="checkbox" id="select-all-students" class="h-4 w-4 text-primary-600 border-gray-300 rounded">
+                        </th>
+                        @endcan
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Index</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Name</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Phone</th>
@@ -101,7 +116,7 @@
                         @include('admin.class-groups.partials.students-rows', ['students' => collect([$s]), 'classGroup' => $classGroup, 'isSuperAdmin' => $isSuperAdmin])
                     @empty
                         <tr>
-                            <td colspan="4" class="px-4 py-8 text-center text-gray-500 text-sm">No students yet.@can('update', $classGroup) Add indices above or upload Excel/CSV.@endcan</td>
+                            <td colspan="5" class="px-4 py-8 text-center text-gray-500 text-sm">No students yet.@can('update', $classGroup) Add indices above or upload Excel/CSV.@endcan</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -143,6 +158,7 @@
                     .then(function(data) {
                         if (data.html) {
                             tbody.insertAdjacentHTML('beforeend', data.html);
+                            attachStudentCheckboxListeners();
                         }
                         nextUrl = data.next_page_url || '';
                         if (!nextUrl) {
@@ -158,6 +174,51 @@
             }, { rootMargin: '120px', threshold: 0 });
             observer.observe(sentinel);
         }
+
+        // Bulk selection for delete
+        window.attachStudentCheckboxListeners = function() {
+            var bulkBtn = document.getElementById('bulk-delete-btn');
+            if (!bulkBtn) return;
+
+            var master = document.getElementById('select-all-students');
+            var checkboxes = document.querySelectorAll('.student-select-checkbox');
+
+            function updateBulkState() {
+                var anyChecked = false;
+                var allChecked = true;
+                checkboxes.forEach(function(cb) {
+                    if (cb.checked) {
+                        anyChecked = true;
+                    } else {
+                        allChecked = false;
+                    }
+                });
+                bulkBtn.disabled = !anyChecked;
+                if (master) {
+                    master.checked = allChecked && checkboxes.length > 0;
+                    master.indeterminate = anyChecked && !allChecked;
+                }
+            }
+
+            checkboxes.forEach(function(cb) {
+                cb.removeEventListener('change', updateBulkState);
+                cb.addEventListener('change', updateBulkState);
+            });
+
+            if (master) {
+                master.onclick = function() {
+                    var checked = master.checked;
+                    checkboxes.forEach(function(cb) {
+                        cb.checked = checked;
+                    });
+                    updateBulkState();
+                };
+            }
+
+            updateBulkState();
+        };
+
+        attachStudentCheckboxListeners();
     })();
     </script>
     @endpush

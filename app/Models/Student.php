@@ -12,6 +12,76 @@ class Student extends Model implements Authenticatable
 
     protected $fillable = ['index_number', 'index_number_hash', 'phone_contact', 'student_name', 'level'];
 
+    /**
+     * Completely remove a student (by index) from QuizSnap + Docu Mentor.
+     *
+     * This is the single source of truth for cascading deletions when a student
+     * is removed from all class groups. It:
+     * - Deletes Quiz sessions + acceptances for the index.
+     * - Deletes OTPs and the Student account row.
+     * - Cleans up Docu Mentor users tied to this index:
+     *   - Detaches them from all groups (group_members).
+     *   - Clears leader flags and leader assignments on groups.
+     *   - Deletes the Docu Mentor user when it is safe to do so.
+     */
+    public static function deleteEverywhereByIndex(string $indexNumber): void
+    {
+        $indexUpper = strtoupper(trim($indexNumber));
+        if ($indexUpper === '') {
+            return;
+        }
+
+        $hash = self::hashIndexNumber($indexUpper);
+
+        // QuizSnap data
+        \App\Models\QuizSession::whereRaw('UPPER(TRIM(student_index)) = ?', [$indexUpper])->delete();
+        \App\Models\QuizAcceptance::whereRaw('UPPER(TRIM(index_number)) = ?', [$indexUpper])->delete();
+
+        // OTPs tied to this student login index
+        \App\Models\Otp::where('index_number_hash', $hash)->delete();
+
+        // Student account (global student row)
+        self::where('index_number_hash', $hash)->delete();
+
+        // Docu Mentor: users mapped to this index
+        $dmUsers = \App\Models\User::whereIn('role', [
+                \App\Models\User::DM_ROLE_STUDENT,
+                \App\Models\User::DM_ROLE_LEADER,
+            ])
+            ->whereRaw('UPPER(TRIM(index_number)) = ?', [$indexUpper])
+            ->get();
+
+        if ($dmUsers->isEmpty()) {
+            return;
+        }
+
+        foreach ($dmUsers as $user) {
+            // Detach from all Docu Mentor project groups
+            $user->docuMentorGroups()->detach();
+
+            // If this user was a leader of any group, clear the leader_id
+            \App\Models\DocuMentor\ProjectGroup::where('leader_id', $user->id)->update(['leader_id' => null]);
+
+            // Clear leader flag
+            $user->group_leader = false;
+
+            // Only delete the user when it is safe:
+            // - Not a coordinator or staff (super admin/examiner)
+            // - Not supervising any projects
+            // - Not a member/leader of any groups after detach
+            $hasGroups = $user->docuMentorGroups()->exists();
+            $hasSupervisedProjects = $user->supervisedProjects()->exists();
+            $isCoordinator = $user->isDocuMentorCoordinator();
+            $isStaff = $user->isStaff();
+
+            if (!$hasGroups && !$hasSupervisedProjects && !$isCoordinator && !$isStaff) {
+                $user->delete();
+            } else {
+                $user->save();
+            }
+        }
+    }
+
     /** @deprecated Use StudentLevel::allowsDocuMentor for dynamic check */
     public const LEVEL_DOCU_MENTOR = 400;
 

@@ -498,9 +498,13 @@ class CoordinatorStudentController extends Controller
 
         $indexUpper = strtoupper(trim($indexNumber));
 
+        // Remove from all class groups in scope
         ClassGroupStudent::whereIn('class_group_id', $classGroupIds)
             ->whereRaw('UPPER(TRIM(index_number)) = ?', [$indexUpper])
             ->delete();
+
+        // Cascade removal across QuizSnap + Docu Mentor for this index
+        Student::deleteEverywhereByIndex($indexNumber);
 
         return redirect()->route('dashboard.coordinators.students.index')
             ->with('success', 'Student removed from class groups.');
