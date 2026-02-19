@@ -29,7 +29,8 @@ class SettingsController extends Controller
         $currentUser = auth()->user() ?? User::find(session('admin_user_id'));
         $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
         $canManageProctoring = $currentUser && $currentUser->isSuperAdmin() && $currentUser->id === $primarySuperAdminId;
-        $canManageBackup = $currentUser && $currentUser->isSuperAdmin() && $currentUser->id === $primarySuperAdminId;
+        $isSuperAdmin = $currentUser && $currentUser->isSuperAdmin();
+        $canManageBackup = $isSuperAdmin && $currentUser->id === $primarySuperAdminId; // only primary can save
         $backupEmailConfigured = $canManageBackup && Setting::getValue(Setting::KEY_NOTIFY_DIGEST_RECIPIENT) !== null && trim(Setting::getValue(Setting::KEY_NOTIFY_DIGEST_RECIPIENT, '') ?? '') !== '';
 
         return view('admin.settings.index', [
@@ -74,6 +75,7 @@ class SettingsController extends Controller
             'landing_hero_enabled' => Setting::getValue(Setting::KEY_LANDING_HERO_ENABLED, '1') === '1',
             'can_manage_proctoring' => $canManageProctoring,
             'can_manage_backup' => $canManageBackup,
+            'show_backup_tab' => $isSuperAdmin, // all super admins see the tab; only primary can edit
             'backup_email_configured' => $backupEmailConfigured,
         ]);
     }

@@ -50,7 +50,7 @@
                             Proctoring
                         </button>
                         @endif
-                        @if($can_manage_backup ?? false)
+                        @if($show_backup_tab ?? false)
                         <button type="button" class="settings-tab-btn px-6 py-3 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="backup" id="tab-btn-backup">
                             <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                             Backup
@@ -482,10 +482,11 @@
                 </div>
                 </div>
                 @endif
-                @if($can_manage_backup ?? false)
-                <!-- Tab: Backup (Primary Super Admin only) -->
+                @if($show_backup_tab ?? false)
+                <!-- Tab: Backup (all super admins see tab; only primary can set email) -->
                 <div class="settings-tab-content p-6 hidden" data-tab-content="backup" id="tab-content-backup">
                     <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Backup</p>
+                    @if($can_manage_backup ?? false)
                     <div class="space-y-4">
                         <div>
                             <label for="notify_digest_recipient" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -495,6 +496,9 @@
                             @endif
                         </div>
                     </div>
+                    @else
+                    <p class="text-sm text-gray-600">Only the primary administrator can configure the backup email.</p>
+                    @endif
                 </div>
                 @endif
             </div>
