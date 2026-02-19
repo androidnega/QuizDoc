@@ -13,8 +13,8 @@
         <span class="text-slate-900 font-medium">View/Reset Password</span>
     </div>
 
-    <div class="max-w-lg mx-auto w-full min-w-0">
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8">
+    <div class="w-full min-w-0 max-w-full">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8 w-full min-w-0 max-w-full overflow-hidden">
             <h2 class="text-xl font-semibold text-slate-900 mb-2">View/Reset Password</h2>
             <p class="text-sm text-slate-600 mb-1">
                 Enter your admin password to view or reset the password for <strong>{{ $user->username }}</strong>.
