@@ -1,6 +1,11 @@
 <table class="min-w-full divide-y divide-gray-200">
     <thead class="bg-gray-50">
         <tr>
+            @if(!empty($canManageAll) && $canManageAll)
+            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-10">
+                <input type="checkbox" id="select-all-courses" class="h-4 w-4 text-primary-600 border-gray-300 rounded">
+            </th>
+            @endif
             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
             <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quizzes</th>
@@ -12,6 +17,11 @@
     <tbody class="bg-white divide-y divide-gray-200">
         @foreach($courses as $c)
             <tr class="hover:bg-gray-50">
+                @if(!empty($canManageAll) && $canManageAll)
+                <td class="px-3 py-2">
+                    <input type="checkbox" name="course_ids[]" value="{{ $c->id }}" class="h-4 w-4 text-primary-600 border-gray-300 rounded course-select-checkbox" form="bulk-delete-courses-form">
+                </td>
+                @endif
                 <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{{ $c->code ?? '—' }}</td>
                 <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{{ $c->name }}</td>
                 <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-600">{{ $c->quizzes_count ?? 0 }}</td>

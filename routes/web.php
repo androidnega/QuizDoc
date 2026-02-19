@@ -334,6 +334,7 @@ Route::middleware('admin.auth')->group(function () {
             Route::post('/courses/{course}/archive', [\App\Http\Controllers\Admin\CourseController::class, 'archive'])->name('courses.archive');
             Route::post('/courses/{course}/unarchive', [\App\Http\Controllers\Admin\CourseController::class, 'unarchive'])->name('courses.unarchive');
             Route::delete('/courses/{course}', [\App\Http\Controllers\Admin\CourseController::class, 'destroy'])->name('courses.destroy');
+            Route::delete('/courses', [\App\Http\Controllers\Admin\CourseController::class, 'bulkDestroy'])->name('courses.bulk-destroy');
         });
 
         // Examiners can edit their own profile (faculty/department)

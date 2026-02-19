@@ -25,19 +25,30 @@ class CourseController extends Controller
     {
         $user = $this->adminUser();
         $canManageAll = $user && ($user->isSuperAdmin() || $user->isDocuMentorCoordinator());
-
-        $query = Course::withCount(['quizzes', 'validIndices'])
-            ->with('examiners:id,username,name')
-            ->where('is_archived', false)
-            ->orderBy('name');
-
+        // Base query for stats and listing (respecting scope: all vs examiner-assigned)
+        $baseQuery = Course::query()->where('is_archived', false);
         if (!$canManageAll && $user?->isExaminer()) {
-            $query->whereHas('examiners', fn ($q) => $q->where('users.id', $user->id));
+            $baseQuery->whereHas('examiners', fn ($q) => $q->where('users.id', $user->id));
         }
 
-        $courses = $query->paginate(20);
+        // Stats: total, assigned (has examiners), unassigned (no examiners)
+        $assignedCount = (clone $baseQuery)->whereHas('examiners')->count();
+        $unassignedCount = (clone $baseQuery)->whereDoesntHave('examiners')->count();
+        $totalCount = $assignedCount + $unassignedCount;
 
-        return view('admin.courses.index', compact('courses', 'canManageAll'));
+        $courses = (clone $baseQuery)
+            ->withCount(['quizzes', 'validIndices'])
+            ->with('examiners:id,username,name')
+            ->orderBy('name')
+            ->paginate(20);
+
+        $stats = [
+            'total' => $totalCount,
+            'assigned' => $assignedCount,
+            'unassigned' => $unassignedCount,
+        ];
+
+        return view('admin.courses.index', compact('courses', 'canManageAll', 'stats'));
     }
 
     public function create(): View
@@ -185,5 +196,61 @@ class CourseController extends Controller
         $course->validIndices()->delete();
         $course->delete();
         return redirect()->route('dashboard.courses.index')->with('success', "Course \"{$name}\" deleted.");
+    }
+
+    /**
+     * Bulk delete multiple courses at once (Coordinator/Super Admin only).
+     * Courses with quizzes are skipped and reported back.
+     */
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $user = $this->adminUser();
+        $canManage = $user && ($user->isSuperAdmin() || $user->isDocuMentorCoordinator());
+        if (! $canManage) {
+            return redirect()->route('dashboard.courses.index')
+                ->with('error', 'Only the coordinator or Super Administrator can delete courses.');
+        }
+
+        $ids = $request->input('course_ids', []);
+        if (!is_array($ids) || count($ids) === 0) {
+            return redirect()->route('dashboard.courses.index')
+                ->with('error', 'No courses selected.');
+        }
+
+        $courses = Course::whereIn('id', $ids)->get();
+        if ($courses->isEmpty()) {
+            return redirect()->route('dashboard.courses.index')
+                ->with('error', 'No valid courses selected.');
+        }
+
+        $deleted = 0;
+        $skipped = [];
+
+        foreach ($courses as $course) {
+            if ($course->quizzes()->exists()) {
+                $skipped[] = $course->name ?: $course->code ?: ('ID ' . $course->id);
+                continue;
+            }
+            $course->examiners()->detach();
+            $course->classGroups()->detach();
+            $course->validIndices()->delete();
+            $course->delete();
+            $deleted++;
+        }
+
+        $message = $deleted > 0
+            ? "{$deleted} course" . ($deleted === 1 ? '' : 's') . ' deleted.'
+            : 'No courses were deleted.';
+
+        if (!empty($skipped)) {
+            $list = implode(', ', array_slice($skipped, 0, 5));
+            if (count($skipped) > 5) {
+                $list .= ' +' . (count($skipped) - 5) . ' more';
+            }
+            $message .= ' Skipped (has quizzes): ' . $list . '.';
+        }
+
+        return redirect()->route('dashboard.courses.index')
+            ->with($deleted > 0 ? 'success' : 'error', $message);
     }
 }
