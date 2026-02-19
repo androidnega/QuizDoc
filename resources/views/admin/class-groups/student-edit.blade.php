@@ -6,7 +6,7 @@
 @endsection
 
 @section('dashboard_content')
-<div class="w-full max-w-md">
+<div class="w-full max-w-lg">
     @if(session('error'))
         <div class="alert alert-error mb-4">{{ session('error') }}</div>
     @endif
@@ -16,7 +16,7 @@
     </a>
 
     <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <form action="{{ route('dashboard.class-groups.students.update', [$classGroup, $student]) }}" method="post" class="space-y-4">
+        <form action="{{ route('dashboard.class-groups.students.update', [$classGroup, $student]) }}" method="post" class="space-y-5">
             @csrf
             @method('PUT')
             <div>
@@ -45,9 +45,19 @@
                 <p class="text-xs text-gray-500 mt-1">Phone number for OTP login. Leave empty to require student to provide it.</p>
             </div>
             <p class="text-xs text-gray-500">Level and program context come from the class group.</p>
-            <div class="flex gap-3">
-                <button type="submit" class="btn btn-primary">Save changes</button>
-                <a href="{{ route('dashboard.class-groups.students.index', $classGroup) }}" class="btn btn-secondary">Cancel</a>
+            <div class="flex items-center gap-3 pt-2">
+                <button
+                    type="submit"
+                    class="inline-flex items-center justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
+                >
+                    Save changes
+                </button>
+                <a
+                    href="{{ route('dashboard.class-groups.students.index', $classGroup) }}"
+                    class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300"
+                >
+                    Cancel
+                </a>
             </div>
         </form>
     </div>
