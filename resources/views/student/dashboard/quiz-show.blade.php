@@ -6,6 +6,7 @@
 @endphp
 
 @section('dashboard_content')
+<div class="w-full min-w-0 max-w-full">
 @php
     $quiz = $session->quiz ?? null;
     $hasScore = isset($session->result) && $session->result && $quiz && $quiz->canShowScore();
@@ -16,9 +17,9 @@
 
 <a href="{{ route('dashboard.my-quizzes') }}" class="text-sm text-slate-500 font-medium hover:text-slate-800 inline-block mb-4">← My quizzes</a>
 
-<header class="flex flex-wrap items-start justify-between gap-4 mb-6">
-    <div class="min-w-0">
-        <h1 class="text-xl font-semibold text-slate-800 tracking-tight">{{ isset($quiz->title) ? $quiz->title : 'Quiz' }}</h1>
+<header class="flex flex-wrap items-start justify-between gap-4 mb-6 min-w-0">
+    <div class="min-w-0 flex-1">
+        <h1 class="text-xl font-semibold text-slate-800 tracking-tight break-words">{{ isset($quiz->title) ? $quiz->title : 'Quiz' }}</h1>
         <p class="text-sm text-slate-500 mt-1">
             Taken {{ $session->created_at ? $session->created_at->format('M j, Y g:i A') : 'Date not available' }}
             @if($reviewWindowOpen)
@@ -26,15 +27,15 @@
             @endif
         </p>
     </div>
-        @if($hasScore)
-        <a href="{{ route('dashboard.my-quizzes.download-pdf', ['sessionId' => $session->id]) }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-slate-600 text-white hover:bg-slate-700 min-h-[44px] sm:min-h-0" title="Download PDF">
+    @if($hasScore)
+        <a href="{{ route('dashboard.my-quizzes.download-pdf', ['sessionId' => $session->id]) }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-slate-600 text-white hover:bg-slate-700 shrink-0" title="Download PDF">
             <i class="fas fa-file-pdf"></i> Download PDF
         </a>
     @endif
-</div>
+</header>
 
 @if($hasScore)
-<section class="mb-8" aria-label="Result">
+<section class="mb-8 min-w-0 max-w-full" aria-label="Result">
         @php
             $score = round($session->result->score, 0);
             $correctCount = $session->result->correct_count;
@@ -74,11 +75,11 @@
 @endif
 
 @if($canShowFull && $reviewWindowOpen && $hasAnswers)
-<section class="mb-8" aria-label="Questions and answers">
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5">
+<section class="mb-8 min-w-0 max-w-full overflow-hidden" aria-label="Questions and answers">
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5 min-w-0 max-w-full">
             <h2 class="text-sm font-medium text-slate-700 mb-2">Questions & answers</h2>
             <p class="text-sm text-slate-500 mb-4">Review your answers and the correct answers. Available for 21 days.</p>
-            <div class="space-y-4">
+            <div class="space-y-4 min-w-0 max-w-full">
                 @foreach($session->answers as $idx => $answer)
                     @php
                         $question = $answer->question ?? null;
@@ -130,11 +131,11 @@
                         }
                     @endphp
 
-                    <div class="bg-white rounded-xl border p-4 {{ $correct ? 'border-emerald-200 bg-emerald-50/30' : 'border-red-200 bg-red-50/30' }}">
-                        <p class="text-sm font-medium text-slate-800 mb-2">{{ $idx + 1 }}. {{ $question->text ?? 'Question not available' }}</p>
-                        <div class="flex flex-wrap gap-4 text-sm mt-2">
-                            <span class="text-slate-500">Your answer: <strong class="text-slate-800 font-medium">{{ $yourText !== null ? $studentAnswerValue . '. ' . $yourText : ($studentAnswerValue ?: '—') }}</strong></span>
-                            <span class="text-green-700">Correct: <strong class="font-medium">{{ $correctText !== null ? $sessionCorrect . '. ' . $correctText : ($sessionCorrect ?: '—') }}</strong></span>
+                    <div class="bg-white rounded-xl border p-4 min-w-0 w-full max-w-full {{ $correct ? 'border-emerald-200 bg-emerald-50/30' : 'border-red-200 bg-red-50/30' }}">
+                        <p class="text-sm font-medium text-slate-800 mb-2 break-words">{{ $idx + 1 }}. {{ $question->text ?? 'Question not available' }}</p>
+                        <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm mt-2 min-w-0">
+                            <span class="text-slate-500 break-words min-w-0">Your answer: <strong class="text-slate-800 font-medium">{{ $yourText !== null ? $studentAnswerValue . '. ' . $yourText : ($studentAnswerValue ?: '—') }}</strong></span>
+                            <span class="text-green-700 break-words min-w-0">Correct: <strong class="font-medium">{{ $correctText !== null ? $sessionCorrect . '. ' . $correctText : ($sessionCorrect ?: '—') }}</strong></span>
                         </div>
 
                         @if(!$correct)
@@ -142,7 +143,7 @@
                                 $whyWrong = $question->explanation_wrong ?? $answer->explanation_wrong ?? null;
                             @endphp
                             @if(!empty($whyWrong))
-                                <div class="mt-3 pt-3 border-t border-slate-200 text-sm">
+                                <div class="mt-3 pt-3 border-t border-slate-200 text-sm break-words min-w-0">
                                     <p class="text-red-700 text-xs"><strong>Reason:</strong> {{ $whyWrong }}</p>
                                 </div>
                             @endif
@@ -177,4 +178,5 @@
     </div>
 </section>
 @endif
+</div>
 @endsection
