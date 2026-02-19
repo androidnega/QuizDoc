@@ -166,9 +166,14 @@ class Quiz extends Model
     /**
      * Whether the quiz has enough approved questions for students to take it.
      * Approved count must be >= questions_per_student.
+     * Uses eager-loaded questions_count when present to avoid N+1.
      */
     public function hasEnoughApprovedQuestions(): bool
     {
+        $count = $this->getAttribute('questions_count');
+        if ($count !== null) {
+            return (int) $count >= $this->getQuestionsPerStudent();
+        }
         return $this->questions()->count() >= $this->getQuestionsPerStudent();
     }
 
@@ -206,9 +211,14 @@ class Quiz extends Model
     /**
      * Whether at least one student has started this quiz (session has start_time set).
      * Once true, examiner cannot edit the quiz.
+     * Uses eager-loaded sessions_started_count when present to avoid N+1.
      */
     public function hasStarted(): bool
     {
+        $count = $this->getAttribute('sessions_started_count');
+        if ($count !== null) {
+            return (int) $count > 0;
+        }
         return $this->sessions()->whereNotNull('start_time')->exists();
     }
 

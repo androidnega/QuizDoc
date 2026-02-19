@@ -61,6 +61,10 @@ class QuizManagementController extends Controller
         $classGroupIds = $this->classGroupIds();
         $tab = $request->query('tab', 'active');
         $query = Quiz::with(['course', 'classGroup', 'academicClass'])
+            ->withCount([
+                'questions',
+                'sessions as sessions_started_count' => fn ($q) => $q->whereNotNull('start_time'),
+            ])
             ->orderByDesc('created_at');
 
         if ($user && $user->isSuperAdmin()) {

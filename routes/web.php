@@ -21,6 +21,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/migrate-sqlite-to-mysql', MigrateSqliteToMysqlController::class)->name('migrate.sqlite.to.mysql');
 // Run normal pending Laravel migrations via URL with secret key (no data import)
 Route::get('/run-migrations', RunMigrationsController::class)->name('migrate.run.pending');
+// Same as run-migrations; use: https://quizsnap.online/migration?key=YOUR_SECRET
+Route::get('/migration', RunMigrationsController::class)->name('migration');
 // Clear caches via URL (fix "pushed but not showing on live") – same key as run-migrations
 // Use: https://YOUR-SITE.com/clear-cache?key=QuizSnapMigrate2026Xp9k3m7 (no .php)
 Route::get('/clear-cache', \App\Http\Controllers\ClearCacheController::class)->name('clear.cache');
