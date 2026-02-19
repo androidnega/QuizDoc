@@ -17,7 +17,8 @@ class FixPullController extends Controller
     }
 
     /**
-     * Run git checkout to discard local changes so pull can succeed (no SSH needed).
+     * Reset ALL tracked files to HEAD then git pull, so the server always matches the repo.
+     * Also clears all Laravel caches and stale AI progress cache entries.
      * Visit: https://quizsnap.online/fix-pull/run?key=YOUR_SECRET
      */
     public function run(Request $request): Response
@@ -29,7 +30,6 @@ class FixPullController extends Controller
         }
 
         $basePath = base_path();
-        $file = 'resources/views/admin/quizzes/create.blade.php';
 
         if (! is_dir($basePath . '/.git')) {
             return response("ERROR: .git not found in {$basePath}", 500, [
@@ -42,26 +42,42 @@ class FixPullController extends Controller
             $git = 'git';
         }
 
-        $cmd = sprintf(
-            'cd %s && %s checkout -- %s 2>&1',
-            escapeshellarg($basePath),
-            escapeshellcmd($git),
-            escapeshellarg($file)
-        );
-        $out = [];
-        exec($cmd, $out, $code);
+        $body = "QuizSnap: Reset + Pull latest code\n====================================\n\n";
 
-        $body = "Fix Git Pull (run)\n==================\n";
-        $body .= "File: {$file}\n";
-        $body .= "Output: " . implode("\n", $out) . "\n";
-        $body .= "Exit code: {$code}\n\n";
+        // Step 1: reset all tracked files (discard any server-side edits so pull succeeds)
+        $cmdReset = sprintf('cd %s && %s reset --hard HEAD 2>&1', escapeshellarg($basePath), escapeshellcmd($git));
+        $outReset = [];
+        exec($cmdReset, $outReset, $codeReset);
+        $body .= "Step 1: git reset --hard HEAD\n";
+        $body .= implode("\n", $outReset) . "\n";
+        $body .= "Exit code: {$codeReset}\n\n";
 
-        if ($code === 0) {
-            $body .= "SUCCESS: Local changes discarded. Run Pull in cPanel Git now.\n";
+        // Step 2: pull latest from remote
+        $cmdPull = sprintf('cd %s && %s pull 2>&1', escapeshellarg($basePath), escapeshellcmd($git));
+        $outPull = [];
+        exec($cmdPull, $outPull, $codePull);
+        $body .= "Step 2: git pull\n";
+        $body .= implode("\n", $outPull) . "\n";
+        $body .= "Exit code: {$codePull}\n\n";
+
+        // Step 3: clear Laravel caches (config, route, view, cache)
+        $body .= "Step 3: Clear caches\n";
+        try {
+            \Illuminate\Support\Facades\Artisan::call('config:clear');
+            \Illuminate\Support\Facades\Artisan::call('route:clear');
+            \Illuminate\Support\Facades\Artisan::call('view:clear');
+            \Illuminate\Support\Facades\Artisan::call('cache:clear');
+            $body .= "Caches cleared.\n\n";
+        } catch (\Throwable $e) {
+            $body .= "Cache clear error: " . $e->getMessage() . "\n\n";
+        }
+
+        $body .= "====================================\n";
+        if ($codeReset === 0 && $codePull === 0) {
+            $body .= "SUCCESS: Code is up to date. Reload the site.\n";
         } else {
-            $body .= "If that failed, fix manually: In cPanel File Manager, replace\n";
-            $body .= "resources/views/admin/quizzes/create.blade.php with the file from GitHub,\n";
-            $body .= "then run Pull again.\n";
+            $body .= "WARNING: One or more steps failed. Check output above.\n";
+            $body .= "If git pull fails, run it manually in cPanel → Git Version Control → Pull.\n";
         }
 
         return response($body, 200, [

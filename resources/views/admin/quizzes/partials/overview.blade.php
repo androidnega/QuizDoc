@@ -132,6 +132,16 @@ function startAiBatchGeneration(quizId, batchUrl, topics, target) {
 
     var totalGenerated = 0;
     var isFirst = true;
+    var zeroRetries = 0;
+    var maxZeroRetries = 3;
+
+    function showError(msg) {
+        statusEl.textContent = msg;
+        statusEl.className = 'text-sm text-red-600 font-medium';
+        barEl.classList.add('bg-red-500');
+        barEl.classList.remove('bg-indigo-600');
+        btn.disabled = false;
+    }
 
     function runBatch() {
         var body = new URLSearchParams({ target: target, topics: topics, first_call: isFirst ? '1' : '0', _token: csrfToken });
@@ -141,14 +151,20 @@ function startAiBatchGeneration(quizId, batchUrl, topics, target) {
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.error) {
-                    statusEl.textContent = 'Error: ' + data.error;
-                    statusEl.className = 'text-sm text-red-600 font-medium';
-                    barEl.classList.add('bg-red-500');
-                    barEl.classList.remove('bg-indigo-600');
-                    btn.disabled = false;
+                    showError('Error: ' + data.error);
                     return;
                 }
-                totalGenerated += (data.generated || 0);
+                var got = data.generated || 0;
+                if (got === 0) {
+                    zeroRetries++;
+                    if (zeroRetries >= maxZeroRetries) {
+                        showError('AI returned 0 questions after ' + maxZeroRetries + ' attempts. Check your Gemini API key in Settings → AI.');
+                        return;
+                    }
+                } else {
+                    zeroRetries = 0;
+                }
+                totalGenerated += got;
                 var soFar = data.total_so_far || 0;
                 var pct = Math.min(100, Math.round((soFar / target) * 100));
                 barEl.style.width = pct + '%';
@@ -166,9 +182,7 @@ function startAiBatchGeneration(quizId, batchUrl, topics, target) {
                 }
             })
             .catch(function(err) {
-                statusEl.textContent = 'Network error. Please try again.';
-                statusEl.className = 'text-sm text-red-600 font-medium';
-                btn.disabled = false;
+                showError('Network error. Please try again.');
             });
     }
 

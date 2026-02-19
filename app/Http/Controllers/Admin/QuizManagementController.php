@@ -1197,6 +1197,11 @@ class QuizManagementController extends Controller
         $target      = (int) $validated['target'];
         $isFirstCall = (bool) ($validated['first_call'] ?? false);
 
+        // On first call: clear any stale progress cache from a previous failed job run.
+        if ($isFirstCall) {
+            \Illuminate\Support\Facades\Cache::forget('quiz_ai_progress:' . $quiz->id);
+        }
+
         // Consume a token only on the first call of this generation run.
         $tokenService = app(AiQuizTokenService::class);
         if ($isFirstCall) {
@@ -1238,6 +1243,14 @@ class QuizManagementController extends Controller
         @set_time_limit(120);
         $ids       = $aiService->generatePoolAndStore($quiz, $topics, $batchSize, $sourceText ?: null);
         $generated = count($ids);
+
+        // If the AI service returned nothing (API failure, bad key, etc.) return an error
+        // so the browser stops the loop instead of retrying forever.
+        if ($generated === 0) {
+            return response()->json([
+                'error' => 'AI returned 0 questions. Check that a Gemini API key is saved in Dashboard → Settings → AI and that the key is valid.',
+            ], 422);
+        }
 
         $newCount   = $quiz->questions()->count();
         $newPool    = $quiz->questionPools()->count();
