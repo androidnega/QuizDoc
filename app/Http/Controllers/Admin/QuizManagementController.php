@@ -1231,12 +1231,22 @@ class QuizManagementController extends Controller
         $ids       = $aiService->generatePoolAndStore($quiz, $topics, $batchSize, $sourceText ?: null);
         $generated = count($ids);
 
-        // If the AI service returned nothing (API failure, bad key, etc.) return an error
-        // so the browser stops the loop instead of retrying forever.
+        // If the AI service returned nothing (API failure, bad key, etc.) return 200 with error
+        // so the browser always gets JSON (no HTML error page) and the JS can show the message.
         if ($generated === 0) {
+            $apiError = $aiService->getLastApiError();
+            $message = $apiError
+                ? 'AI returned 0 questions. ' . $apiError
+                : 'AI returned 0 questions. Check that a Gemini API key is saved in Dashboard → Settings → AI and that the key is valid.';
             return response()->json([
-                'error' => 'AI returned 0 questions. Check that a Gemini API key is saved in Dashboard → Settings → AI and that the key is valid.',
-            ], 422);
+                'error' => $message,
+                'generated' => 0,
+                'questions_count' => $currentCount,
+                'pool_count' => $poolCount,
+                'total_so_far' => $totalSoFar,
+                'target' => $target,
+                'done' => false,
+            ]);
         }
 
         $newCount   = $quiz->questions()->count();

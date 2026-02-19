@@ -308,6 +308,10 @@ Route::middleware('admin.auth')->group(function () {
             Route::put('/quizzes/{quiz}', [QuizManagementController::class, 'update'])->name('quizzes.update');
             Route::post('/quizzes/{quiz}/ai-generate/background', [QuizManagementController::class, 'startAiGenerationBackground'])->name('quizzes.ai-generate.background');
             Route::post('/quizzes/{quiz}/ai-generate/batch', [QuizManagementController::class, 'generateBatch'])->name('quizzes.ai-generate.batch');
+            Route::get('/quizzes/{quiz}/ai-generate/batch', function (Quiz $quiz) {
+                return redirect()->route('dashboard.quizzes.show', $quiz)
+                    ->with('info', 'Use the "Generate questions with AI" button on this page.');
+            })->name('quizzes.ai-generate.batch.get');
             Route::get('/quizzes/{quiz}/scores', [QuizManagementController::class, 'scores'])->name('quizzes.scores');
             Route::get('/quizzes/{quiz}/scores/export/pdf/preview', [QuizManagementController::class, 'exportScoresPdf'])->name('quizzes.scores.export.pdf.preview');
             Route::get('/quizzes/{quiz}/scores/export/pdf', [QuizManagementController::class, 'exportScoresPdf'])->name('quizzes.scores.export.pdf');
