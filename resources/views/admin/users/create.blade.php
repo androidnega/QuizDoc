@@ -23,7 +23,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label for="username" class="block text-sm font-medium text-slate-700 mb-1">Username <span class="text-red-500">*</span></label>
-                            <input type="text" name="username" id="username" value="{{ old('username') }}" required class="input w-full max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 @error('username') border-red-500 @enderror">
+                            <input type="text" name="username" id="username" value="{{ old('username') }}" required class="input w-full max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 @error('username') border-red-500 @enderror" placeholder="e.g. j.doe or jdoe">
                             @error('username')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
                         <div>
@@ -33,7 +33,7 @@
                         </div>
                         <div>
                             <label for="name" class="block text-sm font-medium text-slate-700 mb-1">Name (optional)</label>
-                            <input type="text" name="name" id="name" value="{{ old('name') }}" class="input w-full max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 @error('name') border-red-500 @enderror">
+                            <input type="text" name="name" id="name" value="{{ old('name') }}" class="input w-full max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 @error('name') border-red-500 @enderror" placeholder="e.g. John Doe">
                             @error('name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
                         <div id="phone-field-for-sms">
@@ -45,6 +45,7 @@
                         <div>
                             <label for="role" class="block text-sm font-medium text-slate-700 mb-1">Role <span class="text-red-500">*</span></label>
                             <select name="role" id="role" required class="input w-full max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 @error('role') border-red-500 @enderror">
+                                <option value="" {{ old('role') === null || old('role') === '' ? 'selected' : '' }}>— Select role —</option>
                                 @if($canCreateSuperAdmin ?? false)
                                 <option value="super_admin" {{ old('role') === 'super_admin' ? 'selected' : '' }}>Super Admin (secondary)</option>
                                 @endif
@@ -55,13 +56,13 @@
                         </div>
                         <div id="sms-field">
                             <label for="sms_allocation" class="block text-sm font-medium text-slate-700 mb-1">SMS allocation (for Examiner only)</label>
-                            <input type="number" name="sms_allocation" id="sms_allocation" value="{{ old('sms_allocation', 0) }}" min="0" step="1" class="input w-full max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 @error('sms_allocation') border-red-500 @enderror" placeholder="0">
+                            <input type="number" name="sms_allocation" id="sms_allocation" value="{{ old('sms_allocation', 0) }}" min="0" step="1" class="input w-full max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 @error('sms_allocation') border-red-500 @enderror" placeholder="e.g. 20">
                             <p class="mt-1 text-xs text-slate-500">Number of SMS the examiner can use to send login tokens to students (e.g. 20).</p>
                             @error('sms_allocation')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
                         <div id="ai-tokens-field">
                             <label for="ai_quiz_tokens_allocation" class="block text-sm font-medium text-slate-700 mb-1">AI quiz tokens (for Examiner only)</label>
-                            <input type="number" name="ai_quiz_tokens_allocation" id="ai_quiz_tokens_allocation" value="{{ old('ai_quiz_tokens_allocation', 10) }}" min="0" step="1" class="input w-full max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 @error('ai_quiz_tokens_allocation') border-red-500 @enderror" placeholder="10">
+                            <input type="number" name="ai_quiz_tokens_allocation" id="ai_quiz_tokens_allocation" value="{{ old('ai_quiz_tokens_allocation', 10) }}" min="0" step="1" class="input w-full max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 @error('ai_quiz_tokens_allocation') border-red-500 @enderror" placeholder="e.g. 10">
                             <p class="mt-1 text-xs text-slate-500">AI generations per period. When exhausted, examiner waits for cooldown (Settings → AI) before refill.</p>
                             @error('ai_quiz_tokens_allocation')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
@@ -110,7 +111,7 @@
                         <div>
                             <label for="password" class="block text-sm font-medium text-slate-700 mb-1">Password</label>
                             <div class="flex flex-wrap items-center gap-2">
-                                <input type="password" name="password" id="password" class="input flex-1 min-w-0 max-w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 @error('password') border-red-500 @enderror" minlength="8" autocomplete="new-password">
+                                <input type="password" name="password" id="password" class="input flex-1 min-w-0 max-w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 @error('password') border-red-500 @enderror" minlength="8" autocomplete="new-password" placeholder="Min 8 characters, letters and numbers">
                                 <button type="button" id="generate-password" class="inline-flex items-center justify-center rounded-lg bg-primary-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 shrink-0">Generate</button>
                                 <button type="button" id="copy-password" class="p-2 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 shrink-0" title="Copy password">
                                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
@@ -121,7 +122,7 @@
                         </div>
                         <div>
                             <label for="password_confirmation" class="block text-sm font-medium text-slate-700 mb-1">Confirm password</label>
-                            <input type="password" name="password_confirmation" id="password_confirmation" class="input w-full max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                            <input type="password" name="password_confirmation" id="password_confirmation" class="input w-full max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500" placeholder="Re-enter password">
                         </div>
                     </div>
                     <div id="sms-password-notice" class="hidden text-sm text-slate-700 bg-blue-50 border border-blue-200 rounded-lg p-4">
