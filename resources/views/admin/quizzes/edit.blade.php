@@ -447,7 +447,12 @@ document.addEventListener('DOMContentLoaded', function() {
         statusText.textContent = label || ('Generated ' + generated + ' / ' + target);
     }
 
-    async function postJson(url, payload) {
+    var CHUNK_TIMEOUT_MS = 120000;
+
+    async function postJson(url, payload, opts) {
+        opts = opts || {};
+        var controller = new AbortController();
+        var timeoutId = setTimeout(function() { controller.abort(); }, opts.timeoutMs || CHUNK_TIMEOUT_MS);
         var res = await fetch(url, {
             method: 'POST',
             headers: {
@@ -456,8 +461,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-CSRF-TOKEN': csrf,
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: JSON.stringify(payload || {})
+            body: JSON.stringify(payload || {}),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
         var data = await res.json().catch(function() { return {}; });
         if (!res.ok) {
             throw new Error(data.message || 'Request failed.');
@@ -474,11 +481,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         while (running) {
             var chunk;
+            setProgress(genState.generated_count || 0, genState.target_count || 1, 'Waiting for server...');
             try {
                 chunk = await postJson(chunkUrl, {
                     generation_id: genState.generation_id,
                     batch_size: 8
-                });
+                }, { timeoutMs: CHUNK_TIMEOUT_MS });
                 networkFailures = 0;
             } catch (err) {
                 networkFailures += 1;
@@ -497,7 +505,11 @@ document.addEventListener('DOMContentLoaded', function() {
             genState.target_count = chunk.target_count || genState.target_count;
             genState.status = chunk.status || 'running';
             localStorage.setItem(storageKey, JSON.stringify(genState));
-            setProgress(genState.generated_count, genState.target_count, chunk.message || null);
+            var msg = chunk.message || ('Generated ' + genState.generated_count + ' / ' + genState.target_count);
+            if (chunk.pool_total != null) {
+                msg += ' (' + chunk.pool_total + ' in pool)';
+            }
+            setProgress(genState.generated_count, genState.target_count, msg);
 
             if (genState.status === 'completed') {
                 running = false;

@@ -1119,7 +1119,6 @@ class QuizManagementController extends Controller
         $validated = $request->validate([
             'target_count' => 'required|integer|min:1|max:250',
             'topics' => 'required|array|min:1',
-            'topics.*.name' => 'required|string|max:255',
             'source_text' => 'nullable|string',
         ]);
 
@@ -1140,7 +1139,18 @@ class QuizManagementController extends Controller
         }
 
         $targetCount = (int) $validated['target_count'];
-        $topics = array_values($validated['topics']);
+        $topicsRaw = $validated['topics'];
+        $topics = [];
+        foreach (array_values($topicsRaw) as $t) {
+            if (is_array($t) && isset($t['name']) && is_string($t['name'])) {
+                $topics[] = ['name' => trim($t['name'])];
+            } elseif (is_string($t) && trim($t) !== '') {
+                $topics[] = ['name' => trim($t)];
+            }
+        }
+        if (empty($topics)) {
+            return response()->json(['success' => false, 'message' => 'At least one topic name is required.'], 422);
+        }
         $sourceText = trim((string) ($validated['source_text'] ?? ''));
         if ($sourceText === '') {
             $sourceText = (string) ($quiz->script_text ?? '');
@@ -1226,21 +1236,28 @@ class QuizManagementController extends Controller
         try {
             $topics = is_array($state['topics'] ?? null) ? $state['topics'] : [['name' => 'General knowledge']];
             $sourceText = (string) ($state['source_text'] ?? '');
+            // Keep chunk requests lighter: cap source text so the prompt doesn't time out.
+            if (mb_strlen($sourceText) > 12000) {
+                $sourceText = mb_substr($sourceText, 0, 12000) . "\n[... truncated for batch ...]";
+            }
             $attemptSizes = array_values(array_unique([
-                $batchSize,
-                max(1, (int) floor($batchSize / 2)),
+                min(5, $batchSize),
+                min(3, $batchSize),
                 2,
                 1,
             ]));
 
             foreach ($attemptSizes as $attemptSize) {
+                if ($attemptSize < 1) {
+                    continue;
+                }
                 $generatedIds = $aiService->generatePoolAndStore($quiz, $topics, $attemptSize, $sourceText);
                 $generatedThisBatch = count($generatedIds);
                 if ($generatedThisBatch > 0) {
                     break;
                 }
 
-                // Fallback: if source text is too strict/noisy, retry with topics only once.
+                // Fallback: if source text is too strict/noisy, retry with topics only.
                 if ($sourceText !== '') {
                     $generatedIds = $aiService->generatePoolAndStore($quiz, $topics, $attemptSize, null);
                     $generatedThisBatch = count($generatedIds);
@@ -1249,7 +1266,7 @@ class QuizManagementController extends Controller
                     }
                 }
 
-                usleep(250000);
+                usleep(300000);
             }
         } catch (\Throwable $e) {
             $state['status'] = 'failed';

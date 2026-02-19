@@ -253,9 +253,17 @@ class AiQuestionService
 
     /**
      * Extract JSON array from model response (may be wrapped in markdown or text). Uses first [ to last ] for outer array.
+     * Strips markdown code fences so ```json [...] ``` is parsed correctly.
      */
     private function parseJsonArray(string $content): ?array
     {
+        $content = trim($content);
+        // Strip ```json ... ``` or ``` ... ```
+        if (preg_match('/^```(?:json)?\s*([\s\S]*?)```\s*$/s', $content, $m)) {
+            $content = trim($m[1]);
+        } elseif (preg_match('/^```(?:json)?\s*([\s\S]*?)(?=```|$)/s', $content, $m)) {
+            $content = trim($m[1]);
+        }
         $start = strpos($content, '[');
         if ($start === false) {
             $decoded = json_decode($content, true);
@@ -269,6 +277,33 @@ class AiQuestionService
         $json = substr($content, $start, $end - $start + 1);
         $decoded = json_decode($json, true);
         return is_array($decoded) ? $decoded : null;
+    }
+
+    /**
+     * Normalize options from AI (object {"A":"...","B":"..."} or list [{"key":"A","text":"..."}] ) to [["key"=>"A","text"=>"..."], ...].
+     */
+    private function normalizeOptions(mixed $opts, string $topicNames): array
+    {
+        $out = [];
+        foreach (['A', 'B', 'C', 'D'] as $k) {
+            $text = 'Option ' . $k;
+            if (is_array($opts)) {
+                if (isset($opts[$k]) && is_string($opts[$k])) {
+                    $text = $opts[$k];
+                } elseif (isset($opts[$k]) && is_array($opts[$k])) {
+                    $text = (string) ($opts[$k]['text'] ?? $opts[$k]['value'] ?? $text);
+                } else {
+                    foreach ($opts as $o) {
+                        if (is_array($o) && ($o['key'] ?? $o['letter'] ?? null) === $k) {
+                            $text = (string) ($o['text'] ?? $o['value'] ?? $text);
+                            break;
+                        }
+                    }
+                }
+            }
+            $out[] = ['key' => $k, 'text' => $text];
+        }
+        return $out;
     }
 
     /**
@@ -317,21 +352,23 @@ class AiQuestionService
             return [];
         }
         $decoded = $this->parseJsonArray($content);
-        if (!is_array($decoded)) {
+        if (! is_array($decoded) || empty($decoded)) {
+            // Fallback: try simpler prompt (minimal JSON, often more reliable)
+            $ids = $this->generatePoolAndStoreSimple($quiz, $topicNames, $count, $context);
+            if (! empty($ids)) {
+                return $ids;
+            }
             return [];
         }
         $ids = [];
         foreach (array_slice($decoded, 0, $count) as $item) {
-            $text = $item['text'] ?? 'AI Question';
-            $opts = $item['options'] ?? [];
-            $correct = $item['correct'] ?? 'A';
+            $text = $item['text'] ?? $item['question'] ?? 'AI Question';
+            $opts = $item['options'] ?? $item['choices'] ?? [];
+            $correct = $item['correct'] ?? $item['correct_answer'] ?? 'A';
             $topic = $item['topic'] ?? $topicNames;
             $explanationWrong = $item['explanation_wrong'] ?? null;
             $explanationCorrect = $item['explanation_correct'] ?? null;
-            $options = [];
-            foreach (['A', 'B', 'C', 'D'] as $k) {
-                $options[] = ['key' => $k, 'text' => $opts[$k] ?? 'Option ' . $k];
-            }
+            $options = $this->normalizeOptions($opts, $topicNames);
             $pool = QuestionPool::create([
                 'quiz_id' => $quiz->id,
                 'question_text' => $text,
@@ -354,6 +391,57 @@ class AiQuestionService
             'questions_generated' => count($ids),
             'generated_at' => now(),
         ]);
+        return $ids;
+    }
+
+    /**
+     * Simpler prompt (minimal JSON) to improve reliability when the full prompt returns empty or unparseable output.
+     */
+    private function generatePoolAndStoreSimple(Quiz $quiz, string $topicNames, int $count, string $context = ''): array
+    {
+        $prompt = $context
+            . "Topics: {$topicNames}. Generate exactly {$count} multiple choice questions. "
+            . "Reply with ONLY a JSON array, no other text. Each item: {\"text\":\"question\",\"options\":{\"A\":\"...\",\"B\":\"...\",\"C\":\"...\",\"D\":\"...\"},\"correct\":\"A\"}. "
+            . "Example: [{\"text\":\"What is 2+2?\",\"options\":{\"A\":\"3\",\"B\":\"4\",\"C\":\"5\",\"D\":\"6\"},\"correct\":\"B\"}]";
+        $result = $this->callAiWithUsage($prompt);
+        $content = $result['text'] ?? null;
+        if ($content === null || $content === '') {
+            return [];
+        }
+        $decoded = $this->parseJsonArray($content);
+        if (! is_array($decoded) || empty($decoded)) {
+            return [];
+        }
+        $ids = [];
+        foreach (array_slice($decoded, 0, $count) as $item) {
+            $text = $item['text'] ?? $item['question'] ?? 'AI Question';
+            $opts = $item['options'] ?? $item['choices'] ?? [];
+            $correct = $item['correct'] ?? $item['correct_answer'] ?? 'A';
+            $options = $this->normalizeOptions($opts, $topicNames);
+            $pool = QuestionPool::create([
+                'quiz_id' => $quiz->id,
+                'question_text' => $text,
+                'options' => $options,
+                'correct_answer' => $correct,
+                'topic' => $topicNames,
+                'is_approved' => false,
+                'explanation_wrong' => null,
+                'explanation_correct' => null,
+            ]);
+            $ids[] = $pool->id;
+        }
+        if (! empty($ids)) {
+            $usage = $result['usage'] ?? ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0];
+            AiGenerationLog::create([
+                'quiz_id' => $quiz->id,
+                'prompt_tokens' => $usage['prompt_tokens'],
+                'completion_tokens' => $usage['completion_tokens'],
+                'total_tokens' => $usage['total_tokens'] ?: ($usage['prompt_tokens'] + $usage['completion_tokens']),
+                'provider' => $result['provider'] ?? null,
+                'questions_generated' => count($ids),
+                'generated_at' => now(),
+            ]);
+        }
         return $ids;
     }
 
@@ -408,16 +496,13 @@ class AiQuestionService
             
             // Store questions from this batch
             foreach (array_slice($decoded, 0, $batchCount) as $item) {
-                $text = $item['text'] ?? 'AI Question';
-                $opts = $item['options'] ?? [];
-                $correct = $item['correct'] ?? 'A';
+                $text = $item['text'] ?? $item['question'] ?? 'AI Question';
+                $opts = $item['options'] ?? $item['choices'] ?? [];
+                $correct = $item['correct'] ?? $item['correct_answer'] ?? 'A';
                 $topic = $item['topic'] ?? $topicNames;
                 $explanationWrong = $item['explanation_wrong'] ?? null;
                 $explanationCorrect = $item['explanation_correct'] ?? null;
-                $options = [];
-                foreach (['A', 'B', 'C', 'D'] as $k) {
-                    $options[] = ['key' => $k, 'text' => $opts[$k] ?? 'Option ' . $k];
-                }
+                $options = $this->normalizeOptions($opts, $topicNames);
                 $pool = QuestionPool::create([
                     'quiz_id' => $quiz->id,
                     'question_text' => $text,
