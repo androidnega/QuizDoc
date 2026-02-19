@@ -296,8 +296,8 @@ class AiQuestionService
     }
 
     /**
-     * Call AI: try DeepSeek first when both keys exist (avoids Gemini quota blocking generation),
-     * then Gemini; if the first fails, try the other. Returns ['text' => ..., 'provider' => ..., 'usage' => ...].
+     * Call AI: try Gemini first when both keys exist, then DeepSeek as fallback.
+     * Returns ['text' => ..., 'provider' => ..., 'usage' => ...].
      */
     private function callAiWithUsage(string $prompt): array
     {
@@ -307,12 +307,12 @@ class AiQuestionService
         $firstError = null;
         $secondError = null;
 
-        // Try DeepSeek first when both are set so quota-limited Gemini doesn't block generation.
-        $order = $deepseekKey !== null && $geminiKey !== null
-            ? [['provider' => 'deepseek', 'key' => $deepseekKey], ['provider' => 'gemini', 'key' => $geminiKey]]
-            : ($deepseekKey !== null
-                ? [['provider' => 'deepseek', 'key' => $deepseekKey]]
-                : ($geminiKey !== null ? [['provider' => 'gemini', 'key' => $geminiKey]] : []));
+        // Gemini first, then DeepSeek (e.g. when Gemini has quota and DeepSeek balance is low).
+        $order = $geminiKey !== null && $deepseekKey !== null
+            ? [['provider' => 'gemini', 'key' => $geminiKey], ['provider' => 'deepseek', 'key' => $deepseekKey]]
+            : ($geminiKey !== null
+                ? [['provider' => 'gemini', 'key' => $geminiKey]]
+                : ($deepseekKey !== null ? [['provider' => 'deepseek', 'key' => $deepseekKey]] : []));
 
         foreach ($order as $item) {
             if ($item['provider'] === 'deepseek') {
