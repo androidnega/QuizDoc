@@ -1,14 +1,4 @@
 <?php
-/**
- * LIVE SERVER: Verify which database the app is using and whether it has data.
- *
- * 1. Deploy this file to public/ on the live server (e.g. with git pull).
- * 2. Visit: https://yourdomain.com/check-database.php?key=QuizSnap2026Xk9m2p7
- *    (Change the key in this file if you prefer; same as run-migrate.php secret.)
- * 3. The page shows: connection, host, database name, and row counts per table.
- * 4. If "Database name" is not the DB you see in cPanel/phpMyAdmin, fix .env on the server
- *    (DB_DATABASE, DB_HOST, DB_USERNAME, DB_PASSWORD) and clear config cache: php artisan config:clear
- * 5. Delete or restrict this file after use for security.
  */
 $secret = 'QuizSnap2026Xk9m2p7'; // change if desired
 

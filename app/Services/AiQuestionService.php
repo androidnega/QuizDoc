@@ -19,17 +19,25 @@ class AiQuestionService
     /** Last API error message — set on any failure, cleared on success. */
     private ?string $lastApiError = null;
 
-    /** Use only Dashboard → Settings → AI keys for generation (never .env) so the saved key is always used. */
+    /** Gemini API key: Dashboard → Settings → AI first, then .env GEMINI_API_KEY (e.g. on live server). */
     private function getGeminiKey(): ?string
     {
         $key = Setting::getValue(Setting::KEY_GEMINI_API);
+        if ($key !== null && $key !== '') {
+            return $key;
+        }
+        $key = config('services.gemini.key');
         return ($key !== null && $key !== '') ? $key : null;
     }
 
-    /** Use only Dashboard → Settings → AI keys for generation (never .env) so the saved key is always used. */
+    /** DeepSeek API key: Dashboard → Settings → AI first, then .env DEEPSEEK_API_KEY. */
     private function getDeepSeekKey(): ?string
     {
         $key = Setting::getValue(Setting::KEY_DEEPSEEK_API);
+        if ($key !== null && $key !== '') {
+            return $key;
+        }
+        $key = config('services.deepseek.key');
         return ($key !== null && $key !== '') ? $key : null;
     }
 
