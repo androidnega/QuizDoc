@@ -88,7 +88,7 @@
                                 <td class="px-3 py-2">
                                     @php
                                         $roleLabels = [
-                                            'super_admin' => ['label' => 'Super Admin', 'class' => 'bg-primary-100 text-primary-800'],
+                                            'super_admin' => ['label' => 'Admin', 'class' => 'bg-primary-100 text-primary-800'],
                                             'examiner' => ['label' => 'Examiner', 'class' => 'bg-success-100 text-success-800'],
                                             'coordinator' => ['label' => 'Coordinator', 'class' => 'bg-indigo-100 text-indigo-800'],
                                             'student' => ['label' => 'Student', 'class' => 'bg-gray-100 text-gray-800'],

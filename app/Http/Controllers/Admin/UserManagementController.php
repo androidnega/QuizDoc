@@ -507,11 +507,18 @@ class UserManagementController extends Controller
             abort(403, 'Only Super Administrators can reset user passwords.');
         }
         
-        // Allow resetting passwords for staff and Docu Mentor users
+        $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
+        $isPrimary = $currentUser && $currentUser->id === $primarySuperAdminId;
         $allowedForReset = [User::ROLE_EXAMINER, User::DM_ROLE_COORDINATOR, User::DM_ROLE_STUDENT, User::DM_ROLE_LEADER];
-        if (!in_array($user->role, $allowedForReset, true)) {
+        // Super admin: only primary can reset (themselves or another super admin)
+        if ($user->role === User::ROLE_SUPER_ADMIN) {
+            if (!$isPrimary) {
+                return redirect()->route('dashboard.users.index')
+                    ->with('error', 'Only the primary admin can reset an admin password.');
+            }
+        } elseif (!in_array($user->role, $allowedForReset, true)) {
             return redirect()->route('dashboard.users.index')
-                ->with('error', 'Cannot reset password for super admin.');
+                ->with('error', 'Cannot reset password for this role.');
         }
         
         // Generate a temporary password

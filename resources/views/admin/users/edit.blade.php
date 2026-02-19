@@ -46,7 +46,7 @@
                 <div>
                     <label for="role" class="block text-xs font-medium text-gray-500 mb-0.5">Role</label>
                     <select name="role" id="role" required class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none @error('role') border-red-500 @enderror">
-                        <option value="super_admin" {{ old('role', $user->role) === 'super_admin' ? 'selected' : '' }}>Super Admin</option>
+                        <option value="super_admin" {{ old('role', $user->role) === 'super_admin' ? 'selected' : '' }}>Admin</option>
                         <option value="examiner" {{ old('role', $user->role) === 'examiner' ? 'selected' : '' }}>Examiner</option>
                         <option value="coordinator" {{ old('role', $user->role) === 'coordinator' ? 'selected' : '' }}>Coordinator (Docu Mentor)</option>
                         <option value="student" {{ old('role', $user->role) === 'student' ? 'selected' : '' }}>Student (Docu Mentor)</option>

@@ -47,7 +47,7 @@
                             <select name="role" id="role" required class="input w-full max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 @error('role') border-red-500 @enderror">
                                 <option value="" {{ old('role') === null || old('role') === '' ? 'selected' : '' }}>— Select role —</option>
                                 @if($canCreateSuperAdmin ?? false)
-                                <option value="super_admin" {{ old('role') === 'super_admin' ? 'selected' : '' }}>Super Admin (secondary)</option>
+                                <option value="super_admin" {{ old('role') === 'super_admin' ? 'selected' : '' }}>Admin</option>
                                 @endif
                                 <option value="examiner" {{ old('role') === 'examiner' ? 'selected' : '' }}>Examiner</option>
                                 <option value="coordinator" {{ old('role') === 'coordinator' ? 'selected' : '' }}>Coordinator (Docu Mentor)</option>
