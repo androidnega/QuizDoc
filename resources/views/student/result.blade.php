@@ -4,8 +4,8 @@
 @section('body_class', 'bg-offwhite')
 
 @section('content')
-<div class="min-h-[100dvh] px-4 py-8 sm:py-10 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1rem,env(safe-area-inset-bottom))]">
-    <div class="max-w-4xl mx-auto w-full space-y-8">
+<div class="min-h-[100dvh] px-4 py-8 sm:py-10 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1rem,env(safe-area-inset-bottom))] min-w-0 overflow-x-hidden">
+    <div class="max-w-4xl mx-auto w-full min-w-0 space-y-8">
         {{-- Header --}}
         <div class="text-center mb-8">
             <h1 class="text-xl font-semibold text-gray-900">{{ $session->quiz->title }}</h1>
@@ -167,10 +167,10 @@
 
             {{-- Review: only when quiz allows full review after end (and quiz window has ended) --}}
             @if($session->quiz->canShowFullReview() && $session->answers->isNotEmpty())
-                <div id="answer-review" class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 sm:p-8 mb-8 scroll-mt-4">
+                <div id="answer-review" class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 sm:p-8 mb-8 scroll-mt-4 min-w-0 max-w-full overflow-hidden">
                     <h2 class="text-sm font-semibold text-gray-900 mb-3">Review your answers</h2>
                     <p class="text-xs text-gray-500 mb-4">Full review is available now that the quiz window has ended. See your answers, the correct answers, and why any were wrong.</p>
-                    <div class="space-y-4">
+                    <div class="space-y-4 min-w-0 max-w-full">
                         @foreach($session->answers as $idx => $answer)
                             @php
                                 $question = $answer->question;
@@ -210,18 +210,18 @@
                                     }
                                 }
                             @endphp
-                            <div class="border border-gray-200 rounded-lg p-3 {{ $correct ? 'bg-success-50/50 border-success-200' : 'bg-danger-50/50 border-danger-200' }}">
-                                    <p class="text-sm font-medium text-gray-900 mb-1">{{ $idx + 1 }}. {{ $questionText }}</p>
-                                    <div class="flex flex-wrap gap-2 text-xs mt-2">
-                                        <span class="text-gray-600">Your answer: <strong>{{ $yourText !== null ? $answer->student_answer . '. ' . $yourText : ($answer->student_answer ?: '—') }}</strong></span>
-                                        <span class="text-success-700">Correct: <strong>{{ $correctText !== null ? $sessionCorrect . '. ' . $correctText : $sessionCorrect }}</strong></span>
+                            <div class="border border-gray-200 rounded-lg p-3 min-w-0 max-w-full {{ $correct ? 'bg-success-50/50 border-success-200' : 'bg-danger-50/50 border-danger-200' }}">
+                                    <p class="text-sm font-medium text-gray-900 mb-1 break-words">{{ $idx + 1 }}. {{ $questionText }}</p>
+                                    <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs mt-2 min-w-0">
+                                        <span class="text-gray-600 break-words min-w-0">Your answer: <strong>{{ $yourText !== null ? $answer->student_answer . '. ' . $yourText : ($answer->student_answer ?: '—') }}</strong></span>
+                                        <span class="text-success-700 break-words min-w-0">Correct: <strong>{{ $correctText !== null ? $sessionCorrect . '. ' . $correctText : $sessionCorrect }}</strong></span>
                                     </div>
                                     @if(!$correct)
                                         @php
                                             $whyWrong = ($question && trim((string)($question->explanation_wrong ?? '')) !== '') ? $question->explanation_wrong : ($answer->explanation_wrong ?? null);
                                         @endphp
                                         @if(!empty($whyWrong))
-                                            <div class="mt-3 pt-3 border-t border-gray-200 text-xs">
+                                            <div class="mt-3 pt-3 border-t border-gray-200 text-xs break-words min-w-0">
                                                 <p class="text-danger-700"><strong>Reason:</strong> {{ $whyWrong }}</p>
                                             </div>
                                         @endif
