@@ -5,6 +5,10 @@
 
 @php
     $isSuperAdmin = session('admin_role') === 'super_admin';
+    if (!$isSuperAdmin && session('admin_user_id')) {
+        $layoutAdminUser = \App\Models\User::find(session('admin_user_id'));
+        $isSuperAdmin = $layoutAdminUser && $layoutAdminUser->role === \App\Models\User::ROLE_SUPER_ADMIN;
+    }
     $isExaminer = session('admin_role') === 'examiner';
     $isCoordinatorOnly = session('admin_role') === 'coordinator';
     $isDocuMentorCoordinator = in_array(session('admin_role'), ['coordinator', 'super_admin'], true);
@@ -128,6 +132,11 @@
                         <a href="{{ route('dashboard.users.index') }}" class="examiner-nav-link {{ request()->routeIs('dashboard.users.*') ? 'examiner-nav-link--active' : '' }} group flex items-center gap-3 rounded-lg py-3 px-3 text-sm font-medium min-w-0 transition-all" title="Manage staff (Super Admin and examiners)">
                             <svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                             <span class="examiner-nav-text truncate">Users</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('dashboard.users.create') }}" class="examiner-nav-link {{ request()->routeIs('dashboard.users.create') ? 'examiner-nav-link--active' : '' }} group flex items-center gap-3 rounded-lg py-2.5 pl-11 pr-3 text-sm font-medium min-w-0 transition-all" title="Create examiner or coordinator">
+                            <span class="examiner-nav-text truncate">Add user</span>
                         </a>
                     </li>
                     <li>
