@@ -66,6 +66,20 @@ class AiQuestionService
                 continue;
             }
 
+            if ($response->status() === 429) {
+                // Rate-limited on this model — try the fallback model (different quota bucket).
+                $parsed = $response->json() ?? [];
+                $apiMsg = $parsed['error']['message'] ?? null;
+                // Extract "retry in Xs" hint if present.
+                $retryHint = '';
+                if ($apiMsg && preg_match('/retry[^\d]*(\d+(?:\.\d+)?)\s*s/i', $apiMsg, $m)) {
+                    $retryHint = ' Retry in ' . (int) ceil((float) $m[1]) . 's.';
+                }
+                $this->lastApiError = '[' . $model . ' HTTP 429] Quota exceeded.' . $retryHint
+                    . ' Trying fallback model.';
+                continue; // try next model instead of failing immediately
+            }
+
             if (!$response->successful()) {
                 $status = $response->status();
                 $parsed = $response->json() ?? [];
@@ -107,7 +121,8 @@ class AiQuestionService
             $this->lastApiError = '[' . $model . '] Gemini returned an empty text response.';
             return ['text' => null, 'usage' => $usage];
         }
-        $this->lastApiError = 'All Gemini models returned 404 (' . implode(', ', $triedModels) . '). Check your API key or model availability.';
+        $this->lastApiError = 'All Gemini models failed (' . implode(', ', $triedModels) . '). '
+            . 'This is usually a quota/billing issue. Go to https://aistudio.google.com → API key → enable billing, or wait for the free-tier quota to reset.';
         return ['text' => null, 'usage' => $emptyUsage];
     }
 

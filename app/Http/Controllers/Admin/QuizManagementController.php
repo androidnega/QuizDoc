@@ -1332,15 +1332,28 @@ class QuizManagementController extends Controller
                 $apiError = $aiService->getLastApiError();
                 if ($apiError !== null) {
                     $lower = strtolower($apiError);
-                    $isHardError = str_contains($lower, 'api_key_invalid')
-                        || str_contains($lower, 'resource_exhausted')
+                    $isAuthError = str_contains($lower, 'api_key_invalid')
                         || str_contains($lower, 'permission_denied')
-                        || str_contains($lower, 'quota')
                         || str_contains($lower, 'http 401')
-                        || str_contains($lower, 'http 403')
+                        || str_contains($lower, 'http 403');
+                    $isQuotaError = str_contains($lower, 'resource_exhausted')
+                        || str_contains($lower, 'quota')
                         || str_contains($lower, 'http 429');
-                    if ($isHardError) {
-                        throw new \RuntimeException('Gemini API error: ' . $apiError);
+                    if ($isAuthError) {
+                        throw new \RuntimeException('Gemini API key error: ' . $apiError
+                            . ' — Go to Dashboard → Settings → AI and replace your Gemini API key.');
+                    }
+                    if ($isQuotaError) {
+                        // Parse "retry in Xs" hint from the error if present.
+                        $retrySeconds = 30;
+                        if (preg_match('/retry[^\d]*(\d+(?:\.\d+)?)\s*s/i', $apiError, $m)) {
+                            $retrySeconds = (int) ceil((float) $m[1]);
+                        }
+                        throw new \RuntimeException(
+                            'Gemini quota exceeded (free tier limit reached). '
+                            . 'Retry in ~' . $retrySeconds . 's, or go to https://aistudio.google.com and enable billing for higher limits. '
+                            . 'Error: ' . $apiError
+                        );
                     }
                 }
             }
