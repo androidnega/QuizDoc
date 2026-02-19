@@ -52,6 +52,6 @@ class QuizBackupService
      */
     private static function recipient(): ?string
     {
-        return Setting::getValue(Setting::KEY_NOTIFY_DIGEST_RECIPIENT);
+        return Setting::getDigestRecipientValue();
     }
 }

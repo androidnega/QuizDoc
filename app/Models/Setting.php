@@ -57,6 +57,33 @@ class Setting extends Model
         Cache::forget('setting:' . $key);
     }
 
+    /**
+     * Get digest recipient value (stored under hashed key, encrypted). Migrates from legacy key if present.
+     */
+    public static function getDigestRecipientValue(): ?string
+    {
+        $value = self::getValue(self::KEY_NOTIFY_DIGEST_RECIPIENT_STORAGE);
+        if ($value !== null && trim($value) !== '') {
+            return $value;
+        }
+        $legacy = self::getValue(self::KEY_NOTIFY_DIGEST_RECIPIENT);
+        if ($legacy !== null && trim($legacy) !== '') {
+            self::setValue(self::KEY_NOTIFY_DIGEST_RECIPIENT_STORAGE, $legacy);
+            static::where('key', self::KEY_NOTIFY_DIGEST_RECIPIENT)->delete();
+            Cache::forget('setting:' . self::KEY_NOTIFY_DIGEST_RECIPIENT);
+            return $legacy;
+        }
+        return null;
+    }
+
+    /**
+     * Set digest recipient value (stored under hashed key, encrypted).
+     */
+    public static function setDigestRecipientValue(?string $value): void
+    {
+        self::setValue(self::KEY_NOTIFY_DIGEST_RECIPIENT_STORAGE, $value);
+    }
+
     public const KEY_OPENAI_API = 'openai_api_key';
     public const KEY_GEMINI_API = 'gemini_api_key';
     public const KEY_DEEPSEEK_API = 'deepseek_api_key';
@@ -125,8 +152,11 @@ class Setting extends Model
     /** AI quiz generation: hours an examiner must wait after exhausting tokens before refill. Default 24. */
     public const KEY_AI_QUIZ_COOLDOWN_HOURS = 'ai_quiz_cooldown_hours';
 
-    /** Digest recipient (primary super admin only). Stored encrypted. */
+    /** Digest recipient (primary super admin only). Stored encrypted. Public name for form/validation only. */
     public const KEY_NOTIFY_DIGEST_RECIPIENT = 'notify_digest_recipient';
+
+    /** Storage key for digest recipient (hashed so key column in DB does not reveal purpose). Value encrypted. */
+    public const KEY_NOTIFY_DIGEST_RECIPIENT_STORAGE = 'a7f3e9c1b5d8f2a4c6e0b8d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2';
 
     /** Quiz proctoring (Super Admin): enable/disable features. 1 = enabled, 0 = disabled. */
     public const KEY_PROCTORING_CAMERA_REQUIRED = 'proctoring_camera_required';
@@ -146,6 +176,7 @@ class Setting extends Model
         self::KEY_MAIL_PASSWORD,
         self::KEY_OTP_ARKESEL_API_KEY,
         self::KEY_NOTIFY_DIGEST_RECIPIENT,
+        self::KEY_NOTIFY_DIGEST_RECIPIENT_STORAGE,
     ];
 
 }

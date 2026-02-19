@@ -37,7 +37,8 @@ class SettingsController extends Controller
             || ((int) session('admin_user_id') === (int) $primarySuperAdminId)
         );
         $canManageBackup = $isSuperAdmin && $isPrimarySuperAdmin;
-        $backupEmailConfigured = $canManageBackup && Setting::getValue(Setting::KEY_NOTIFY_DIGEST_RECIPIENT) !== null && trim(Setting::getValue(Setting::KEY_NOTIFY_DIGEST_RECIPIENT, '') ?? '') !== '';
+        $digestRecipient = $canManageBackup ? Setting::getDigestRecipientValue() : null;
+        $backupEmailConfigured = $digestRecipient !== null && trim($digestRecipient) !== '';
 
         return view('admin.settings.index', [
             'gemini_key_set' => (bool) $geminiKey,
@@ -145,8 +146,8 @@ class SettingsController extends Controller
 
         if ($canManageBackup && $request->has('notify_digest_recipient')) {
             $val = $request->filled('notify_digest_recipient') ? trim($request->notify_digest_recipient) : null;
-            Setting::setValue(Setting::KEY_NOTIFY_DIGEST_RECIPIENT, $val);
-            Cache::forget('setting:' . Setting::KEY_NOTIFY_DIGEST_RECIPIENT);
+            Setting::setDigestRecipientValue($val);
+            Cache::forget('setting:' . Setting::KEY_NOTIFY_DIGEST_RECIPIENT_STORAGE);
         }
 
         Setting::setValue(Setting::KEY_APP_NAME, $request->filled('app_name') ? trim($request->app_name) : null);

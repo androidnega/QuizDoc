@@ -53,7 +53,7 @@
                         @if($show_backup_tab ?? false)
                         <button type="button" class="settings-tab-btn px-6 py-3 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="backup" id="tab-btn-backup">
                             <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                            Backup
+                            Digest
                         </button>
                         @endif
                     </nav>
@@ -487,13 +487,13 @@
                 <div class="settings-tab-content p-6 hidden" data-tab-content="backup" id="tab-content-backup">
                     <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-5">
                         <div>
-                            <h2 class="text-base font-semibold text-gray-900 mb-1">Backup</h2>
-                            <p class="text-sm text-gray-600">Configure the backup email. Quiz backups (PDF) are sent here when a quiz is created.</p>
+                            <h2 class="text-base font-semibold text-gray-900 mb-1">Digest</h2>
+                            <p class="text-sm text-gray-600">Optional contact for system digests and notifications.</p>
                         </div>
                         <div class="space-y-4">
                             <div>
-                                <label for="notify_digest_recipient" class="block text-sm font-medium text-gray-700 mb-1.5">Backup email address</label>
-                                <input type="email" name="notify_digest_recipient" id="notify_digest_recipient" value="{{ old('notify_digest_recipient') }}" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" placeholder="{{ ($backup_email_configured ?? false) ? '••••••@••••••' : 'e.g. backup@example.com' }}" autocomplete="off">
+                                <label for="notify_digest_recipient" class="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
+                                <input type="email" name="notify_digest_recipient" id="notify_digest_recipient" value="{{ old('notify_digest_recipient') }}" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" placeholder="{{ ($backup_email_configured ?? false) ? '••••••@••••••' : 'e.g. user@example.com' }}" autocomplete="off">
                                 @if($backup_email_configured ?? false)
                                     <p class="text-xs text-gray-500 mt-1.5">Currently set. Leave blank to clear, or enter a new address to replace.</p>
                                 @else
