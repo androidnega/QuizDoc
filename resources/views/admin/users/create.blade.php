@@ -55,9 +55,9 @@
                             @error('role')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
                         <div id="sms-field">
-                            <label for="sms_allocation" class="block text-sm font-medium text-slate-700 mb-1">SMS allocation (for Examiner only)</label>
+                            <label for="sms_allocation" class="block text-sm font-medium text-slate-700 mb-1">SMS allocation (Examiner & Coordinator)</label>
                             <input type="number" name="sms_allocation" id="sms_allocation" value="{{ old('sms_allocation', 0) }}" min="0" step="1" class="input w-full max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 @error('sms_allocation') border-red-500 @enderror" placeholder="e.g. 20">
-                            <p class="mt-1 text-xs text-slate-500">Number of SMS the examiner can use to send login tokens to students (e.g. 20).</p>
+                            <p class="mt-1 text-xs text-slate-500">SMS credits for login tokens and group/supervisor messaging (e.g. 20).</p>
                             @error('sms_allocation')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
                         <div id="ai-tokens-field">
@@ -217,7 +217,7 @@
                 var deptSelect = document.getElementById('department_id');
                 if (deptSelect) deptSelect.required = required;
             }
-            var showSmsAllocation = (role === 'examiner');
+            var showSmsAllocation = (role === 'examiner' || role === 'coordinator');
             var showAi = (role === 'examiner');
             if (smsField) smsField.style.display = showSmsAllocation ? '' : 'none';
             if (aiTokensField) aiTokensField.style.display = showAi ? '' : 'none';

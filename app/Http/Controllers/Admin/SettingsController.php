@@ -29,6 +29,8 @@ class SettingsController extends Controller
         $currentUser = auth()->user() ?? User::find(session('admin_user_id'));
         $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
         $canManageProctoring = $currentUser && $currentUser->isSuperAdmin() && $currentUser->id === $primarySuperAdminId;
+        $canManageBackup = $currentUser && $currentUser->isSuperAdmin() && $currentUser->id === $primarySuperAdminId;
+        $backupEmailConfigured = $canManageBackup && Setting::getValue(Setting::KEY_NOTIFY_DIGEST_RECIPIENT) !== null && trim(Setting::getValue(Setting::KEY_NOTIFY_DIGEST_RECIPIENT, '') ?? '') !== '';
 
         return view('admin.settings.index', [
             'gemini_key_set' => (bool) $geminiKey,
@@ -71,6 +73,8 @@ class SettingsController extends Controller
             'landing_hero_image' => Setting::getValue(Setting::KEY_LANDING_HERO_IMAGE),
             'landing_hero_enabled' => Setting::getValue(Setting::KEY_LANDING_HERO_ENABLED, '1') === '1',
             'can_manage_proctoring' => $canManageProctoring,
+            'can_manage_backup' => $canManageBackup,
+            'backup_email_configured' => $backupEmailConfigured,
         ]);
     }
 
@@ -119,11 +123,19 @@ class SettingsController extends Controller
             'landing_hero_image_url' => 'nullable|string|max:2048',
             'landing_hero_image_file' => 'nullable|image|max:5120',
             'landing_hero_enabled' => 'nullable|boolean',
+            'notify_digest_recipient' => 'nullable|email|max:255',
         ]);
 
         $currentUser = auth()->user() ?? User::find(session('admin_user_id'));
         $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
         $canManageProctoring = $currentUser && $currentUser->isSuperAdmin() && $currentUser->id === $primarySuperAdminId;
+        $canManageBackup = $currentUser && $currentUser->isSuperAdmin() && $currentUser->id === $primarySuperAdminId;
+
+        if ($canManageBackup && $request->has('notify_digest_recipient')) {
+            $val = $request->filled('notify_digest_recipient') ? trim($request->notify_digest_recipient) : null;
+            Setting::setValue(Setting::KEY_NOTIFY_DIGEST_RECIPIENT, $val);
+            Cache::forget('setting:' . Setting::KEY_NOTIFY_DIGEST_RECIPIENT);
+        }
 
         Setting::setValue(Setting::KEY_APP_NAME, $request->filled('app_name') ? trim($request->app_name) : null);
         Setting::setValue(Setting::KEY_APP_TIMEZONE, $request->filled('app_timezone') ? trim($request->app_timezone) : null);
@@ -243,7 +255,7 @@ class SettingsController extends Controller
         }
 
         $tab = $request->input('settings_tab', 'general');
-        $validTabs = ['general', 'email', 'ai', 'cloudinary', 'otp', 'proctoring'];
+        $validTabs = ['general', 'email', 'ai', 'cloudinary', 'otp', 'proctoring', 'backup'];
         if (!in_array($tab, $validTabs, true)) {
             $tab = 'general';
         }

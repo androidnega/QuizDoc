@@ -64,11 +64,11 @@
                 <input type="hidden" name="role" value="{{ $user->role }}">
                 @endif
                 @if(auth()->user()->isSuperAdmin())
-                @if($user->isExaminer())
+                @if($user->isExaminer() || $user->role === \App\Models\User::DM_ROLE_COORDINATOR)
                 <div>
-                    <label for="sms_allocation" class="block text-xs font-medium text-gray-500 mb-0.5">SMS allocation (for Examiner)</label>
+                    <label for="sms_allocation" class="block text-xs font-medium text-gray-500 mb-0.5">SMS allocation (Examiner & Coordinator)</label>
                     <input type="number" name="sms_allocation" id="sms_allocation" value="{{ old('sms_allocation', $user->sms_allocation ?? 0) }}" min="0" step="1" placeholder="0" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none @error('sms_allocation') border-red-500 @enderror">
-                    <p class="mt-1 text-xs text-gray-500">Number of SMS the examiner can use to send login tokens to students (e.g. 20).</p>
+                    <p class="mt-1 text-xs text-gray-500">SMS credits for login tokens and group/supervisor messaging (e.g. 20).</p>
                     @error('sms_allocation')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 @endif

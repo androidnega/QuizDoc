@@ -135,11 +135,6 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('dashboard.users.create') }}" class="examiner-nav-link {{ request()->routeIs('dashboard.users.create') ? 'examiner-nav-link--active' : '' }} group flex items-center gap-3 rounded-lg py-2.5 pl-11 pr-3 text-sm font-medium min-w-0 transition-all" title="Create examiner or coordinator">
-                            <span class="examiner-nav-text truncate">Add user</span>
-                        </a>
-                    </li>
-                    <li>
                         <a href="{{ route('dashboard.student-levels.index') }}" class="examiner-nav-link {{ request()->routeIs('dashboard.student-levels.*') ? 'examiner-nav-link--active' : '' }} group flex items-center gap-3 rounded-lg py-3 px-3 text-sm font-medium min-w-0 transition-all" title="Student levels (Project eligibility)">
                             <svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
                             <span class="examiner-nav-text truncate">Student Levels</span>
@@ -174,11 +169,12 @@
                 <h1 class="min-w-0 flex-1 truncate text-lg font-semibold text-gray-900">@yield('dashboard_heading', 'Dashboard')</h1>
                 @php
                     $examiner = auth()->user();
-                    $smsRemaining = $examiner && $examiner->isExaminer() ? $examiner->sms_remaining : 0;
-                    $smsAllocation = $examiner && $examiner->isExaminer() ? ($examiner->sms_allocation ?? 0) : 0;
+                    $showSmsInHeader = $examiner && ($examiner->isExaminer() || $examiner->role === \App\Models\User::DM_ROLE_COORDINATOR);
+                    $smsRemaining = $showSmsInHeader ? $examiner->sms_remaining : 0;
+                    $smsAllocation = $showSmsInHeader ? ($examiner->sms_allocation ?? 0) : 0;
                     $smsColorClass = $smsRemaining >= 100 ? 'text-green-600' : 'text-red-600';
                 @endphp
-                @if($examiner && $examiner->isExaminer())
+                @if($examiner && ($examiner->isExaminer() || $examiner->role === \App\Models\User::DM_ROLE_COORDINATOR))
                 @php
                     $aiTokenStatus = app(\App\Services\AiQuizTokenService::class)->getStatus($examiner);
                     $aiTokenColor = $aiTokenStatus['remaining'] > 0 ? 'text-primary-600' : 'text-red-600';
@@ -188,7 +184,7 @@
                         <span class="text-gray-500">AI Token:</span>
                         <span class="font-semibold">{{ $aiTokenStatus['remaining'] }}</span>
                     </div>
-                    <div class="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm {{ $smsColorClass }}" title="SMS balance for login tokens">
+                    <div class="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm {{ $smsColorClass }}" title="SMS balance">
                         <span class="text-gray-500">SMS:</span>
                         <span class="font-semibold">{{ $smsRemaining }}</span>
                     </div>

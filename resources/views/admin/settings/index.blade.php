@@ -50,6 +50,12 @@
                             Proctoring
                         </button>
                         @endif
+                        @if($can_manage_backup ?? false)
+                        <button type="button" class="settings-tab-btn px-6 py-3 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm" data-tab="backup" id="tab-btn-backup">
+                            <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                            Backup
+                        </button>
+                        @endif
                     </nav>
                 </div>
 
@@ -476,6 +482,21 @@
                 </div>
                 </div>
                 @endif
+                @if($can_manage_backup ?? false)
+                <!-- Tab: Backup (Primary Super Admin only) -->
+                <div class="settings-tab-content p-6 hidden" data-tab-content="backup" id="tab-content-backup">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Backup</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="notify_digest_recipient" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" name="notify_digest_recipient" id="notify_digest_recipient" value="{{ old('notify_digest_recipient') }}" class="input w-full" placeholder="{{ ($backup_email_configured ?? false) ? '••••••@••••••' : '' }}" autocomplete="off">
+                            @if($backup_email_configured ?? false)
+                                <p class="text-xs text-gray-500 mt-1">Leave blank to clear. Enter a new address to replace.</p>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+                @endif
             </div>
 
             <div class="flex justify-end">
@@ -497,7 +518,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const tabBtns = document.querySelectorAll('.settings-tab-btn');
     const tabContents = document.querySelectorAll('.settings-tab-content');
-    const validTabs = ['general', 'email', 'ai', 'cloudinary', 'otp', 'proctoring'];
+    const validTabs = ['general', 'email', 'ai', 'cloudinary', 'otp', 'proctoring', 'backup'];
 
     function switchToTab(targetTab) {
         if (!validTabs.includes(targetTab)) targetTab = 'general';

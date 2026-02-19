@@ -624,11 +624,11 @@ class UserManagementController extends Controller
         ]);
 
         $user = User::findOrFail($request->user_id);
-        
-        if ($user->role !== User::ROLE_EXAMINER) {
+
+        if ($user->role !== User::ROLE_EXAMINER && $user->role !== User::DM_ROLE_COORDINATOR) {
             return response()->json([
                 'success' => false,
-                'message' => 'SMS allocation can only be set for examiners.',
+                'message' => 'SMS allocation can only be set for examiners and coordinators.',
             ], 422);
         }
 

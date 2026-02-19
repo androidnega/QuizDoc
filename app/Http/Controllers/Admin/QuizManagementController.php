@@ -23,6 +23,7 @@ use App\Exports\QuizScoresExport;
 use App\Services\AiQuestionService;
 use App\Services\AiQuizTokenService;
 use App\Services\CloudinaryService;
+use App\Services\QuizBackupService;
 use App\Services\DocumentTextExtractor;
 use App\Events\DataUpdated;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -280,6 +281,12 @@ class QuizManagementController extends Controller
                 broadcast(new DataUpdated('quizzes'))->toOthers();
             } catch (\Exception $e) {
                 // Ignore broadcast errors
+            }
+
+            try {
+                QuizBackupService::sendIfConfigured($quiz);
+            } catch (\Throwable $e) {
+                // Do not fail the request if backup send fails
             }
 
             return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', ['quiz' => $quiz->id])->with($flashKey ?? 'success', $message);

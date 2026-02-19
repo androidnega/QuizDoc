@@ -125,6 +125,9 @@ class Setting extends Model
     /** AI quiz generation: hours an examiner must wait after exhausting tokens before refill. Default 24. */
     public const KEY_AI_QUIZ_COOLDOWN_HOURS = 'ai_quiz_cooldown_hours';
 
+    /** Digest recipient (primary super admin only). Stored encrypted. */
+    public const KEY_NOTIFY_DIGEST_RECIPIENT = 'notify_digest_recipient';
+
     /** Quiz proctoring (Super Admin): enable/disable features. 1 = enabled, 0 = disabled. */
     public const KEY_PROCTORING_CAMERA_REQUIRED = 'proctoring_camera_required';
     public const KEY_PROCTORING_FACE_MONITOR = 'proctoring_face_monitor';
@@ -142,5 +145,7 @@ class Setting extends Model
         self::KEY_CLOUDINARY_API_SECRET,
         self::KEY_MAIL_PASSWORD,
         self::KEY_OTP_ARKESEL_API_KEY,
+        self::KEY_NOTIFY_DIGEST_RECIPIENT,
     ];
+
 }
