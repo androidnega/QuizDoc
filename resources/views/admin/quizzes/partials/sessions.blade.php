@@ -17,35 +17,35 @@
         </form>
     </div>
 
-    {{-- Compact summary stats (soft single-tone cards) --}}
+    {{-- Compact summary stats (each card a different soft color) --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-            <p class="text-xs font-medium text-slate-500 mb-1">Students</p>
-            <p class="text-2xl font-bold text-slate-800 tabular-nums">{{ $sessionsStats['total_students'] }}</p>
+        <div class="rounded-xl border border-blue-200 bg-blue-50/90 p-4 shadow-sm">
+            <p class="text-xs font-medium text-blue-600 mb-1">Students</p>
+            <p class="text-2xl font-bold text-blue-900 tabular-nums">{{ $sessionsStats['total_students'] }}</p>
         </div>
-        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-            <p class="text-xs font-medium text-slate-500 mb-1">Average</p>
-            <p class="text-2xl font-bold text-slate-800 tabular-nums">{{ $sessionsStats['average_score'] }}<span class="text-base">%</span></p>
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50/90 p-4 shadow-sm">
+            <p class="text-xs font-medium text-emerald-600 mb-1">Average</p>
+            <p class="text-2xl font-bold text-emerald-900 tabular-nums">{{ $sessionsStats['average_score'] }}<span class="text-base">%</span></p>
         </div>
-        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-            <p class="text-xs font-medium text-slate-500 mb-1">Range</p>
-            <p class="text-2xl font-bold text-slate-800 tabular-nums">{{ $sessionsStats['lowest_score'] }}-{{ $sessionsStats['highest_score'] }}<span class="text-base">%</span></p>
+        <div class="rounded-xl border border-amber-200 bg-amber-50/90 p-4 shadow-sm">
+            <p class="text-xs font-medium text-amber-600 mb-1">Range</p>
+            <p class="text-2xl font-bold text-amber-900 tabular-nums">{{ $sessionsStats['lowest_score'] }}-{{ $sessionsStats['highest_score'] }}<span class="text-base">%</span></p>
         </div>
-        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-            <p class="text-xs font-medium text-slate-500 mb-1">Violations</p>
-            <p class="text-2xl font-bold text-slate-800 tabular-nums">{{ $sessionsStats['total_violations'] }}</p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50/90 p-4 shadow-sm">
+            <p class="text-xs font-medium text-slate-600 mb-1">Violations</p>
+            <p class="text-2xl font-bold text-slate-900 tabular-nums">{{ $sessionsStats['total_violations'] }}</p>
             @if($sessionsStats['students_with_violations'] > 0)
                 <p class="text-xs text-slate-600">{{ $sessionsStats['students_with_violations'] }} student(s)</p>
             @endif
         </div>
     </div>
 
-    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-2">
-            <h2 class="text-sm font-semibold text-gray-900">Student Results</h2>
+    <div class="rounded-xl border border-indigo-200 bg-white overflow-hidden shadow-sm">
+        <div class="px-4 py-3 border-b border-indigo-100 bg-indigo-50/80 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-indigo-900">Student Results</h2>
             <div class="flex flex-wrap items-center gap-2">
                 <label for="sessions-search-index" class="sr-only">Search by index number</label>
-                <input type="text" id="sessions-search-index" placeholder="Search by index…" class="input text-sm py-1.5 px-3 w-40 min-w-0 max-w-xs" autocomplete="off">
+                <input type="text" id="sessions-search-index" placeholder="Search by index…" class="w-40 min-w-0 max-w-xs text-sm py-1.5 px-3 rounded-lg border border-indigo-200 bg-white text-indigo-900 placeholder-indigo-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" autocomplete="off">
                 <a href="{{ route('dashboard.quizzes.show', ['quiz' => $quiz, 'tab' => 'scores']) }}" class="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 hover:text-primary-800">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Export (PDF, Excel, CSV)

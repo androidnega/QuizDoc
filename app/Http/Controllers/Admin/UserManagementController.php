@@ -18,10 +18,29 @@ use Illuminate\View\View;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rule;
 
 class UserManagementController extends Controller
 {
     use InteractsWithAdminSession;
+
+    /** Normalize phone to international digits (e.g. 0544919953 → 233544919953) for storage and uniqueness check. */
+    private static function normalizePhone(?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+        $phone = preg_replace('/\D/', '', trim($value));
+        if ($phone === '') {
+            return null;
+        }
+        if (strlen($phone) >= 10 && substr($phone, 0, 1) === '0') {
+            $phone = '233' . substr($phone, 1);
+        } elseif (strlen($phone) >= 9 && substr($phone, 0, 3) !== '233') {
+            $phone = '233' . $phone;
+        }
+        return $phone;
+    }
 
     public function index(): View
     {
@@ -119,6 +138,9 @@ class UserManagementController extends Controller
             $rules['password'] = ['required', 'confirmed', Password::min(8)->letters()->numbers()];
             $rules['phone'] = 'nullable|string|max:20';
         }
+        if ($request->filled('phone')) {
+            $rules['phone_normalized'] = [Rule::unique('users', 'phone')];
+        }
         if ($isSuperAdmin) {
             $rules['institution_id'] = 'nullable|exists:institutions,id';
             $rules['faculty_id'] = 'nullable|exists:faculties,id';
@@ -132,6 +154,10 @@ class UserManagementController extends Controller
             }
         }
 
+        // Normalize phone for uniqueness check (DB stores normalized format); do not overwrite phone so old() keeps user input
+        if ($request->filled('phone')) {
+            $request->merge(['phone_normalized' => self::normalizePhone($request->phone)]);
+        }
         $request->validate($rules, [
             'password.required' => 'A password is required.',
             'password.confirmed' => 'The password confirmation does not match.',
@@ -139,6 +165,7 @@ class UserManagementController extends Controller
             'password.letters' => 'The password must contain at least one letter.',
             'password.numbers' => 'The password must contain at least one number.',
             'phone.required' => 'Phone is required when sending login credentials by SMS (Settings → Send SMS on staff creation).',
+            'phone_normalized.unique' => 'This phone number is already used by another account. Please use a different number.',
             'institution_id.required' => 'Institution is required for examiners and coordinators.',
             'faculty_id.required' => 'Faculty is required for examiners and coordinators.',
             'department_id.required' => 'Department is required for examiners and coordinators.',
@@ -207,7 +234,7 @@ class UserManagementController extends Controller
             $result = ArkeselService::sendSms($newUser->phone, $message);
             if ($result['success']) {
                 return redirect()->route('dashboard.users.index')
-                    ->with('success', 'User created. Login credentials have been sent by SMS.');
+                    ->with('success', "Account created! We've sent the login details by SMS — they're all set.");
             }
             return redirect()->route('dashboard.users.index')
                 ->with('sms_failed', $result['message'] ?? 'SMS could not be sent.')
@@ -216,7 +243,7 @@ class UserManagementController extends Controller
         }
 
         return redirect()->route('dashboard.users.index')
-            ->with('success', 'Saved');
+            ->with('success', "Account created! They can log in with the password you set.");
     }
 
     public function edit(Request $request, User $user): View|RedirectResponse

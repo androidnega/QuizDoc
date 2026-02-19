@@ -53,7 +53,7 @@
         @endif
         @if(session('sms_failed') && session('generated_password'))
         <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <p class="text-sm text-amber-800 font-medium mb-2">User was created but SMS could not be sent. Please give this password to the user manually.</p>
+            <p class="text-sm text-amber-800 font-medium mb-2">Account was created, but we couldn't send the SMS. No worries — please share this password with them manually so they can log in.</p>
             @if(session('created_username'))<p class="text-xs text-amber-700 mb-2">Username: <strong>{{ session('created_username') }}</strong></p>@endif
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-sm text-amber-800">Password:</span>

@@ -23,6 +23,9 @@
             <span data-step-oval="step-3" class="inline-flex h-7 px-4 items-center justify-center rounded-full bg-slate-100 text-slate-500 border border-slate-300">3</span>
             <span class="hidden sm:inline text-slate-500">Finish</span>
         </div>
+        <button type="button" id="clear-project-form-btn" class="ml-auto px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-300 text-slate-600 hover:bg-slate-50">
+            Start fresh
+        </button>
     </div>
 </header>
 
@@ -259,6 +262,58 @@
         if (stepIndicator && idx >= 0) stepIndicator.textContent = 'Step ' + (idx + 1) + ' of 3';
         updateStepOvals(stepId);
         persistStep(stepId);
+    }
+
+    function clearFormAndStorage() {
+        try {
+            if (window.localStorage) {
+                localStorage.removeItem(STORAGE_KEY_STEP);
+                localStorage.removeItem(STORAGE_KEY_FORM);
+            }
+        } catch (e) {}
+        if (!form) return;
+        var groupSelect = document.getElementById('group_id');
+        if (groupSelect && groupSelect.options.length) groupSelect.selectedIndex = 0;
+        var titleEl = document.getElementById('title');
+        if (titleEl) titleEl.value = '';
+        var descEl = document.getElementById('description');
+        if (descEl) descEl.value = '';
+        var catSelect = document.getElementById('category_id');
+        if (catSelect && catSelect.options.length) catSelect.selectedIndex = 0;
+        var parentSelect = document.getElementById('parent_project_id');
+        if (parentSelect && parentSelect.options.length) parentSelect.selectedIndex = 0;
+        var budgetEl = document.getElementById('budget');
+        if (budgetEl) budgetEl.value = '';
+        if (uploadedUrlInput) uploadedUrlInput.value = '';
+        if (fileInput) fileInput.value = '';
+        if (fileNameEl) fileNameEl.textContent = 'No file selected';
+        if (progressBar) {
+            progressBar.classList.add('hidden');
+            progressBar.style.width = '0%';
+        }
+        if (progressLabel) {
+            progressLabel.textContent = 'Not uploaded yet';
+            progressLabel.classList.remove('text-red-600', 'text-green-600');
+            progressLabel.classList.add('text-slate-500');
+        }
+        var featContainer = document.getElementById('features-container');
+        if (featContainer) {
+            featContainer.innerHTML = '<div class="feature-row flex flex-wrap gap-2 items-end">' +
+                '<input type="text" name="features[0][name]" value="" placeholder="Feature name" class="flex-1 min-w-[120px] rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400">' +
+                '<input type="text" name="features[0][description]" value="" placeholder="Description (optional)" class="flex-1 min-w-[120px] rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400">' +
+                '<button type="button" class="remove-feature px-4 py-2 rounded-lg text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shrink-0 shrink-0">Remove</button>' +
+                '</div>';
+        }
+        showStep('step-1');
+    }
+
+    var clearBtn = document.getElementById('clear-project-form-btn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            if (confirm('Clear the form and start a new project? Any unsent data will be removed.')) {
+                clearFormAndStorage();
+            }
+        });
     }
 
     // Restore saved form + step on load
