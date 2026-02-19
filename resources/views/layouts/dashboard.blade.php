@@ -4,11 +4,8 @@
 @section('body_class', 'bg-slate-200')
 
 @php
-    $isSuperAdmin = session('admin_role') === 'super_admin';
-    if (!$isSuperAdmin && session('admin_user_id')) {
-        $layoutAdminUser = \App\Models\User::find(session('admin_user_id'));
-        $isSuperAdmin = $layoutAdminUser && $layoutAdminUser->role === \App\Models\User::ROLE_SUPER_ADMIN;
-    }
+    $layoutAdminUser = auth()->user();
+    $isSuperAdmin = $layoutAdminUser && $layoutAdminUser->role === \App\Models\User::ROLE_SUPER_ADMIN;
     $isExaminer = session('admin_role') === 'examiner';
     $isCoordinatorOnly = session('admin_role') === 'coordinator';
     $isDocuMentorCoordinator = in_array(session('admin_role'), ['coordinator', 'super_admin'], true);

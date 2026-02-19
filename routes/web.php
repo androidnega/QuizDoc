@@ -252,6 +252,8 @@ Route::middleware('admin.auth')->group(function () {
     // GET /dashboard is handled by DashboardGatewayController (unified)
 
         Route::prefix('dashboard')->name('dashboard.')->middleware('block.superadmin.coordinator')->group(function () {
+        // Minimal ping (same auth/session as quizzes) — if this is fast but /dashboard/quizzes times out, bottleneck is controller/view
+        Route::get('/ping', fn () => response('OK', 200, ['Content-Type' => 'text/plain; charset=utf-8']))->name('ping');
         // Profile — both roles
         Route::get('/profile', [\App\Http\Controllers\Admin\StaffProfileController::class, 'show'])->name('profile.show');
         Route::put('/profile', [\App\Http\Controllers\Admin\StaffProfileController::class, 'update'])->name('profile.update');
@@ -295,6 +297,7 @@ Route::middleware('admin.auth')->group(function () {
 
         // Quizzes — examiner only
         Route::middleware('examiner.only')->group(function () {
+            Route::get('/quizzes-ping', fn () => response('OK', 200, ['Content-Type' => 'text/plain; charset=utf-8']))->name('quizzes.ping');
             Route::get('/students', fn () => redirect()->route('dashboard.class-groups.index', [], 301))->name('students.index');
             Route::get('/attendance', fn () => redirect()->route('dashboard.class-groups.index', [], 301))->name('attendance.index');
             Route::get('/quizzes', [QuizManagementController::class, 'index'])->name('quizzes.index');

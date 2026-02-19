@@ -24,7 +24,7 @@ class EnsureAdminAuthenticated
                 ->with('error', 'Please log in.');
         }
 
-        $user = User::find(session('admin_user_id'));
+        $user = User::with('institution')->find(session('admin_user_id'));
         if (!$user) {
             session()->forget(['admin_authenticated', 'admin_user_id', 'admin_role']);
             return redirect()->guest(route('login'))
