@@ -545,8 +545,8 @@ document.addEventListener('DOMContentLoaded', function() {
             ? payload.topics
             : parseTopics((document.getElementById('topics-value') || {}).value || '');
         if (!topics.length) {
-            alert('Add at least one topic before generating.');
-            return;
+            topics = [{ name: 'General knowledge' }];
+            setProgress(0, 1, 'No topics set; using General knowledge.');
         }
         var targetInput = document.getElementById('ai-target-count');
         var target = Number((payload && payload.target_count) || (targetInput ? targetInput.value : 0) || ((document.getElementById('number_of_questions') || {}).value || 0));

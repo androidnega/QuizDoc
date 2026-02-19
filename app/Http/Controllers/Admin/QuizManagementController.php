@@ -1181,7 +1181,7 @@ class QuizManagementController extends Controller
 
         $validated = $request->validate([
             'target_count' => 'required|integer|min:1|max:250',
-            'topics' => 'required|array|min:1',
+            'topics' => 'nullable|array',
             'source_text' => 'nullable|string',
         ]);
 
@@ -1209,7 +1209,7 @@ class QuizManagementController extends Controller
                 'message' => 'Maximum questions per generation is ' . $perQuizLimit . '.',
             ], 422);
         }
-        $topicsRaw = $validated['topics'];
+        $topicsRaw = $validated['topics'] ?? [];
         $topics = [];
         foreach (array_values($topicsRaw) as $t) {
             if (is_array($t) && isset($t['name']) && is_string($t['name'])) {
@@ -1219,7 +1219,7 @@ class QuizManagementController extends Controller
             }
         }
         if (empty($topics)) {
-            return response()->json(['success' => false, 'message' => 'At least one topic name is required.'], 422);
+            $topics = [['name' => 'General knowledge']];
         }
         $sourceText = trim((string) ($validated['source_text'] ?? ''));
         if ($sourceText === '') {
