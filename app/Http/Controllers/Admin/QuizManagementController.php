@@ -1236,37 +1236,29 @@ class QuizManagementController extends Controller
         try {
             $topics = is_array($state['topics'] ?? null) ? $state['topics'] : [['name' => 'General knowledge']];
             $sourceText = (string) ($state['source_text'] ?? '');
-            // Keep chunk requests lighter: cap source text so the prompt doesn't time out.
-            if (mb_strlen($sourceText) > 12000) {
-                $sourceText = mb_substr($sourceText, 0, 12000) . "\n[... truncated for batch ...]";
+            if (mb_strlen($sourceText) > 8000) {
+                $sourceText = mb_substr($sourceText, 0, 8000) . "\n[... truncated ...]";
             }
-            $attemptSizes = array_values(array_unique([
-                min(5, $batchSize),
-                min(3, $batchSize),
-                2,
-                1,
-            ]));
+            $attemptSizes = array_values(array_unique([min(5, $batchSize), 3, 2, 1]));
 
             foreach ($attemptSizes as $attemptSize) {
                 if ($attemptSize < 1) {
                     continue;
                 }
-                $generatedIds = $aiService->generatePoolAndStore($quiz, $topics, $attemptSize, $sourceText);
+                // Try topics-only first (no source) — often more reliable; add source only if topics-only fails.
+                $generatedIds = $aiService->generatePoolAndStore($quiz, $topics, $attemptSize, null);
                 $generatedThisBatch = count($generatedIds);
                 if ($generatedThisBatch > 0) {
                     break;
                 }
-
-                // Fallback: if source text is too strict/noisy, retry with topics only.
                 if ($sourceText !== '') {
-                    $generatedIds = $aiService->generatePoolAndStore($quiz, $topics, $attemptSize, null);
+                    $generatedIds = $aiService->generatePoolAndStore($quiz, $topics, $attemptSize, $sourceText);
                     $generatedThisBatch = count($generatedIds);
                     if ($generatedThisBatch > 0) {
                         break;
                     }
                 }
-
-                usleep(300000);
+                usleep(400000);
             }
         } catch (\Throwable $e) {
             $state['status'] = 'failed';
@@ -1289,9 +1281,9 @@ class QuizManagementController extends Controller
         if ((int) $state['generated_count'] >= (int) $state['target_count']) {
             $state['status'] = 'completed';
             $state['message'] = 'Generation complete.';
-        } elseif ((int) $state['empty_batches'] >= 8) {
+        } elseif ((int) $state['empty_batches'] >= 20) {
             $state['status'] = 'failed';
-            $state['message'] = 'AI returned empty results repeatedly. Try simpler topics, then run again.';
+            $state['message'] = 'AI returned no questions after many attempts. Check Dashboard → Settings → AI: ensure a Gemini or DeepSeek API key is set and has quota. Try 1–2 short topic names (e.g. "Mathematics", "Biology") then run again.';
         } else {
             $state['message'] = 'Generated ' . $state['generated_count'] . ' of ' . $state['target_count'] . '...';
         }

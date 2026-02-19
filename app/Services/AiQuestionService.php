@@ -348,15 +348,21 @@ class AiQuestionService
             . "Format as JSON array only, no other text: [{\"text\":\"...\",\"options\":{\"A\":\"...\",\"B\":\"...\",\"C\":\"...\",\"D\":\"...\"},\"correct\":\"A\",\"topic\":\"...\",\"explanation_wrong\":\"...\",\"explanation_correct\":\"...\"}]";
         $result = $this->callAiWithUsage($prompt);
         $content = $result['text'] ?? null;
-        if ($content === null || $content === '') {
-            return [];
-        }
-        $decoded = $this->parseJsonArray($content);
+        $decoded = ($content !== null && $content !== '') ? $this->parseJsonArray($content) : null;
         if (! is_array($decoded) || empty($decoded)) {
-            // Fallback: try simpler prompt (minimal JSON, often more reliable)
+            $ids = $this->generatePoolAndStoreSimple($quiz, $topicNames, $count, '');
+            if (! empty($ids)) {
+                return $ids;
+            }
             $ids = $this->generatePoolAndStoreSimple($quiz, $topicNames, $count, $context);
             if (! empty($ids)) {
                 return $ids;
+            }
+            if ($count >= 1) {
+                $ids = $this->generateOneQuestionMinimal($quiz, $topicNames);
+                if (! empty($ids)) {
+                    return $ids;
+                }
             }
             return [];
         }
@@ -392,6 +398,50 @@ class AiQuestionService
             'generated_at' => now(),
         ]);
         return $ids;
+    }
+
+    /**
+     * Ultra-minimal: one question only, no context. Used when all other attempts return empty.
+     */
+    private function generateOneQuestionMinimal(Quiz $quiz, string $topicNames): array
+    {
+        $prompt = "Topic: {$topicNames}. Write 1 multiple choice question. Reply with ONLY this JSON array (no other text): [{\"text\":\"Your question here\",\"options\":{\"A\":\"\",\"B\":\"\",\"C\":\"\",\"D\":\"\"},\"correct\":\"A\"}]";
+        $result = $this->callAiWithUsage($prompt);
+        $content = $result['text'] ?? null;
+        if ($content === null || $content === '') {
+            return [];
+        }
+        $decoded = $this->parseJsonArray($content);
+        if (! is_array($decoded) || empty($decoded)) {
+            return [];
+        }
+        $item = $decoded[0];
+        $text = $item['text'] ?? $item['question'] ?? 'AI Question';
+        $opts = $item['options'] ?? $item['choices'] ?? [];
+        $correct = $item['correct'] ?? $item['correct_answer'] ?? 'A';
+        $options = $this->normalizeOptions($opts, $topicNames);
+        $pool = QuestionPool::create([
+            'quiz_id' => $quiz->id,
+            'question_text' => $text,
+            'options' => $options,
+            'correct_answer' => $correct,
+            'topic' => $topicNames,
+            'is_approved' => false,
+            'explanation_wrong' => null,
+            'explanation_correct' => null,
+        ]);
+        if (isset($result['usage'], $result['provider'])) {
+            AiGenerationLog::create([
+                'quiz_id' => $quiz->id,
+                'prompt_tokens' => $result['usage']['prompt_tokens'] ?? 0,
+                'completion_tokens' => $result['usage']['completion_tokens'] ?? 0,
+                'total_tokens' => $result['usage']['total_tokens'] ?? 0,
+                'provider' => $result['provider'],
+                'questions_generated' => 1,
+                'generated_at' => now(),
+            ]);
+        }
+        return [$pool->id];
     }
 
     /**
