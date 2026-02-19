@@ -525,7 +525,12 @@ class QuizManagementController extends Controller
         }
         $path = storage_path('app/proctor_feed/' . $quizSession->id . '.jpg');
         if (!is_file($path)) {
-            abort(404);
+            // Return 1x1 transparent GIF so the live proctor page never shows a broken image
+            $placeholder = base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+            return response($placeholder, 200, [
+                'Content-Type' => 'image/gif',
+                'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            ]);
         }
         return response()->file($path, ['Content-Type' => 'image/jpeg']);
     }

@@ -35,7 +35,7 @@
             <button type="button" id="live-proctor-modal-close" class="shrink-0 p-2 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Close">✕</button>
         </div>
         <div class="flex-1 min-h-0 bg-gray-900 flex items-center justify-center p-2">
-            <img id="live-modal-img" src="" alt="Camera feed" class="max-w-full max-h-[60vh] w-auto h-auto object-contain">
+            <img id="live-modal-img" src="" alt="Camera feed" class="max-w-full max-h-[60vh] w-auto h-auto object-contain" onerror="this.onerror=null; this.src=this.dataset.placeholder||'';" data-placeholder="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
         </div>
         <div class="px-4 py-3 border-t border-gray-200 flex flex-wrap items-center gap-2">
             <button type="button" id="live-modal-end-quiz-btn" class="btn bg-red-100 text-red-800 hover:bg-red-200 py-2 px-4 text-sm font-semibold">End quiz (violation)</button>
@@ -62,9 +62,14 @@
     var endQuizBtn = document.getElementById('live-modal-end-quiz-btn');
     var endStatus = document.getElementById('live-modal-end-status');
     var csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content;
+    var placeholderDataUri = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
     function frameUrl(sessionId) {
         return frameUrlTemplate.replace('__ID__', String(sessionId)) + '?t=' + (Date.now() / 4000 | 0);
+    }
+
+    function onProctorImgError(img) {
+        if (img && img.src && img.src !== placeholderDataUri) img.src = placeholderDataUri;
     }
 
     function openModal(sessionId, studentIndex, studentName) {
@@ -150,7 +155,10 @@
                 });
             }
             var img = card.querySelector('.proctor-frame-img');
-            if (img) img.src = frameUrl(s.id);
+            if (img) {
+                img.onerror = function() { onProctorImgError(img); };
+                img.src = frameUrl(s.id);
+            }
         });
         Object.keys(existing).forEach(function(id) {
             if (!seen[id]) existing[id].remove();
