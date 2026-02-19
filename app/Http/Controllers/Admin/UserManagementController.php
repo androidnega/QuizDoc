@@ -75,8 +75,8 @@ class UserManagementController extends Controller
         if (!$isSuperAdmin) {
             abort(403, 'Only Super Administrators can create users.');
         }
-        $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
-        $canCreateSuperAdmin = $isSuperAdmin && $user && $user->id === $primarySuperAdminId;
+        // Any super admin can create a secondary super admin (show "Super Admin (secondary)" in role dropdown)
+        $canCreateSuperAdmin = $isSuperAdmin && $user;
         
         $institutions = Institution::orderBy('name')->get();
         $faculties = collect();
@@ -95,7 +95,7 @@ class UserManagementController extends Controller
             abort(403, 'Only Super Administrators can create users.');
         }
         $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
-        $canCreateSuperAdmin = $isSuperAdmin && $user && $user->id === $primarySuperAdminId;
+        $canCreateSuperAdmin = $isSuperAdmin && $user;
         
         $courseIds = $user ? $user->assignedCourseIds() : [];
         $role = $request->role;
