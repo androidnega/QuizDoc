@@ -369,13 +369,20 @@ class ClassGroupController extends Controller
     public function destroy(ClassGroup $classGroup): RedirectResponse
     {
         $this->authorize('delete', $classGroup);
-        if ($classGroup->quizzes()->exists()) {
-            return redirect()->route($this->staffRoutePrefix() . '.class-groups.index')
-                ->with('error', 'Error');
-        }
         $name = $classGroup->name;
-        $classGroup->delete();
-        return redirect()->route($this->staffRoutePrefix() . '.class-groups.index')->with('success', 'Deleted');
+        try {
+            $classGroup->delete();
+        } catch (QueryException $e) {
+            report($e);
+
+            return redirect()
+                ->route($this->staffRoutePrefix() . '.class-groups.index')
+                ->with('error', "Could not delete class group '{$name}' because related records still depend on it.");
+        }
+
+        return redirect()
+            ->route($this->staffRoutePrefix() . '.class-groups.index')
+            ->with('success', 'Deleted');
     }
 
     /** Show the student indices management page for this class group. */
