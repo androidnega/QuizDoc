@@ -297,6 +297,14 @@ class AiQuestionService
     }
 
     /**
+     * Whether a Gemini API key is configured (Settings or .env). Use for Gemini-only generation flow.
+     */
+    public function hasGeminiKey(): bool
+    {
+        return $this->getGeminiKey() !== null;
+    }
+
+    /**
      * Maximum number of questions allowed per quiz generation (config + env).
      */
     public function getPerQuizLimit(): int
@@ -309,9 +317,10 @@ class AiQuestionService
 
     /**
      * Call AI: try Gemini first when both keys exist, then DeepSeek as fallback.
+     * When $geminiOnly is true, only Gemini is used (no DeepSeek) — use for a clear Gemini-only flow.
      * Returns ['text' => ..., 'provider' => ..., 'usage' => ...].
      */
-    private function callAiWithUsage(string $prompt): array
+    private function callAiWithUsage(string $prompt, bool $geminiOnly = false): array
     {
         $empty = ['text' => null, 'provider' => null, 'usage' => ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0]];
         $geminiKey = $this->getGeminiKey();
@@ -319,12 +328,16 @@ class AiQuestionService
         $firstError = null;
         $secondError = null;
 
-        // Gemini first, then DeepSeek (e.g. when Gemini has quota and DeepSeek balance is low).
-        $order = $geminiKey !== null && $deepseekKey !== null
-            ? [['provider' => 'gemini', 'key' => $geminiKey], ['provider' => 'deepseek', 'key' => $deepseekKey]]
-            : ($geminiKey !== null
-                ? [['provider' => 'gemini', 'key' => $geminiKey]]
-                : ($deepseekKey !== null ? [['provider' => 'deepseek', 'key' => $deepseekKey]] : []));
+        if ($geminiOnly) {
+            $order = $geminiKey !== null ? [['provider' => 'gemini', 'key' => $geminiKey]] : [];
+        } else {
+            // Gemini first, then DeepSeek (e.g. when Gemini has quota and DeepSeek balance is low).
+            $order = $geminiKey !== null && $deepseekKey !== null
+                ? [['provider' => 'gemini', 'key' => $geminiKey], ['provider' => 'deepseek', 'key' => $deepseekKey]]
+                : ($geminiKey !== null
+                    ? [['provider' => 'gemini', 'key' => $geminiKey]]
+                    : ($deepseekKey !== null ? [['provider' => 'deepseek', 'key' => $deepseekKey]] : []));
+        }
 
         foreach ($order as $item) {
             if ($item['provider'] === 'deepseek') {
@@ -349,7 +362,9 @@ class AiQuestionService
 
         $this->lastApiError = trim(
             ($firstError ? $firstError . '.' : '') . ($secondError ? ' ' . $secondError : '')
-        ) ?: 'No API key set. Add a Gemini or DeepSeek key in Dashboard → Settings → AI.';
+        ) ?: ($geminiOnly
+            ? 'Gemini API key not set or invalid. Set GEMINI_API_KEY in .env or add a key in Dashboard → Settings → AI.'
+            : 'No API key set. Add a Gemini or DeepSeek key in Dashboard → Settings → AI.');
         return $empty;
     }
 
@@ -430,15 +445,25 @@ class AiQuestionService
     }
 
     /**
+     * Generate questions via Gemini only (no DeepSeek). Use for a clear Gemini-only flow and clearer errors.
+     * Returns array of question_pool IDs. Requires GEMINI_API_KEY or Settings → AI Gemini key.
+     */
+    public function generatePoolAndStoreGeminiOnly(Quiz $quiz, array $topics, int $count, ?string $sourceText = null): array
+    {
+        return $this->generatePoolAndStore($quiz, $topics, $count, $sourceText, true);
+    }
+
+    /**
      * Generate questions via Gemini (primary) or DeepSeek (fallback) and store in question_pools as unapproved.
      * Blocked when no API key: returns [] and no placeholders. Enforces per-quiz limit. Logs token usage per quiz.
      * If $sourceText is provided (e.g. from uploaded PDF/DOCX/TXT), the AI uses it as the primary material.
      * For large counts (>20), uses batching to avoid token limits and parsing issues.
+     * When $geminiOnly is true, only Gemini is used (no DeepSeek).
      * Returns array of question_pool IDs.
      */
-    public function generatePoolAndStore(Quiz $quiz, array $topics, int $count, ?string $sourceText = null): array
+    public function generatePoolAndStore(Quiz $quiz, array $topics, int $count, ?string $sourceText = null, bool $geminiOnly = false): array
     {
-        if (!$this->hasApiKey()) {
+        if ($geminiOnly ? $this->getGeminiKey() === null : !$this->hasApiKey()) {
             return [];
         }
         $count = min($count, $this->getPerQuizLimit());
@@ -453,7 +478,7 @@ class AiQuestionService
         // Use batching for large requests to avoid token limits
         $batchSize = 20; // Generate max 20 questions per API call
         if ($count > $batchSize) {
-            return $this->generatePoolInBatches($quiz, $topics, $topicNames, $count, $sourceText, $batchSize);
+            return $this->generatePoolInBatches($quiz, $topics, $topicNames, $count, $sourceText, $batchSize, $geminiOnly);
         }
         
         // Single batch for smaller requests
@@ -469,18 +494,18 @@ class AiQuestionService
             . "\"explanation_wrong\" (why a wrong answer is wrong) and \"explanation_correct\" (why the correct answer is right). "
             . "Include a topic label per question (one of the listed topics). "
             . "Format as JSON array only, no other text: [{\"text\":\"...\",\"options\":{\"A\":\"...\",\"B\":\"...\",\"C\":\"...\",\"D\":\"...\"},\"correct\":\"A\",\"topic\":\"...\",\"explanation_wrong\":\"...\",\"explanation_correct\":\"...\"}]";
-        $result = $this->callAiWithUsage($prompt);
+        $result = $this->callAiWithUsage($prompt, $geminiOnly);
         $content = $result['text'] ?? null;
         $decoded = ($content !== null && $content !== '') ? $this->parseJsonArray($content) : null;
         if (! is_array($decoded) || empty($decoded)) {
             // Fallback: simpler prompt often works when the main one times out or returns bad JSON.
             $fallbackCount = min(3, $count);
-            $ids = $this->generatePoolAndStoreSimple($quiz, $topicNames, $fallbackCount, '');
+            $ids = $this->generatePoolAndStoreSimple($quiz, $topicNames, $fallbackCount, '', $geminiOnly);
             if (! empty($ids)) {
                 return array_slice($ids, 0, $count);
             }
             if ($count >= 1) {
-                $ids = $this->generateOneQuestionMinimal($quiz, $topicNames);
+                $ids = $this->generateOneQuestionMinimal($quiz, $topicNames, $geminiOnly);
                 if (! empty($ids)) {
                     return $ids;
                 }
@@ -524,10 +549,10 @@ class AiQuestionService
     /**
      * Ultra-minimal: one question only, no context. Used when all other attempts return empty.
      */
-    private function generateOneQuestionMinimal(Quiz $quiz, string $topicNames): array
+    private function generateOneQuestionMinimal(Quiz $quiz, string $topicNames, bool $geminiOnly = false): array
     {
         $prompt = "Topic: {$topicNames}. Write 1 multiple choice question. Reply with ONLY this JSON array (no other text): [{\"text\":\"Your question here\",\"options\":{\"A\":\"\",\"B\":\"\",\"C\":\"\",\"D\":\"\"},\"correct\":\"A\"}]";
-        $result = $this->callAiWithUsage($prompt);
+        $result = $this->callAiWithUsage($prompt, $geminiOnly);
         $content = $result['text'] ?? null;
         if ($content === null || $content === '') {
             return [];
@@ -568,13 +593,13 @@ class AiQuestionService
     /**
      * Simpler prompt (minimal JSON) to improve reliability when the full prompt returns empty or unparseable output.
      */
-    private function generatePoolAndStoreSimple(Quiz $quiz, string $topicNames, int $count, string $context = ''): array
+    private function generatePoolAndStoreSimple(Quiz $quiz, string $topicNames, int $count, string $context = '', bool $geminiOnly = false): array
     {
         $prompt = $context
             . "Topics: {$topicNames}. Generate exactly {$count} multiple choice questions. "
             . "Reply with ONLY a JSON array, no other text. Each item: {\"text\":\"question\",\"options\":{\"A\":\"...\",\"B\":\"...\",\"C\":\"...\",\"D\":\"...\"},\"correct\":\"A\"}. "
             . "Example: [{\"text\":\"What is 2+2?\",\"options\":{\"A\":\"3\",\"B\":\"4\",\"C\":\"5\",\"D\":\"6\"},\"correct\":\"B\"}]";
-        $result = $this->callAiWithUsage($prompt);
+        $result = $this->callAiWithUsage($prompt, $geminiOnly);
         $content = $result['text'] ?? null;
         if ($content === null || $content === '') {
             return [];
@@ -620,7 +645,7 @@ class AiQuestionService
      * Generate questions in multiple batches to avoid token limits.
      * Each batch makes a separate API call, then combines results.
      */
-    private function generatePoolInBatches(Quiz $quiz, array $topics, string $topicNames, int $totalCount, ?string $sourceText, int $batchSize): array
+    private function generatePoolInBatches(Quiz $quiz, array $topics, string $topicNames, int $totalCount, ?string $sourceText, int $batchSize, bool $geminiOnly = false): array
     {
         $allIds = [];
         $totalPromptTokens = 0;
@@ -653,7 +678,7 @@ class AiQuestionService
                 . "Include a topic label per question (one of the listed topics). "
                 . "Format as JSON array only, no other text: [{\"text\":\"...\",\"options\":{\"A\":\"...\",\"B\":\"...\",\"C\":\"...\",\"D\":\"...\"},\"correct\":\"A\",\"topic\":\"...\",\"explanation_wrong\":\"...\",\"explanation_correct\":\"...\"}]";
             
-            $result = $this->callAiWithUsage($prompt);
+            $result = $this->callAiWithUsage($prompt, $geminiOnly);
             $content = $result['text'] ?? null;
             
             if ($content === null || $content === '') {

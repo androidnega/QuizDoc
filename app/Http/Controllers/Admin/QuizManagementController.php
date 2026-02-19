@@ -245,13 +245,13 @@ class QuizManagementController extends Controller
             }
 
             // Do not run background job here — on shared hosting it often never runs.
-            // User should open the quiz and click "Generate questions with AI" (batch flow, no queue needed).
+            // User should open the quiz and click "Generate questions with Gemini" (batch flow, no queue needed).
             $aiService = app(AiQuestionService::class);
-            if ($aiService->hasApiKey()) {
-                $message = 'Quiz created. Open the quiz below and click "Generate questions with AI" to add questions (no cron or queue needed).';
+            if ($aiService->hasGeminiKey()) {
+                $message = 'Quiz created. Open the quiz below and click "Generate questions with Gemini" to add questions (no cron or queue needed).';
                 $flashKey = 'success';
             } else {
-                $message = 'Quiz created. Add a Gemini or DeepSeek key in Dashboard → Settings → AI, then open this quiz and click "Generate questions with AI".';
+                $message = 'Quiz created. Set GEMINI_API_KEY in .env or add a key in Dashboard → Settings → AI, then open this quiz and click "Generate questions with Gemini".';
                 $flashKey = 'warning';
             }
 
@@ -1240,6 +1240,109 @@ class QuizManagementController extends Controller
             $message = $apiError
                 ? 'AI returned 0 questions. ' . $apiError
                 : 'AI returned 0 questions. Check that a Gemini API key is saved in Dashboard → Settings → AI and that the key is valid.';
+            return response()->json([
+                'error' => $message,
+                'generated' => 0,
+                'questions_count' => $currentCount,
+                'pool_count' => $poolCount,
+                'total_so_far' => $totalSoFar,
+                'target' => $target,
+                'done' => false,
+            ]);
+        }
+
+        $newCount   = $quiz->questions()->count();
+        $newPool    = $quiz->questionPools()->count();
+        $newTotal   = $newCount + $newPool;
+        $done       = $newTotal >= $target;
+
+        return response()->json([
+            'generated'       => $generated,
+            'questions_count'  => $newCount,
+            'pool_count'       => $newPool,
+            'total_so_far'     => $newTotal,
+            'target'           => $target,
+            'done'             => $done,
+        ]);
+    }
+
+    /**
+     * Gemini-only batch generation: same as generateBatch but uses only Gemini (no DeepSeek).
+     * Use this for the main quiz-creation flow so errors are clear and not mixed with DeepSeek 402.
+     */
+    public function generateBatchGemini(Request $request, Quiz $quiz): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('update', $quiz);
+        $user = $this->adminUser();
+        if (! $user) {
+            return response()->json(['error' => 'Unauthorized.'], 401);
+        }
+
+        $validated = $request->validate([
+            'target'     => 'required|integer|min:1|max:250',
+            'topics'     => 'nullable|string|max:1000',
+            'first_call' => 'nullable|boolean',
+        ]);
+
+        $aiService = app(AiQuestionService::class);
+        if (! $aiService->hasGeminiKey()) {
+            return response()->json(['error' => 'Gemini API key not set. Set GEMINI_API_KEY in .env or add a key in Dashboard → Settings → AI.'], 422);
+        }
+
+        $target      = (int) $validated['target'];
+        $isFirstCall = (bool) ($validated['first_call'] ?? false);
+
+        if ($isFirstCall) {
+            \Illuminate\Support\Facades\Cache::forget('quiz_ai_progress:' . $quiz->id);
+            \Illuminate\Support\Facades\Cache::forget('setting:' . \App\Models\Setting::KEY_GEMINI_API);
+        }
+
+        $tokenService = app(AiQuizTokenService::class);
+        if ($isFirstCall) {
+            if (! $tokenService->canUse($user)) {
+                $status = $tokenService->getStatus($user);
+                return response()->json(['error' => $status['message'] ?? 'No AI quiz tokens left.'], 422);
+            }
+            $tokenService->consume($user);
+        }
+
+        $currentCount = $quiz->questions()->count();
+        $poolCount    = $quiz->questionPools()->count();
+        $totalSoFar   = $currentCount + $poolCount;
+        $remaining    = max(0, $target - $totalSoFar);
+
+        if ($remaining <= 0) {
+            return response()->json([
+                'generated'      => 0,
+                'questions_count' => $currentCount,
+                'pool_count'      => $poolCount,
+                'target'          => $target,
+                'done'            => true,
+            ]);
+        }
+
+        $batchSize = min(5, $remaining);
+
+        $topicsRaw = preg_split('/[\s,]+/', (string) ($validated['topics'] ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+        $topics    = array_map(fn ($t) => ['name' => trim($t)], array_filter(array_map('trim', $topicsRaw)));
+        if (empty($topics)) {
+            $topics = [['name' => 'General knowledge']];
+        }
+
+        $sourceText = (string) ($quiz->script_text ?? '');
+        if (mb_strlen($sourceText) > 50000) {
+            $sourceText = mb_substr($sourceText, 0, 50000) . "\n[... truncated ...]";
+        }
+
+        @set_time_limit(120);
+        $ids       = $aiService->generatePoolAndStoreGeminiOnly($quiz, $topics, $batchSize, $sourceText ?: null);
+        $generated = count($ids);
+
+        if ($generated === 0) {
+            $apiError = $aiService->getLastApiError();
+            $message = $apiError
+                ? 'Gemini returned 0 questions. ' . $apiError
+                : 'Gemini returned 0 questions. Check GEMINI_API_KEY in .env or Settings → AI and that the key is valid and billing is enabled.';
             return response()->json([
                 'error' => $message,
                 'generated' => 0,
