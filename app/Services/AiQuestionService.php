@@ -215,8 +215,8 @@ class AiQuestionService
      */
     public function getPerQuizLimit(): int
     {
-        $limit = (int) config('quizsnap.ai.max_generation_per_quiz', 100);
-        return $limit > 0 ? $limit : 100;
+        $limit = (int) config('quizsnap.ai.max_generation_per_quiz', 250);
+        return $limit > 0 ? $limit : 250;
     }
 
     /**

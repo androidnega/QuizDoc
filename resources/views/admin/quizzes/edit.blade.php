@@ -210,6 +210,20 @@
                     <p class="text-xs text-gray-500 mt-1">Score only, full review after quiz end, or disabled (no score/review).</p>
                 </div>
 
+                <div class="border-t border-gray-200 pt-6">
+                    <h3 class="text-base font-semibold text-gray-900 mb-2">AI generation (safe mode)</h3>
+                    <p class="text-sm text-gray-600 mb-3">Generate large question sets in small browser batches to avoid timeout (works better for 50-120 questions).</p>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button type="button" id="ai-generate-btn" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                            Generate AI Questions
+                        </button>
+                        <span id="ai-generate-status-text" class="text-sm text-gray-600">Idle.</span>
+                    </div>
+                    <div class="mt-3 h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                        <div id="ai-generate-progress-bar" class="h-2 w-0 bg-indigo-600 transition-all duration-300"></div>
+                    </div>
+                </div>
+
                 <!-- Actions -->
                 <div class="flex flex-wrap items-center gap-3 pt-6 border-t border-gray-200">
                     <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 shadow-sm">
@@ -405,6 +419,165 @@ document.addEventListener('DOMContentLoaded', function() {
         xhr.setRequestHeader('Accept', 'text/html');
         xhr.send(formData);
     });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.querySelector('form[action="{{ route('dashboard.quizzes.update', $quiz) }}"]');
+    var btn = document.getElementById('ai-generate-btn');
+    var statusText = document.getElementById('ai-generate-status-text');
+    var progressBar = document.getElementById('ai-generate-progress-bar');
+    if (!form || !btn || !statusText || !progressBar) return;
+
+    var startUrl = "{{ route('dashboard.quizzes.ai-generate.start', $quiz) }}";
+    var chunkUrl = "{{ route('dashboard.quizzes.ai-generate.chunk', $quiz) }}";
+    var csrf = "{{ csrf_token() }}";
+    var storageKey = "quiz-ai-gen-{{ $quiz->id }}";
+    var autoPayload = @json(session('ai_autostart_payload'));
+    var running = false;
+
+    function parseTopics(raw) {
+        if (!raw || typeof raw !== 'string') return [];
+        return raw.split(',').map(function (s) { return s.trim(); }).filter(Boolean).map(function (name) { return { name: name }; });
+    }
+
+    function setProgress(generated, target, label) {
+        var safeTarget = Math.max(1, Number(target || 0));
+        var pct = Math.max(0, Math.min(100, Math.round((Number(generated || 0) / safeTarget) * 100)));
+        progressBar.style.width = pct + '%';
+        statusText.textContent = label || ('Generated ' + generated + ' / ' + target);
+    }
+
+    async function postJson(url, payload) {
+        var res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrf,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(payload || {})
+        });
+        var data = await res.json().catch(function() { return {}; });
+        if (!res.ok) {
+            throw new Error(data.message || 'Request failed.');
+        }
+        return data;
+    }
+
+    async function runBatches(genState) {
+        running = true;
+        btn.disabled = true;
+        btn.classList.add('opacity-60', 'cursor-not-allowed');
+        localStorage.setItem(storageKey, JSON.stringify(genState));
+        var networkFailures = 0;
+
+        while (running) {
+            var chunk;
+            try {
+                chunk = await postJson(chunkUrl, {
+                    generation_id: genState.generation_id,
+                    batch_size: 8
+                });
+                networkFailures = 0;
+            } catch (err) {
+                networkFailures += 1;
+                setProgress(genState.generated_count || 0, genState.target_count || 1, 'Retrying... (' + networkFailures + ')');
+                if (networkFailures >= 5) {
+                    running = false;
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                    statusText.textContent = err && err.message ? err.message : 'Network/server error during generation.';
+                    return;
+                }
+                await new Promise(function(resolve) { setTimeout(resolve, 1200); });
+                continue;
+            }
+            genState.generated_count = chunk.generated_count || 0;
+            genState.target_count = chunk.target_count || genState.target_count;
+            genState.status = chunk.status || 'running';
+            localStorage.setItem(storageKey, JSON.stringify(genState));
+            setProgress(genState.generated_count, genState.target_count, chunk.message || null);
+
+            if (genState.status === 'completed') {
+                running = false;
+                localStorage.removeItem(storageKey);
+                btn.disabled = false;
+                btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                statusText.textContent = 'Done. Refreshing question pool...';
+                setTimeout(function() { window.location.href = "{{ route('dashboard.quizzes.show', $quiz) }}?tab=overview"; }, 1200);
+                return;
+            }
+            if (genState.status === 'failed') {
+                running = false;
+                btn.disabled = false;
+                btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                statusText.textContent = chunk.message || 'Generation failed.';
+                return;
+            }
+
+            await new Promise(function(resolve) { setTimeout(resolve, 250); });
+        }
+    }
+
+    async function startGeneration(payload) {
+        if (running) return;
+        var topics = (payload && Array.isArray(payload.topics) && payload.topics.length)
+            ? payload.topics
+            : parseTopics((document.getElementById('topics-value') || {}).value || '');
+        if (!topics.length) {
+            alert('Add at least one topic before generating.');
+            return;
+        }
+        var target = Number((payload && payload.target_count) || ((document.getElementById('number_of_questions') || {}).value || 0));
+        if (!target || target < 1) {
+            alert('Set a valid question count.');
+            return;
+        }
+
+        var sourceModeEl = form.querySelector('input[name="source_mode"]:checked');
+        var sourceMode = sourceModeEl ? sourceModeEl.value : 'topics';
+        var sourceText = '';
+        if (payload && typeof payload.source_text === 'string') {
+            sourceText = payload.source_text;
+        } else if (sourceMode === 'paste') {
+            sourceText = ((document.getElementById('source_script') || {}).value || '').trim();
+        }
+
+        setProgress(0, target, 'Starting generation...');
+        var started = await postJson(startUrl, {
+            target_count: target,
+            topics: topics,
+            source_text: sourceText
+        });
+
+        var genState = {
+            generation_id: started.generation_id,
+            target_count: started.target_count || target,
+            generated_count: started.generated_count || 0,
+            status: started.status || 'running'
+        };
+        setProgress(genState.generated_count, genState.target_count, started.message || null);
+        await runBatches(genState);
+    }
+
+    btn.addEventListener('click', function() {
+        startGeneration(null).catch(function(err) {
+            running = false;
+            btn.disabled = false;
+            btn.classList.remove('opacity-60', 'cursor-not-allowed');
+            statusText.textContent = err && err.message ? err.message : 'Generation failed.';
+        });
+    });
+
+    if (autoPayload && autoPayload.target_count && autoPayload.topics) {
+        startGeneration(autoPayload).catch(function(err) {
+            running = false;
+            btn.disabled = false;
+            btn.classList.remove('opacity-60', 'cursor-not-allowed');
+            statusText.textContent = err && err.message ? err.message : 'Auto generation failed.';
+        });
+    }
 });
 </script>
 @endpush
