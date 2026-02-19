@@ -12,9 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="QuizSnap">
     <meta name="format-detection" content="telephone=no">
     <title>@yield('title', 'QuizSnap')</title>
-    {{-- Favicon: global for all pages (dashboards, login, etc.) — do not override per page --}}
-    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
-    <link rel="apple-touch-icon" href="{{ asset('favicon.svg') }}">
+    {{-- No favicon on admin/dashboard pages — remove Laravel default appearance --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
