@@ -33,6 +33,26 @@ class ClassGroup extends Model
         return self::ACCENT_COLORS[$key];
     }
 
+    /** Tailwind classes for the level tag on the card (darker bg based on accent). */
+    public function getLevelTagClassesAttribute(): string
+    {
+        $keys = array_keys(self::ACCENT_COLORS);
+        $key = $this->accent_color && isset(self::ACCENT_COLORS[$this->accent_color])
+            ? $this->accent_color
+            : $keys[((int) $this->id) % count($keys)];
+        $tagMap = [
+            'sky' => 'bg-sky-200 text-sky-900',
+            'emerald' => 'bg-emerald-200 text-emerald-900',
+            'amber' => 'bg-amber-200 text-amber-900',
+            'violet' => 'bg-violet-200 text-violet-900',
+            'rose' => 'bg-rose-200 text-rose-900',
+            'teal' => 'bg-teal-200 text-teal-900',
+            'indigo' => 'bg-indigo-200 text-indigo-900',
+            'slate' => 'bg-slate-200 text-slate-900',
+        ];
+        return $tagMap[$key] ?? 'bg-gray-200 text-gray-900';
+    }
+
     /** Pick next accent from palette (round-robin) for auto-assign. */
     public static function nextAccentColor(): string
     {

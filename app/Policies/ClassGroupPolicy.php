@@ -78,14 +78,15 @@ class ClassGroupPolicy
     }
 
     /**
-     * Examiner can generate a one-time fallback login code for a student (if assigned to the group).
+     * Only examiner (assigned to the group) or Super Admin can generate a one-time fallback login code.
+     * Coordinators must not have access to generate code.
      */
     public function generateFallbackCode(User $user, ClassGroup $classGroup): bool
     {
-        if ($user->isSuperAdmin() || $user->isDocuMentorCoordinator()) {
+        if ($user->isSuperAdmin()) {
             return true;
         }
-        if (!$user->isStaff()) {
+        if (!$user->isStaff() || $user->isDocuMentorCoordinator()) {
             return false;
         }
         return $this->isExaminerAssignedToClassGroup($user, $classGroup);

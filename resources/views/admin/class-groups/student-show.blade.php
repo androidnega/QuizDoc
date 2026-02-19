@@ -47,9 +47,7 @@
                 @can('generateFallbackCode', $classGroup)
                 <form action="{{ route('dashboard.class-groups.students.fallback-code', [$classGroup, $student]) }}" method="post" class="inline">
                     @csrf
-                    <button type="submit" class="btn btn-sm inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium bg-amber-400 text-amber-900 hover:bg-amber-500 border border-amber-500">
-                        <i class="fas fa-key"></i> Generate code
-                    </button>
+                    <button type="submit" class="inline-flex items-center justify-center w-9 h-9 rounded-md text-amber-700 hover:bg-amber-100 border border-amber-300 hover:border-amber-400" title="Generate one-time login code"><i class="fas fa-key"></i></button>
                 </form>
                 @endcan
                 @endcan

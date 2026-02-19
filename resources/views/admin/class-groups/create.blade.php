@@ -26,7 +26,7 @@
 @endpush
 
 @section('dashboard_content')
-<div class="w-full max-w-3xl">
+<div class="w-full">
     @if(session('error'))
         <div class="alert alert-error mb-6">{{ session('error') }}</div>
     @endif

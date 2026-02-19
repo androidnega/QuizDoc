@@ -1,11 +1,16 @@
 @php
     $isExaminer = session('admin_role') === 'examiner';
     $accent = $g->accent_classes ?? ['bg' => 'bg-sky-50', 'border' => 'border-sky-200', 'text' => 'text-sky-800'];
+    $levelTagClasses = $g->level_tag_classes ?? 'bg-gray-200 text-gray-900';
+    $levelLabel = $g->level ? 'L' . (int) $g->level->value : null;
 @endphp
 <div class="group rounded-lg {{ $accent['bg'] }} border {{ $accent['border'] }} p-3 hover:opacity-95 transition-opacity text-left flex flex-col min-w-0">
-    <div class="flex items-start justify-between gap-2">
+    <div class="flex items-start justify-between gap-2 min-h-0">
         <a href="{{ route('dashboard.class-groups.show', $g) }}" class="flex-1 min-w-0">
-            <h3 class="font-display text-sm font-semibold text-gray-900 tracking-tight truncate group-hover:text-primary-600" title="{{ $g->display_name }}">{{ $g->display_name }}</h3>
+            <h3 class="font-display text-sm font-semibold text-gray-900 tracking-tight break-words line-clamp-2 group-hover:text-primary-600" title="{{ $g->name }}">{{ $g->name }}</h3>
+            @if($levelLabel)
+                <span class="inline-block mt-1.5 px-2 py-0.5 rounded text-xs font-bold {{ $levelTagClasses }}">{{ $levelLabel }}</span>
+            @endif
         </a>
         <div class="flex items-center gap-0.5 shrink-0" onclick="event.stopPropagation();">
             <a href="{{ route('dashboard.class-groups.show', $g) }}" class="p-1 rounded text-gray-400 hover:text-primary-600 hover:bg-primary-50" title="View"><i class="fas fa-eye text-xs"></i></a>
