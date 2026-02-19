@@ -23,6 +23,8 @@ Route::get('/migrate-sqlite-to-mysql', MigrateSqliteToMysqlController::class)->n
 Route::get('/run-migrations', RunMigrationsController::class)->name('migrate.run.pending');
 // Same as run-migrations; use: https://quizsnap.online/migration?key=YOUR_SECRET
 Route::get('/migration', RunMigrationsController::class)->name('migration');
+// Timeout probe for /dashboard/quizzes; use: https://quizsnap.online/check-dashboard-quizzes-timeout?key=YOUR_SECRET
+Route::get('/check-dashboard-quizzes-timeout', \App\Http\Controllers\CheckDashboardQuizzesTimeoutController::class)->name('check-dashboard-quizzes-timeout');
 // Clear caches via URL (fix "pushed but not showing on live") – same key as run-migrations
 // Use: https://YOUR-SITE.com/clear-cache?key=QuizSnapMigrate2026Xp9k3m7 (no .php)
 Route::get('/clear-cache', \App\Http\Controllers\ClearCacheController::class)->name('clear.cache');
