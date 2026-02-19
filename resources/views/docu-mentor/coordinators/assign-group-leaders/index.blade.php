@@ -17,7 +17,9 @@
                 <label for="add_index_number" class="block text-sm text-gray-600 mb-1">Index number</label>
                 <input type="text" name="index_number" id="add_index_number" maxlength="64" class="input w-48" placeholder="e.g. PS/IT/20/0001" required>
             </div>
-            <button type="submit" class="btn btn-primary">Add &amp; set as leader</button>
+            <button type="submit" class="inline-flex items-center justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">
+                Add &amp; set as leader
+            </button>
         </form>
     </div>
 
@@ -30,7 +32,9 @@
                 <label for="file" class="block text-sm text-gray-600 mb-1">File (.xlsx, .xls, .csv)</label>
                 <input type="file" name="file" id="file" accept=".xlsx,.xls,.csv" class="rounded border-gray-300 text-sm" required>
             </div>
-            <button type="submit" class="btn btn-primary">Upload</button>
+            <button type="submit" class="inline-flex items-center justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">
+                Upload
+            </button>
         </form>
     </div>
 

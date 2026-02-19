@@ -72,11 +72,21 @@
                     @error('sms_allocation')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 @endif
-                @if($user->isExaminer())
+                @if($user->isExaminer() || $user->role === \App\Models\User::DM_ROLE_COORDINATOR)
                 <div>
                     <label for="ai_quiz_tokens_allocation" class="block text-xs font-medium text-gray-500 mb-0.5">AI quiz tokens (per period)</label>
-                    <input type="number" name="ai_quiz_tokens_allocation" id="ai_quiz_tokens_allocation" value="{{ old('ai_quiz_tokens_allocation', $user->ai_quiz_tokens_allocation ?? 10) }}" min="0" step="1" placeholder="10" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none @error('ai_quiz_tokens_allocation') border-red-500 @enderror">
-                    <p class="mt-1 text-xs text-gray-500">Number of AI quiz generations allowed. When exhausted, examiner waits for cooldown (Settings → AI) before refill.</p>
+                    <input
+                        type="number"
+                        name="ai_quiz_tokens_allocation"
+                        id="ai_quiz_tokens_allocation"
+                        value="{{ old('ai_quiz_tokens_allocation', $user->ai_quiz_tokens_allocation ?? ($user->role === \App\Models\User::DM_ROLE_COORDINATOR ? 3 : 10)) }}"
+                        min="0"
+                        step="1"
+                        placeholder="{{ $user->role === \App\Models\User::DM_ROLE_COORDINATOR ? '3' : '10' }}"
+                        class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none @error('ai_quiz_tokens_allocation') border-red-500 @enderror">
+                    <p class="mt-1 text-xs text-gray-500">
+                        Number of AI quiz generations allowed for this user. When exhausted, they wait for the cooldown (Settings → AI) before refill.
+                    </p>
                     @error('ai_quiz_tokens_allocation')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 @endif

@@ -204,8 +204,9 @@ class UserManagementController extends Controller
         if ($isSuperAdmin && $request->has('sms_allocation') && $request->input('sms_allocation') !== null && $request->input('sms_allocation') !== '') {
             $attrs['sms_allocation'] = max(0, (int) $request->sms_allocation);
         }
-        if ($isSuperAdmin && $role === User::ROLE_EXAMINER) {
-            $attrs['ai_quiz_tokens_allocation'] = max(0, (int) ($request->ai_quiz_tokens_allocation ?? 10));
+        if ($isSuperAdmin && in_array($role, [User::ROLE_EXAMINER, User::DM_ROLE_COORDINATOR], true)) {
+            $defaultAllocation = $role === User::DM_ROLE_COORDINATOR ? 3 : 10;
+            $attrs['ai_quiz_tokens_allocation'] = max(0, (int) ($request->ai_quiz_tokens_allocation ?? $defaultAllocation));
         }
         $newUser = User::create($attrs);
         if ($isSuperAdmin && $request->filled('faculty_id')) {
@@ -368,8 +369,9 @@ class UserManagementController extends Controller
             if ($request->has('sms_allocation') && $request->input('sms_allocation') !== null && $request->input('sms_allocation') !== '') {
                 $user->sms_allocation = max(0, (int) $request->sms_allocation);
             }
-            if ($user->isExaminer() && $request->has('ai_quiz_tokens_allocation')) {
-                $user->ai_quiz_tokens_allocation = max(0, (int) ($request->ai_quiz_tokens_allocation ?? 10));
+            if (($user->isExaminer() || $user->role === User::DM_ROLE_COORDINATOR) && $request->has('ai_quiz_tokens_allocation')) {
+                $defaultAllocation = $user->role === User::DM_ROLE_COORDINATOR ? 3 : 10;
+                $user->ai_quiz_tokens_allocation = max(0, (int) ($request->ai_quiz_tokens_allocation ?? $defaultAllocation));
             }
         }
         

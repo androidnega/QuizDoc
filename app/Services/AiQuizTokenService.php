@@ -29,8 +29,10 @@ class AiQuizTokenService
         if ($user->isSuperAdmin()) {
             return true;
         }
-        if (!$user->isExaminer()) {
-            return true; // coordinators etc. - no restriction for now
+        $isCoordinator = $user->role === User::DM_ROLE_COORDINATOR;
+        $isExaminer = $user->isExaminer();
+        if (! $isExaminer && ! $isCoordinator) {
+            return false;
         }
         return $this->getRemaining($user) > 0;
     }
@@ -52,20 +54,24 @@ class AiQuizTokenService
                 'message' => null,
             ];
         }
-        if (!$user->isExaminer()) {
+        $isCoordinator = $user->role === User::DM_ROLE_COORDINATOR;
+        $isExaminer = $user->isExaminer();
+        if (! $isExaminer && ! $isCoordinator) {
             return [
-                'remaining' => 999,
-                'allocation' => 999,
+                'remaining' => 0,
+                'allocation' => 0,
                 'used' => 0,
                 'reset_at' => null,
-                'can_use' => true,
+                'can_use' => false,
                 'message' => null,
             ];
         }
 
         $this->maybeReset($user);
 
-        $allocation = (int) ($user->ai_quiz_tokens_allocation ?? 10);
+        // Default allocation: examiners 10, coordinators 3 (per period, typically per day).
+        $defaultAllocation = $isCoordinator ? 3 : 10;
+        $allocation = (int) ($user->ai_quiz_tokens_allocation ?? $defaultAllocation);
         $used = (int) ($user->ai_quiz_tokens_used ?? 0);
         $remaining = max(0, $allocation - $used);
         $resetAt = $user->ai_quiz_tokens_reset_at ? \Carbon\Carbon::parse($user->ai_quiz_tokens_reset_at) : null;
@@ -94,8 +100,14 @@ class AiQuizTokenService
      */
     public function consume(User $user): bool
     {
-        if ($user->isSuperAdmin() || !$user->isExaminer()) {
+        if ($user->isSuperAdmin()) {
             return true;
+        }
+
+        $isCoordinator = $user->role === User::DM_ROLE_COORDINATOR;
+        $isExaminer = $user->isExaminer();
+        if (! $isExaminer && ! $isCoordinator) {
+            return false;
         }
 
         $this->maybeReset($user);
