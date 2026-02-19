@@ -44,4 +44,27 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->exceptInput('password', 'password_confirmation')
                 ->withErrors(['session' => 'Your session expired. Please refresh the page and try again.']);
         });
+        // When 404 on student Docu Mentor paths and user is staff (not student), show 403 "Student access required" instead of 404
+        $exceptions->renderable(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, $request) {
+            if (!$request instanceof \Illuminate\Http\Request) {
+                return null;
+            }
+            $path = $request->path();
+            $isStudentProjectPath = str_starts_with($path, 'dashboard/projects')
+                || str_starts_with($path, 'docu-mentor/students');
+            if (!$isStudentProjectPath) {
+                return null;
+            }
+            $user = $request->attributes->get('dm_user')
+                ?? \Illuminate\Support\Facades\Auth::user()
+                ?? (session('admin_user_id') ? \App\Models\User::find(session('admin_user_id')) : null);
+            if (!$user instanceof \App\Models\User) {
+                return null;
+            }
+            if ($user->isDocuMentorStudent()) {
+                return null; // Let 404 through for actual students (e.g. wrong project id)
+            }
+            // Staff (supervisor/coordinator/etc.) hitting student-only path: show 403 instead of 404
+            return \Illuminate\Support\Facades\Response::make('403 | Student access required.', 403);
+        });
     })->create();

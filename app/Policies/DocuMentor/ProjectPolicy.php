@@ -83,7 +83,15 @@ class ProjectPolicy
             return $user->supervisedProjects()->where('projects.id', $project->id)->exists();
         }
         if ($user->isDocuMentorStudent()) {
-            return $user->docuMentorGroups()->where('groups.id', $project->group_id)->exists();
+            // Member of project's group (via group_members)
+            if ($user->docuMentorGroups()->where('groups.id', $project->group_id)->exists()) {
+                return true;
+            }
+            // Leader of project's group (coordinator may set leader_id without adding to group_members)
+            if ($project->group && $project->group->leader_id === $user->id) {
+                return true;
+            }
+            return false;
         }
         return false;
     }

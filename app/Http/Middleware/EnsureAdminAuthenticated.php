@@ -31,9 +31,10 @@ class EnsureAdminAuthenticated
                 ->with('error', 'Session invalid. Please log in again.');
         }
 
-        // Coordinators may access their dashboard (coordinators.*), Class Groups, Courses (assign lecturers), profile, and logout
+        // Coordinators may access their dashboard (coordinators.*), Docu Mentor (proposals/chapters), Class Groups, Courses, profile, and logout
         $coordinatorAllowed = $request->routeIs('dashboard.profile.*')
             || $request->routeIs('dashboard.coordinators.*')
+            || $request->routeIs('dashboard.docu-mentor.*')
             || $request->routeIs('dashboard.class-groups.*')
             || $request->routeIs('dashboard.courses.*')
             || $request->routeIs('logout');
