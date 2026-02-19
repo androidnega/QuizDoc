@@ -11,8 +11,14 @@
     <td class="px-4 py-3 text-sm text-gray-600">{{ $displayName }}</td>
     <td class="px-4 py-3 text-sm text-gray-600">{{ $phone ?? '—' }}</td>
     <td class="px-4 py-3 text-right">
-        <div class="inline-flex items-center justify-end gap-3">
+        <div class="inline-flex items-center justify-end gap-2 flex-wrap">
             <a href="{{ route('dashboard.class-groups.students.show', [$classGroup, $s]) }}" class="inline-flex items-center gap-1 text-gray-600 hover:text-primary-600 text-sm" title="View details"><i class="fas fa-eye"></i> View</a>
+            @can('generateFallbackCode', $classGroup)
+            <form action="{{ route('dashboard.class-groups.students.fallback-code', [$classGroup, $s]) }}" method="post" class="inline">
+                @csrf
+                <button type="submit" class="inline-flex items-center gap-1 text-sm font-medium rounded px-2 py-1 bg-amber-400 text-amber-900 hover:bg-amber-500 border border-amber-500" title="Generate one-time login code"><i class="fas fa-key"></i> Generate code</button>
+            </form>
+            @endcan
             @can('update', $classGroup)
             <a href="{{ route('dashboard.class-groups.students.edit', [$classGroup, $s]) }}" class="inline-flex items-center gap-1 text-primary-600 hover:text-primary-800 text-sm" title="Edit"><i class="fas fa-pen"></i> Edit</a>
             <form action="{{ route('dashboard.class-groups.students.destroy', [$classGroup, $s]) }}" method="post" class="inline" onsubmit="return confirm('Remove this index from the group?');">

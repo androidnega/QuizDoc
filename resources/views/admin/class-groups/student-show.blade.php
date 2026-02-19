@@ -47,8 +47,8 @@
                 @can('generateFallbackCode', $classGroup)
                 <form action="{{ route('dashboard.class-groups.students.fallback-code', [$classGroup, $student]) }}" method="post" class="inline">
                     @csrf
-                    <button type="submit" class="btn btn-sm btn-primary">
-                        <i class="fas fa-key mr-1"></i> Generate one-time login code
+                    <button type="submit" class="btn btn-sm inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium bg-amber-400 text-amber-900 hover:bg-amber-500 border border-amber-500">
+                        <i class="fas fa-key"></i> Generate code
                     </button>
                 </form>
                 @endcan
@@ -132,6 +132,7 @@
             @endif
         </div>
 
+        @can('update', $classGroup)
         <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
             <form action="{{ route('dashboard.class-groups.students.destroy', [$classGroup, $student]) }}" method="post" onsubmit="return confirm('Remove this student from the class group? This will not delete their quiz history.');">
                 @csrf
@@ -144,6 +145,7 @@
                 <i class="fas fa-pen mr-1"></i> Edit details
             </a>
         </div>
+        @endcan
     </div>
 </div>
 @endsection
