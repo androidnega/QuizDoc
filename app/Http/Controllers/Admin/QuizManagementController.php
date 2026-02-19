@@ -254,7 +254,7 @@ class QuizManagementController extends Controller
             if ($aiService->hasApiKey() && $aiTokenService->canUse($user)) {
                 $aiTokenService->consume($user);
                 GenerateAiQuestionsJob::dispatch($quiz->id, $user->id, $targetCount, array_values($topics), '')->afterResponse();
-                $message = 'Quiz created. Questions are being generated in the background. Refresh this page in a moment, then click Approve All to add them to the quiz.';
+                $message = 'Quiz created. Questions are being generated in the background. Refresh in a moment, then Approve All. If 0 questions appear: set QUEUE_CONNECTION=database in .env, run migrations, then add a cron job (every minute): php artisan queue:work --stop-when-empty';
                 $flashKey = 'success';
             } elseif (!$aiService->hasApiKey()) {
                 $message = 'Quiz created. AI generation was skipped: no API key is set. Add a Gemini or DeepSeek key in Dashboard → Settings → AI, then use "Generate questions" on this quiz.';
