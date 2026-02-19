@@ -151,7 +151,7 @@
                 <ul class="space-y-3">
                     @foreach($project->chapters as $ch)
                         <li>
-                            <a href="{{ route('dashboard.docu-mentor.chapters.show', [$project, $ch]) }}" class="flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-slate-50">
+                            <a href="{{ route('dashboard.docu-mentor.chapters.show', [$project, $ch->order]) }}" class="flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-slate-50">
                                 <span class="font-medium">{{ $ch->title }}</span>
                                 <div class="flex items-center gap-2 text-sm">
                                     <span class="text-slate-500">{{ $ch->submissions->count() }} submissions</span>

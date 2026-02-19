@@ -16,12 +16,13 @@ use Illuminate\Http\RedirectResponse;
  */
 class SupervisorChapterController extends Controller
 {
-    public function show(Project $project, Chapter $chapter): View
+    /**
+     * Show chapter by order (1-6) so URLs are stable; order is used in links from project page.
+     */
+    public function show(Project $project, int $chapterOrder): View
     {
         $user = request()->attributes->get('dm_user');
-        if ($chapter->project_id !== $project->id) {
-            abort(404);
-        }
+        $chapter = $project->chapters()->where('order', $chapterOrder)->firstOrFail();
         $this->authorize('view', [$chapter, $project]);
 
         $chapter->load(['project', 'submissions.aiReviews']);

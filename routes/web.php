@@ -385,7 +385,7 @@ Route::middleware('admin.auth')->group(function () {
         Route::middleware('docu-mentor.supervisor')->prefix('docu-mentor')->name('docu-mentor.')->group(function () {
             Route::get('/projects', [\App\Http\Controllers\DocuMentor\SupervisorProjectController::class, 'index'])->name('projects.index');
             Route::get('/projects/{project}', [\App\Http\Controllers\DocuMentor\SupervisorProjectController::class, 'show'])->name('projects.show');
-            Route::get('/projects/{project}/chapters/{chapter}', [\App\Http\Controllers\DocuMentor\SupervisorChapterController::class, 'show'])->name('chapters.show');
+            Route::get('/projects/{project}/chapters/{chapterOrder}', [\App\Http\Controllers\DocuMentor\SupervisorChapterController::class, 'show'])->name('chapters.show')->whereNumber('chapterOrder');
             Route::put('/projects/{project}/chapters/{chapter}', [\App\Http\Controllers\DocuMentor\SupervisorChapterController::class, 'update'])->name('chapters.update');
             Route::post('/projects/{project}/chapters/{chapter}/toggle-open', [\App\Http\Controllers\DocuMentor\SupervisorChapterController::class, 'toggleOpen'])->name('chapters.toggle-open');
             Route::post('/projects/{project}/chapters/{chapter}/mark-completed', [\App\Http\Controllers\DocuMentor\SupervisorChapterController::class, 'markCompleted'])->name('chapters.mark-completed');

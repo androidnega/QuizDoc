@@ -248,7 +248,7 @@
                 @foreach($project->chapters as $ch)
                     <li class="flex items-center justify-between gap-3 px-3 py-2.5 bg-white hover:bg-gray-50/80 transition-colors">
                         <span class="text-sm text-gray-800">{{ $ch->order }}. {{ $ch->title }} <span class="text-gray-400">(max {{ $ch->max_score }} pts)</span>@if($ch->completed) <span class="text-success-600">✓</span>@endif</span>
-                        <a href="{{ route('dashboard.docu-mentor.chapters.show', [$project, $ch]) }}" class="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline shrink-0">View</a>
+                        <a href="{{ route('dashboard.docu-mentor.chapters.show', [$project, $ch->order]) }}" class="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline shrink-0">View</a>
                     </li>
                 @endforeach
             </ul>
