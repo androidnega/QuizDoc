@@ -244,28 +244,15 @@ class QuizManagementController extends Controller
                     ->with('error', 'Failed');
             }
 
-            // Run AI question generation in the background when API key and tokens are available.
+            // Do not run background job here — on shared hosting it often never runs.
+            // User should open the quiz and click "Generate questions with AI" (batch flow, no queue needed).
             $aiService = app(AiQuestionService::class);
-            $aiTokenService = app(AiQuizTokenService::class);
-            $targetCount = (int) $request->number_of_questions;
-            if (empty($topics)) {
-                $topics = [['name' => 'General knowledge']];
-            }
-            if ($aiService->hasApiKey() && $aiTokenService->canUse($user)) {
-                $aiTokenService->consume($user);
-                GenerateAiQuestionsJob::dispatch($quiz->id, $user->id, $targetCount, array_values($topics), '')->afterResponse();
-                $message = 'Quiz created. Questions are being generated in the background. Refresh in a moment, then Approve All. If 0 questions appear: set QUEUE_CONNECTION=database in .env, run migrations, then add a cron job (every minute): php artisan queue:work --stop-when-empty';
+            if ($aiService->hasApiKey()) {
+                $message = 'Quiz created. Open the quiz below and click "Generate questions with AI" to add questions (no cron or queue needed).';
                 $flashKey = 'success';
-            } elseif (!$aiService->hasApiKey()) {
-                $message = 'Quiz created. AI generation was skipped: no API key is set. Add a Gemini or DeepSeek key in Dashboard → Settings → AI, then use "Generate questions" on this quiz.';
-                $flashKey = 'warning';
-            } elseif (!$aiTokenService->canUse($user)) {
-                $status = $aiTokenService->getStatus($user);
-                $message = 'Quiz created. ' . ($status['message'] ?? 'You have no AI quiz tokens left. Tokens refill after a cooldown period.');
-                $flashKey = 'warning';
             } else {
-                $message = 'Quiz created successfully.';
-                $flashKey = 'success';
+                $message = 'Quiz created. Add a Gemini or DeepSeek key in Dashboard → Settings → AI, then open this quiz and click "Generate questions with AI".';
+                $flashKey = 'warning';
             }
 
             try {
