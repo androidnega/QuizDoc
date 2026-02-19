@@ -154,71 +154,80 @@
 
                 <!-- Tab: Email -->
                 <div class="settings-tab-content p-6 hidden" data-tab-content="email" id="tab-content-email">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Email</h2>
-                <p class="text-sm text-gray-600 mb-4">Outgoing mail configuration. Stored in database (password encrypted). Used for password reset and notifications.</p>
-                <div class="rounded-lg border border-primary-200 bg-primary-50 p-3 mb-4 text-sm text-primary-800">
-                    <p class="font-medium">Secure SSL/TLS (recommended):</p>
-                    <p class="mt-1">Host: mail.ausweblabs.com — SMTP Port: 465 (SSL). Username: reset@ausweblabs.com. Use the email account’s password. IMAP/POP3/SMTP require authentication.</p>
-                </div>
-                <div class="space-y-4">
-                    <div>
-                        <label for="mail_mailer" class="block text-sm font-medium text-gray-700 mb-1">Mailer</label>
-                        <select name="mail_mailer" id="mail_mailer" class="input w-full">
-                            <option value="smtp" {{ ($mail_mailer ?? '') === 'smtp' ? 'selected' : '' }}>SMTP</option>
-                            <option value="sendmail" {{ ($mail_mailer ?? '') === 'sendmail' ? 'selected' : '' }}>Sendmail</option>
-                            <option value="log" {{ ($mail_mailer ?? '') === 'log' ? 'selected' : '' }}>Log (no send)</option>
-                        </select>
+                    <div class="mb-6">
+                        <h2 class="text-base font-semibold text-gray-900 mb-1">Email</h2>
+                        <p class="text-sm text-gray-600">Outgoing mail configuration. Stored in database (password encrypted). Used for password reset and notifications.</p>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="mail_host" class="block text-sm font-medium text-gray-700 mb-1">Host</label>
-                            <input type="text" name="mail_host" id="mail_host" value="{{ old('mail_host', $mail_host ?? 'mail.ausweblabs.com') }}" class="input w-full" placeholder="mail.ausweblabs.com">
+                    <div class="rounded-lg border border-primary-200 bg-primary-50/80 p-4 mb-6 text-sm text-primary-800">
+                        <p class="font-medium">Secure SSL/TLS (recommended)</p>
+                        <p class="mt-1 text-primary-700">Host: mail.ausweblabs.com — Port: 465 (SSL). Username: reset@ausweblabs.com. Use the account password. IMAP/POP3/SMTP require authentication.</p>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-4">
+                            <h3 class="text-sm font-semibold text-gray-800">SMTP server</h3>
+                            <div>
+                                <label for="mail_mailer" class="block text-sm font-medium text-gray-700 mb-1.5">Mailer</label>
+                                <select name="mail_mailer" id="mail_mailer" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                    <option value="smtp" {{ ($mail_mailer ?? '') === 'smtp' ? 'selected' : '' }}>SMTP</option>
+                                    <option value="sendmail" {{ ($mail_mailer ?? '') === 'sendmail' ? 'selected' : '' }}>Sendmail</option>
+                                    <option value="log" {{ ($mail_mailer ?? '') === 'log' ? 'selected' : '' }}>Log (no send)</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="mail_host" class="block text-sm font-medium text-gray-700 mb-1.5">Host</label>
+                                    <input type="text" name="mail_host" id="mail_host" value="{{ old('mail_host', $mail_host ?? 'mail.ausweblabs.com') }}" placeholder="mail.ausweblabs.com" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label for="mail_port" class="block text-sm font-medium text-gray-700 mb-1.5">Port</label>
+                                    <input type="text" name="mail_port" id="mail_port" value="{{ old('mail_port', $mail_port ?? '465') }}" placeholder="465" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="mail_username" class="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
+                                <input type="text" name="mail_username" id="mail_username" value="{{ old('mail_username', $mail_username ?? 'reset@ausweblabs.com') }}" placeholder="reset@ausweblabs.com" autocomplete="off" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label for="mail_password" class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                                <input type="password" name="mail_password" id="mail_password" autocomplete="new-password" placeholder="Leave blank to keep current" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">Stored encrypted. Leave blank to keep existing password.</p>
+                            </div>
+                            <div>
+                                <label for="mail_encryption" class="block text-sm font-medium text-gray-700 mb-1.5">Encryption</label>
+                                <select name="mail_encryption" id="mail_encryption" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                    <option value="tls" {{ ($mail_encryption ?? '') === 'tls' ? 'selected' : '' }}>TLS</option>
+                                    <option value="ssl" {{ ($mail_encryption ?? 'ssl') === 'ssl' ? 'selected' : '' }}>SSL</option>
+                                    <option value="" {{ ($mail_encryption ?? '') === '' ? 'selected' : '' }}>None</option>
+                                </select>
+                            </div>
                         </div>
-                        <div>
-                            <label for="mail_port" class="block text-sm font-medium text-gray-700 mb-1">Port</label>
-                            <input type="text" name="mail_port" id="mail_port" value="{{ old('mail_port', $mail_port ?? '465') }}" class="input w-full" placeholder="465">
+                        <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-4">
+                            <h3 class="text-sm font-semibold text-gray-800">From (sender)</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="mail_from_address" class="block text-sm font-medium text-gray-700 mb-1.5">From address</label>
+                                    <input type="email" name="mail_from_address" id="mail_from_address" value="{{ old('mail_from_address', $mail_from_address ?? 'reset@ausweblabs.com') }}" placeholder="reset@ausweblabs.com" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label for="mail_from_name" class="block text-sm font-medium text-gray-700 mb-1.5">From name</label>
+                                    <input type="text" name="mail_from_name" id="mail_from_name" value="{{ old('mail_from_name', $mail_from_name ?? 'QuizSnap') }}" placeholder="QuizSnap" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-4">
+                            <h3 class="text-sm font-semibold text-gray-800">Result-ready notification</h3>
+                            <p class="text-xs text-gray-500">Send an email when a student submits a quiz (result ready).</p>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="notify_result_ready" value="1" {{ old('notify_result_ready', $notify_result_ready ?? false) ? 'checked' : '' }} class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+                                <span class="text-sm font-medium text-gray-700">Enable result-ready email</span>
+                            </label>
+                            <div>
+                                <label for="notify_result_email" class="block text-sm font-medium text-gray-700 mb-1.5">Send to (email)</label>
+                                <input type="email" name="notify_result_email" id="notify_result_email" value="{{ old('notify_result_email', $notify_result_email ?? '') }}" placeholder="examiner@example.com" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">Leave blank to disable. One email per submission.</p>
+                            </div>
                         </div>
                     </div>
-                    <div>
-                        <label for="mail_username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                        <input type="text" name="mail_username" id="mail_username" value="{{ old('mail_username', $mail_username ?? 'reset@ausweblabs.com') }}" class="input w-full" placeholder="reset@ausweblabs.com" autocomplete="off">
-                    </div>
-                    <div>
-                        <label for="mail_password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                        <input type="password" name="mail_password" id="mail_password" class="input w-full" autocomplete="new-password" placeholder="Use the email account’s password (stored encrypted)">
-                    </div>
-                    <div>
-                        <label for="mail_encryption" class="block text-sm font-medium text-gray-700 mb-1">Encryption</label>
-                        <select name="mail_encryption" id="mail_encryption" class="input w-full">
-                            <option value="tls" {{ ($mail_encryption ?? '') === 'tls' ? 'selected' : '' }}>TLS</option>
-                            <option value="ssl" {{ ($mail_encryption ?? 'ssl') === 'ssl' ? 'selected' : '' }}>SSL</option>
-                            <option value="" {{ ($mail_encryption ?? '') === '' ? 'selected' : '' }}>None</option>
-                        </select>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="mail_from_address" class="block text-sm font-medium text-gray-700 mb-1">From address</label>
-                            <input type="email" name="mail_from_address" id="mail_from_address" value="{{ old('mail_from_address', $mail_from_address ?? 'reset@ausweblabs.com') }}" class="input w-full" placeholder="reset@ausweblabs.com">
-                        </div>
-                        <div>
-                            <label for="mail_from_name" class="block text-sm font-medium text-gray-700 mb-1">From name</label>
-                            <input type="text" name="mail_from_name" id="mail_from_name" value="{{ old('mail_from_name', $mail_from_name ?? 'QuizSnap') }}" class="input w-full" placeholder="QuizSnap">
-                        </div>
-                    </div>
-                    <div class="pt-4 border-t border-gray-200 space-y-2">
-                        <p class="text-sm font-medium text-gray-700">Result-ready notification</p>
-                        <p class="text-xs text-gray-500 mb-2">Send an email when a student submits a quiz (result ready).</p>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" name="notify_result_ready" value="1" {{ old('notify_result_ready', $notify_result_ready ?? false) ? 'checked' : '' }} class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
-                            <span class="text-sm text-gray-700">Enable result-ready email</span>
-                        </label>
-                        <div class="mt-2">
-                            <label for="notify_result_email" class="block text-sm font-medium text-gray-700 mb-1">Send to (email)</label>
-                            <input type="email" name="notify_result_email" id="notify_result_email" value="{{ old('notify_result_email', $notify_result_email ?? '') }}" class="input w-full" placeholder="examiner@example.com">
-                            <p class="text-xs text-gray-500 mt-1">Leave blank to disable. One email per submission.</p>
-                        </div>
-                    </div>
-                </div>
                 </div>
 
                 <!-- Tab: AI -->
