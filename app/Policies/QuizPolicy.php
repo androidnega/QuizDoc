@@ -27,7 +27,17 @@ class QuizPolicy
             return true;
         }
         $classGroup = $quiz->classGroup;
-        return $classGroup && (int) $classGroup->examiner_id === (int) $user->id;
+        if (! $classGroup) {
+            return false;
+        }
+        if ((int) $classGroup->examiner_id === (int) $user->id) {
+            return true;
+        }
+        // Lecturer assigned to any course in this class group (e.g. for live proctor)
+        if (\Illuminate\Support\Facades\Schema::hasColumn('class_group_course', 'examiner_id')) {
+            return $classGroup->courses()->wherePivot('examiner_id', $user->id)->exists();
+        }
+        return false;
     }
 
     public function create(User $user): bool

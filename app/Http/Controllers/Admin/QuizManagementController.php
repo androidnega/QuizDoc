@@ -512,25 +512,31 @@ class QuizManagementController extends Controller
 
     /**
      * Serve the latest proctor feed frame image for a session (examiner only).
-     * Respects live_proctor_enabled setting.
+     * Respects live_proctor_enabled setting. Always returns 200 with an image (real or placeholder)
+     * so the live proctor page never shows a broken image.
      */
     public function proctorFrame(Quiz $quiz, QuizSession $quizSession): \Symfony\Component\HttpFoundation\BinaryFileResponse|Response
     {
-        $this->authorize('view', $quiz);
+        $placeholder = base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+        $placeholderResponse = response($placeholder, 200, [
+            'Content-Type' => 'image/gif',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        ]);
+
         if (Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') !== '1') {
-            abort(403, 'Live examiner view is disabled.');
+            return $placeholderResponse;
+        }
+        try {
+            $this->authorize('view', $quiz);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return $placeholderResponse;
         }
         if ($quizSession->quiz_id !== $quiz->id) {
-            abort(404);
+            return $placeholderResponse;
         }
         $path = storage_path('app/proctor_feed/' . $quizSession->id . '.jpg');
-        if (!is_file($path)) {
-            // Return 1x1 transparent GIF so the live proctor page never shows a broken image
-            $placeholder = base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
-            return response($placeholder, 200, [
-                'Content-Type' => 'image/gif',
-                'Cache-Control' => 'no-store, no-cache, must-revalidate',
-            ]);
+        if (! is_file($path)) {
+            return $placeholderResponse;
         }
         return response()->file($path, ['Content-Type' => 'image/jpeg']);
     }
