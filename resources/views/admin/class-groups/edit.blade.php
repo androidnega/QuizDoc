@@ -42,7 +42,7 @@
         </div>
     @endif
 
-    <div class="w-full max-w-3xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm min-w-0">
+    <div class="w-full rounded-xl border border-gray-200 bg-white p-6 shadow-sm min-w-0">
         <form action="{{ route('dashboard.class-groups.update', $classGroup) }}" method="post" class="class-group-edit-form space-y-6">
             @csrf
             @method('PUT')
