@@ -87,17 +87,22 @@
         @php
             $hasScheduled = isset($scheduledQuiz) && $scheduledQuiz;
             $hasScheduledResult = isset($scheduledQuizSession) && $scheduledQuizSession?->result;
+            $scheduledUpcoming = $hasScheduled && $scheduledQuiz->starts_at && $scheduledQuiz->starts_at->isFuture();
+            $scheduledActive = $hasScheduled && !$hasScheduledResult && !$scheduledUpcoming;
         @endphp
         <a
             href="@if($hasScheduled && $hasScheduledResult)
                       {{ route('dashboard.my-quizzes.show', ['sessionId' => $scheduledQuizSession->id]) }}
-                  @elseif($hasScheduled && $scheduledQuiz->starts_at && $scheduledQuiz->starts_at->isFuture())
+                  @elseif($scheduledUpcoming)
                       {{ route('student.quiz-will-start', ['token' => $scheduledQuiz->link_token]) }}
                   @elseif($hasScheduled)
                       {{ route('student.rules.show.quiz', ['token' => $scheduledQuiz->link_token]) }}
                   @else
                       {{ route('dashboard.course-materials') }}
                   @endif"
+            @if($scheduledUpcoming)
+            data-rules-url="{{ route('student.rules.show.quiz', ['token' => $scheduledQuiz->link_token]) }}"
+            @endif
             class="rounded-2xl shadow-sm p-4 sm:p-5 flex flex-col no-underline hover:bg-emerald-50/80 transition-colors min-h-[84px] sm:min-h-[100px]"
             style="background-color: #d1fae5; border: none;"
         >
@@ -112,8 +117,10 @@
             <span class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide mt-0.5 truncate text-slate-700">
                 @if(isset($scheduledQuizSession) && $scheduledQuizSession?->result)
                     Score: {{ number_format($scheduledQuizSession->result->score, 1) }}%
-                @elseif(isset($scheduledQuiz) && $scheduledQuiz && $scheduledQuiz->starts_at && $scheduledQuiz->starts_at->isFuture())
-                    Starts {{ $scheduledQuiz->starts_at->format('M j, g:i A') }}
+                @elseif($scheduledUpcoming)
+                    <span id="quiz-countdown-{{ $scheduledQuiz->id }}" aria-live="polite">—</span>
+                @elseif($scheduledActive)
+                    Start
                 @else
                     Course materials
                 @endif
@@ -370,10 +377,16 @@
     var startMs = new Date(startsAt).getTime();
     var el = document.getElementById('quiz-countdown-{{ $scheduledQuiz->id }}');
     if (!el) return;
+    var cardLink = el.closest('a');
+    var rulesUrl = cardLink && cardLink.getAttribute('data-rules-url');
     function update() {
         var now = Date.now();
         var left = Math.max(0, Math.floor((startMs - now) / 1000));
-        if (left <= 0) { el.textContent = 'Started'; return; }
+        if (left <= 0) {
+            el.textContent = 'Start';
+            if (cardLink && rulesUrl) cardLink.href = rulesUrl;
+            return;
+        }
         var h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
         el.textContent = (h > 0 ? h + ':' : '') + (m < 10 && h > 0 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
     }
