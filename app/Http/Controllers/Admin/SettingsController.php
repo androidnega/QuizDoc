@@ -81,7 +81,7 @@ class SettingsController extends Controller
             'landing_hero_enabled' => Setting::getValue(Setting::KEY_LANDING_HERO_ENABLED, '1') === '1',
             'can_manage_proctoring' => $canManageProctoring,
             'can_manage_backup' => $canManageBackup,
-            'show_backup_tab' => $isSuperAdmin, // all super admins see the tab; only primary can edit
+            'show_backup_tab' => $canManageBackup, // only primary sees the Backup tab
             'backup_email_configured' => $backupEmailConfigured,
         ]);
     }

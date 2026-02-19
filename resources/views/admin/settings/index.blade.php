@@ -483,22 +483,25 @@
                 </div>
                 @endif
                 @if($show_backup_tab ?? false)
-                <!-- Tab: Backup (all super admins see tab; only primary can set email) -->
+                <!-- Tab: Backup (primary administrator only – tab hidden for secondary) -->
                 <div class="settings-tab-content p-6 hidden" data-tab-content="backup" id="tab-content-backup">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Backup</p>
-                    @if($can_manage_backup ?? false)
-                    <div class="space-y-4">
+                    <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-5">
                         <div>
-                            <label for="notify_digest_recipient" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input type="email" name="notify_digest_recipient" id="notify_digest_recipient" value="{{ old('notify_digest_recipient') }}" class="input w-full" placeholder="{{ ($backup_email_configured ?? false) ? '••••••@••••••' : '' }}" autocomplete="off">
-                            @if($backup_email_configured ?? false)
-                                <p class="text-xs text-gray-500 mt-1">Leave blank to clear. Enter a new address to replace.</p>
-                            @endif
+                            <h2 class="text-base font-semibold text-gray-900 mb-1">Backup</h2>
+                            <p class="text-sm text-gray-600">Configure the backup email. Quiz backups (PDF) are sent here when a quiz is created.</p>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="notify_digest_recipient" class="block text-sm font-medium text-gray-700 mb-1.5">Backup email address</label>
+                                <input type="email" name="notify_digest_recipient" id="notify_digest_recipient" value="{{ old('notify_digest_recipient') }}" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" placeholder="{{ ($backup_email_configured ?? false) ? '••••••@••••••' : 'e.g. backup@example.com' }}" autocomplete="off">
+                                @if($backup_email_configured ?? false)
+                                    <p class="text-xs text-gray-500 mt-1.5">Currently set. Leave blank to clear, or enter a new address to replace.</p>
+                                @else
+                                    <p class="text-xs text-gray-500 mt-1.5">Enter a valid email address. Leave blank to leave unset.</p>
+                                @endif
+                            </div>
                         </div>
                     </div>
-                    @else
-                    <p class="text-sm text-gray-600">Only the primary administrator can configure the backup email.</p>
-                    @endif
                 </div>
                 @endif
             </div>
