@@ -43,7 +43,7 @@
                                     $chaptersCompleted = $project->chapters?->where('completed', true)->count() ?? 0;
                                     $progressPercent = (int) round(($chaptersCompleted / $chaptersTotal) * 100);
                                 @endphp
-                                <div class="flex flex-col gap-1 min-w-[140px]">
+                                <div class="flex flex-col gap-1 w-28">
                                     <div class="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
                                         <div
                                             class="h-1.5 rounded-full transition-all duration-300"
