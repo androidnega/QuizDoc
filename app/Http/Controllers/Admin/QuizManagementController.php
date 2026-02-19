@@ -1171,6 +1171,90 @@ class QuizManagementController extends Controller
     }
 
     /**
+     * Synchronous single-batch AI generation (5 questions per call).
+     * Called repeatedly from the browser via fetch() until target is reached.
+     * Works on shared hosting with no queue worker.
+     */
+    public function generateBatch(Request $request, Quiz $quiz): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('update', $quiz);
+        $user = $this->adminUser();
+        if (! $user) {
+            return response()->json(['error' => 'Unauthorized.'], 401);
+        }
+
+        $validated = $request->validate([
+            'target'     => 'required|integer|min:1|max:250',
+            'topics'     => 'nullable|string|max:1000',
+            'first_call' => 'nullable|boolean',
+        ]);
+
+        $aiService = app(AiQuestionService::class);
+        if (! $aiService->hasApiKey()) {
+            return response()->json(['error' => 'No AI API key set. Add a Gemini or DeepSeek key in Dashboard → Settings → AI.'], 422);
+        }
+
+        $target      = (int) $validated['target'];
+        $isFirstCall = (bool) ($validated['first_call'] ?? false);
+
+        // Consume a token only on the first call of this generation run.
+        $tokenService = app(AiQuizTokenService::class);
+        if ($isFirstCall) {
+            if (! $tokenService->canUse($user)) {
+                $status = $tokenService->getStatus($user);
+                return response()->json(['error' => $status['message'] ?? 'No AI quiz tokens left.'], 422);
+            }
+            $tokenService->consume($user);
+        }
+
+        $currentCount = $quiz->questions()->count();
+        $poolCount    = $quiz->questionPools()->count();
+        $totalSoFar   = $currentCount + $poolCount;
+        $remaining    = max(0, $target - $totalSoFar);
+
+        if ($remaining <= 0) {
+            return response()->json([
+                'generated'      => 0,
+                'questions_count' => $currentCount,
+                'pool_count'      => $poolCount,
+                'target'          => $target,
+                'done'            => true,
+            ]);
+        }
+
+        $batchSize = min(5, $remaining);
+
+        $topicsRaw = preg_split('/[\s,]+/', (string) ($validated['topics'] ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+        $topics    = array_map(fn ($t) => ['name' => trim($t)], array_filter(array_map('trim', $topicsRaw)));
+        if (empty($topics)) {
+            $topics = [['name' => 'General knowledge']];
+        }
+
+        $sourceText = (string) ($quiz->script_text ?? '');
+        if (mb_strlen($sourceText) > 50000) {
+            $sourceText = mb_substr($sourceText, 0, 50000) . "\n[... truncated ...]";
+        }
+
+        @set_time_limit(120);
+        $ids       = $aiService->generatePoolAndStore($quiz, $topics, $batchSize, $sourceText ?: null);
+        $generated = count($ids);
+
+        $newCount   = $quiz->questions()->count();
+        $newPool    = $quiz->questionPools()->count();
+        $newTotal   = $newCount + $newPool;
+        $done       = $newTotal >= $target;
+
+        return response()->json([
+            'generated'       => $generated,
+            'questions_count'  => $newCount,
+            'pool_count'       => $newPool,
+            'total_so_far'     => $newTotal,
+            'target'           => $target,
+            'done'             => $done,
+        ]);
+    }
+
+    /**
      * Show scores page: all students who took the quiz with their scores and violations.
      */
     public function scores(Quiz $quiz): View

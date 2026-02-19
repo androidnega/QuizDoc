@@ -94,17 +94,87 @@
                         $generateTopicsStr = 'General knowledge';
                     }
                 @endphp
-                <form action="{{ route('dashboard.quizzes.ai-generate.background', $quiz) }}" method="post" class="inline" onsubmit="return confirm('Generate {{ $quiz->getQuestionsPerStudent() }} questions in the background? Refresh the page in a moment to see them.');">
-                    @csrf
-                    <input type="hidden" name="target_count" value="{{ $quiz->number_of_questions }}">
-                    <input type="hidden" name="topics" value="{{ $generateTopicsStr }}">
-                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700">
+
+                {{-- Batch AI generation button: calls server in 5-question chunks, shows live progress --}}
+                <div id="ai-batch-wrap-{{ $quiz->id }}">
+                    <button type="button"
+                        id="ai-batch-btn-{{ $quiz->id }}"
+                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60"
+                        onclick="startAiBatchGeneration('{{ $quiz->id }}','{{ route('dashboard.quizzes.ai-generate.batch', $quiz) }}','{{ $generateTopicsStr }}',{{ $quiz->number_of_questions }})">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
                         Generate questions with AI
                     </button>
-                </form>
+                    <div id="ai-batch-progress-{{ $quiz->id }}" class="mt-2 hidden">
+                        <div class="flex items-center gap-2 mb-1">
+                            <svg class="w-4 h-4 text-indigo-600 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                            <span id="ai-batch-status-{{ $quiz->id }}" class="text-sm text-indigo-700 font-medium">Starting…</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="ai-batch-bar-{{ $quiz->id }}" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width:0%"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <a href="{{ route('dashboard.quizzes.edit', $quiz) }}" class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">Edit quiz (topics, required number)</a>
             </div>
+
+<script>
+function startAiBatchGeneration(quizId, batchUrl, topics, target) {
+    var btn = document.getElementById('ai-batch-btn-' + quizId);
+    var progressWrap = document.getElementById('ai-batch-progress-' + quizId);
+    var statusEl = document.getElementById('ai-batch-status-' + quizId);
+    var barEl = document.getElementById('ai-batch-bar-' + quizId);
+    var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    btn.disabled = true;
+    progressWrap.classList.remove('hidden');
+    statusEl.textContent = 'Connecting to AI…';
+
+    var totalGenerated = 0;
+    var isFirst = true;
+
+    function runBatch() {
+        var body = new URLSearchParams({ target: target, topics: topics, first_call: isFirst ? '1' : '0', _token: csrfToken });
+        isFirst = false;
+
+        fetch(batchUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }, body: body })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.error) {
+                    statusEl.textContent = 'Error: ' + data.error;
+                    statusEl.className = 'text-sm text-red-600 font-medium';
+                    barEl.classList.add('bg-red-500');
+                    barEl.classList.remove('bg-indigo-600');
+                    btn.disabled = false;
+                    return;
+                }
+                totalGenerated += (data.generated || 0);
+                var soFar = data.total_so_far || 0;
+                var pct = Math.min(100, Math.round((soFar / target) * 100));
+                barEl.style.width = pct + '%';
+                statusEl.textContent = 'Generated ' + soFar + ' of ' + target + ' questions (' + pct + '%)…';
+
+                if (data.done) {
+                    barEl.style.width = '100%';
+                    barEl.classList.add('bg-green-500');
+                    barEl.classList.remove('bg-indigo-600');
+                    statusEl.textContent = '✓ Done! ' + soFar + ' questions in pool. Refreshing page…';
+                    statusEl.className = 'text-sm text-green-700 font-medium';
+                    setTimeout(function() { window.location.reload(); }, 1200);
+                } else {
+                    setTimeout(runBatch, 400);
+                }
+            })
+            .catch(function(err) {
+                statusEl.textContent = 'Network error. Please try again.';
+                statusEl.className = 'text-sm text-red-600 font-medium';
+                btn.disabled = false;
+            });
+    }
+
+    runBatch();
+}
+</script>
         </div>
     </div>
 @endif
