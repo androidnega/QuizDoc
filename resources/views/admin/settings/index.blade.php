@@ -61,95 +61,100 @@
 
                 <!-- Tab: General -->
                 <div class="settings-tab-content p-6" data-tab-content="general" id="tab-content-general">
-                <div class="space-y-4">
-                    <div>
-                        <label for="app_name" class="block text-sm font-medium text-gray-700 mb-1">Application name</label>
-                        <input type="text" name="app_name" id="app_name" value="{{ old('app_name', $app_name ?? '') }}" class="input w-full" placeholder="QuizSnap">
-                        <p class="text-xs text-gray-500 mt-1">Used in page titles and emails. Leave blank to use default.</p>
-                    </div>
-                    <div>
-                        <label for="app_timezone" class="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
-                        <input type="text" name="app_timezone" id="app_timezone" value="{{ old('app_timezone', $app_timezone ?? 'UTC') }}" class="input w-full" placeholder="UTC">
-                        <p class="text-xs text-gray-500 mt-1">e.g. UTC, Africa/Nairobi, America/New_York</p>
-                    </div>
-                    <div>
-                        <label for="footer_copyright" class="block text-xs font-medium text-gray-500 mb-0.5">Copyright / footer text</label>
-                        <input type="text" name="footer_copyright" id="footer_copyright" value="{{ old('footer_copyright', $footer_copyright ?? '') }}" placeholder="© {year} QuizSnap. All rights reserved." maxlength="512" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none">
-                        <p class="text-xs text-gray-500 mt-1">Shown at the bottom of Settings. Use <code class="px-1 py-0.5 bg-gray-100 rounded text-gray-700">{year}</code> for the current year (updates automatically).</p>
-                    </div>
-                    @if(session('admin_role') === 'super_admin')
-                    <div class="pt-4 border-t border-gray-200">
-                        <p class="text-sm font-medium text-gray-700 mb-2">Examiner permissions</p>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" name="lock_examiner_create_group" value="1" {{ old('lock_examiner_create_group', $lock_examiner_create_group ?? false) ? 'checked' : '' }} class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
-                            <span class="text-sm text-gray-700">Lock examiners from creating new class groups</span>
-                        </label>
-                        <p class="text-xs text-gray-500 mt-1">When on, only Super Admin can create class groups. Examiners can still view and edit existing groups.</p>
-
-                        <div class="mt-4">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" name="allow_examiner_create_course" value="1" {{ old('allow_examiner_create_course', $allow_examiner_create_course ?? false) ? 'checked' : '' }} class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
-                                <span class="text-sm text-gray-700">Allow examiners to create courses</span>
-                            </label>
-                            <p class="text-xs text-gray-500 mt-1">When enabled, examiners can create and manage courses. By default, only Super Admin can create courses.</p>
-                        </div>
-
-                        <div class="mt-4">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" name="disable_ip_device_restrictions" value="1" {{ old('disable_ip_device_restrictions', $disable_ip_device_restrictions ?? false) ? 'checked' : '' }} class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
-                                <span class="text-sm text-gray-700">Allow shared networks/PCs for quiz access (disable IP/computer uniqueness restriction)</span>
-                            </label>
-                            <p class="text-xs text-gray-500 mt-1">When enabled, students can take the same quiz from the same network or reused computers. This also disables session IP mismatch blocking during the quiz.</p>
-                        </div>
-
-                        <div class="pt-4 mt-4 border-t border-gray-200">
-                            <p class="text-sm font-medium text-gray-700 mb-2">Docu Mentor – Coordinator permissions</p>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" name="allow_coordinator_delete_project" value="1" {{ old('allow_coordinator_delete_project', $allow_coordinator_delete_project ?? true) ? 'checked' : '' }} class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
-                                <span class="text-sm text-gray-700">Allow coordinators to delete projects and groups that have a project</span>
-                            </label>
-                            <p class="text-xs text-gray-500 mt-1">When on, coordinators can delete any Docu Mentor project (and delete a group that has a project). When off, only Super Admin can delete projects or groups with a project. Applies regardless of group members, approval status, or supervisor assignment.</p>
-                        </div>
-                        <div class="pt-4 mt-4 border-t border-gray-200">
-                            <p class="text-sm font-medium text-gray-700 mb-2">Staff account creation – SMS</p>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" name="send_sms_on_staff_creation" value="1" {{ old('send_sms_on_staff_creation', $send_sms_on_staff_creation ?? false) ? 'checked' : '' }} class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
-                                <span class="text-sm text-gray-700">Send SMS to examiner/coordinator on account creation (username, password, login URL)</span>
-                            </label>
-                            <p class="text-xs text-gray-500 mt-1">When on, new examiners and coordinators receive an SMS with their username, password and login URL (quizsnap.online/login). Requires phone number and Arkesel API key in Settings. When off, admin sets the password manually.</p>
-                        </div>
-                    </div>
-
-                    <div class="pt-4 mt-4 border-t border-gray-200">
-                        <p class="text-sm font-medium text-gray-700 mb-2">Mobile landing hero image</p>
-                        <label class="flex items-center gap-2 cursor-pointer mb-3">
-                            <input type="checkbox" name="landing_hero_enabled" value="1" {{ old('landing_hero_enabled', $landing_hero_enabled ?? true) ? 'checked' : '' }} class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
-                            <span class="text-sm text-gray-700">Show hero section on mobile homepage</span>
-                        </label>
-                        <p class="text-xs text-gray-500 mb-3">When on, the hero image is shown on phones only (below the header). Use a URL or upload an image; uploads are stored on Cloudinary.</p>
-                        @if(!empty(trim($landing_hero_image ?? '')))
-                            @php $heroImgUrl = trim($landing_hero_image); @endphp
-                            <div class="mb-3">
-                                <p class="text-xs text-gray-500 mb-1">Current image</p>
-                                <img src="{{ e($heroImgUrl) }}" alt="Landing hero" class="max-w-[200px] max-h-[120px] object-cover rounded-lg border border-gray-200" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'; var n=this.nextElementSibling; if(n) n.style.display='block';">
-                                <p class="landing-hero-img-error text-xs text-amber-600 mt-1" style="display: none;">Image could not be loaded. Use a direct image link (e.g. ending in .jpg) or upload a file. Some hosts block embedding.</p>
+                    <div class="space-y-6">
+                        <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-4">
+                            <h3 class="text-sm font-semibold text-gray-800">App & branding</h3>
+                            <div>
+                                <label for="app_name" class="block text-sm font-medium text-gray-700 mb-1.5">Application name</label>
+                                <input type="text" name="app_name" id="app_name" value="{{ old('app_name', $app_name ?? '') }}" placeholder="QuizSnap" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">Used in page titles and emails. Leave blank to use default.</p>
                             </div>
+                            <div>
+                                <label for="app_timezone" class="block text-sm font-medium text-gray-700 mb-1.5">Timezone</label>
+                                <input type="text" name="app_timezone" id="app_timezone" value="{{ old('app_timezone', $app_timezone ?? 'UTC') }}" placeholder="e.g. UTC, Africa/Nairobi, America/New_York" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">e.g. UTC, Africa/Nairobi, America/New_York</p>
+                            </div>
+                            <div>
+                                <label for="footer_copyright" class="block text-sm font-medium text-gray-700 mb-1.5">Copyright / footer text</label>
+                                <input type="text" name="footer_copyright" id="footer_copyright" value="{{ old('footer_copyright', $footer_copyright ?? '') }}" placeholder="© {year} QuizSnap. All rights reserved." maxlength="512" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">Shown at the bottom of Settings. Use <code class="px-1 py-0.5 bg-gray-100 rounded text-gray-700">{year}</code> for the current year (updates automatically).</p>
+                            </div>
+                        </div>
+
+                        @if(session('admin_role') === 'super_admin')
+                        <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-4">
+                            <h3 class="text-sm font-semibold text-gray-800">Examiner permissions</h3>
+                            <div class="space-y-3">
+                                <label class="flex items-start gap-3 cursor-pointer group">
+                                    <input type="checkbox" name="lock_examiner_create_group" value="1" {{ old('lock_examiner_create_group', $lock_examiner_create_group ?? false) ? 'checked' : '' }} class="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 shrink-0">
+                                    <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Lock examiners from creating new class groups</span>
+                                </label>
+                                <p class="text-xs text-gray-500 ml-7">When on, only Super Admin can create class groups. Examiners can still view and edit existing groups.</p>
+                            </div>
+                            <div class="space-y-3 pt-2 border-t border-gray-200">
+                                <label class="flex items-start gap-3 cursor-pointer group">
+                                    <input type="checkbox" name="allow_examiner_create_course" value="1" {{ old('allow_examiner_create_course', $allow_examiner_create_course ?? false) ? 'checked' : '' }} class="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 shrink-0">
+                                    <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Allow examiners to create courses</span>
+                                </label>
+                                <p class="text-xs text-gray-500 ml-7">When enabled, examiners can create and manage courses. By default, only Super Admin can create courses.</p>
+                            </div>
+                            <div class="space-y-3 pt-2 border-t border-gray-200">
+                                <label class="flex items-start gap-3 cursor-pointer group">
+                                    <input type="checkbox" name="disable_ip_device_restrictions" value="1" {{ old('disable_ip_device_restrictions', $disable_ip_device_restrictions ?? false) ? 'checked' : '' }} class="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 shrink-0">
+                                    <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Allow shared networks/PCs for quiz access</span>
+                                </label>
+                                <p class="text-xs text-gray-500 ml-7">Students can take the same quiz from the same network or reused computers. Disables IP/device uniqueness and session IP mismatch blocking.</p>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-4">
+                            <h3 class="text-sm font-semibold text-gray-800">Docu Mentor – Coordinator</h3>
+                            <label class="flex items-start gap-3 cursor-pointer group">
+                                <input type="checkbox" name="allow_coordinator_delete_project" value="1" {{ old('allow_coordinator_delete_project', $allow_coordinator_delete_project ?? true) ? 'checked' : '' }} class="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 shrink-0">
+                                <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Allow coordinators to delete projects and groups that have a project</span>
+                            </label>
+                            <p class="text-xs text-gray-500 ml-7">When on, coordinators can delete any Docu Mentor project (and the group). When off, only Super Admin can delete.</p>
+                        </div>
+
+                        <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-4">
+                            <h3 class="text-sm font-semibold text-gray-800">Staff account creation – SMS</h3>
+                            <label class="flex items-start gap-3 cursor-pointer group">
+                                <input type="checkbox" name="send_sms_on_staff_creation" value="1" {{ old('send_sms_on_staff_creation', $send_sms_on_staff_creation ?? false) ? 'checked' : '' }} class="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 shrink-0">
+                                <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Send SMS to examiner/coordinator on account creation</span>
+                            </label>
+                            <p class="text-xs text-gray-500 ml-7">New staff receive an SMS with username, password and login URL. Requires phone number and Arkesel API key (OTP tab). When off, admin sets the password manually.</p>
+                        </div>
+
+                        <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-4">
+                            <h3 class="text-sm font-semibold text-gray-800">Mobile landing hero image</h3>
+                            <label class="flex items-start gap-3 cursor-pointer group">
+                                <input type="checkbox" name="landing_hero_enabled" value="1" {{ old('landing_hero_enabled', $landing_hero_enabled ?? true) ? 'checked' : '' }} class="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 shrink-0">
+                                <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Show hero section on mobile homepage</span>
+                            </label>
+                            <p class="text-xs text-gray-500 ml-7">Hero image is shown on phones only (below the header). Use a URL or upload; uploads are stored on Cloudinary.</p>
+                            @if(!empty(trim($landing_hero_image ?? '')))
+                                @php $heroImgUrl = trim($landing_hero_image); @endphp
+                                <div class="pt-2 border-t border-gray-200">
+                                    <p class="text-xs font-medium text-gray-500 mb-1.5">Current image</p>
+                                    <img src="{{ e($heroImgUrl) }}" alt="Landing hero" class="max-w-[200px] max-h-[120px] object-cover rounded-lg border border-gray-200" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'; var n=this.nextElementSibling; if(n) n.style.display='block';">
+                                    <p class="landing-hero-img-error text-xs text-amber-600 mt-1" style="display: none;">Image could not be loaded. Use a direct image link or upload a file.</p>
+                                </div>
+                            @endif
+                            <div class="pt-2 border-t border-gray-200 space-y-4">
+                                <div>
+                                    <label for="landing_hero_image_url" class="block text-sm font-medium text-gray-700 mb-1.5">Image URL</label>
+                                    <input type="url" name="landing_hero_image_url" id="landing_hero_image_url" value="{{ old('landing_hero_image_url', $landing_hero_image ?? '') }}" placeholder="https://example.com/image.jpg" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                    <p class="text-xs text-gray-500 mt-1">Paste a link to an image. Leave blank to keep current or use upload below.</p>
+                                </div>
+                                <div>
+                                    <label for="landing_hero_image_file" class="block text-sm font-medium text-gray-700 mb-1.5">Or upload image</label>
+                                    <input type="file" name="landing_hero_image_file" id="landing_hero_image_file" accept="image/*" class="block w-full text-sm text-gray-600 file:mr-2 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 file:border file:border-gray-200">
+                                    <p class="text-xs text-gray-500 mt-1">Stored on Cloudinary. Max 5 MB. If both URL and file are set, file is used.</p>
+                                </div>
+                            </div>
+                        </div>
                         @endif
-                        <div class="space-y-3">
-                            <div>
-                                <label for="landing_hero_image_url" class="block text-xs font-medium text-gray-500 mb-0.5">Image URL</label>
-                                <input type="url" name="landing_hero_image_url" id="landing_hero_image_url" value="{{ old('landing_hero_image_url', $landing_hero_image ?? '') }}" placeholder="https://example.com/image.jpg or Unsplash link" class="input w-full text-sm">
-                                <p class="text-xs text-gray-500 mt-0.5">Paste a link to an image. Leave blank to keep current or use upload below.</p>
-                            </div>
-                            <div>
-                                <label for="landing_hero_image_file" class="block text-xs font-medium text-gray-500 mb-0.5">Or upload image</label>
-                                <input type="file" name="landing_hero_image_file" id="landing_hero_image_file" accept="image/*" class="block w-full text-sm text-gray-600 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100">
-                                <p class="text-xs text-gray-500 mt-0.5">Uploaded images are stored on Cloudinary. Max 5 MB. If both URL and file are set, file is used.</p>
-                            </div>
-                        </div>
                     </div>
-                    @endif
-                </div>
                 </div>
 
                 <!-- Tab: Email -->
@@ -216,15 +221,15 @@
                         </div>
                         <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-4">
                             <h3 class="text-sm font-semibold text-gray-800">Result-ready notification</h3>
-                            <p class="text-xs text-gray-500">Send an email when a student submits a quiz (result ready).</p>
+                            <p class="text-sm text-gray-600">When a student finishes a quiz and submits their answers, their result is “ready.” You can get an email each time that happens so you know without opening the dashboard.</p>
                             <label class="flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" name="notify_result_ready" value="1" {{ old('notify_result_ready', $notify_result_ready ?? false) ? 'checked' : '' }} class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
-                                <span class="text-sm font-medium text-gray-700">Enable result-ready email</span>
+                                <span class="text-sm font-medium text-gray-700">Send an email when a student submits a quiz</span>
                             </label>
                             <div>
-                                <label for="notify_result_email" class="block text-sm font-medium text-gray-700 mb-1.5">Send to (email)</label>
-                                <input type="email" name="notify_result_email" id="notify_result_email" value="{{ old('notify_result_email', $notify_result_email ?? '') }}" placeholder="examiner@example.com" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
-                                <p class="text-xs text-gray-500 mt-1">Leave blank to disable. One email per submission.</p>
+                                <label for="notify_result_email" class="block text-sm font-medium text-gray-700 mb-1.5">Email address to notify</label>
+                                <input type="email" name="notify_result_email" id="notify_result_email" value="{{ old('notify_result_email', $notify_result_email ?? '') }}" placeholder="e.g. examiner@example.com" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">Who receives the notification (e.g. examiner or admin). Leave blank to turn off; one email is sent per quiz submission.</p>
                             </div>
                         </div>
                     </div>
