@@ -253,7 +253,7 @@ class QuizManagementController extends Controller
             }
             if ($aiService->hasApiKey() && $aiTokenService->canUse($user)) {
                 $aiTokenService->consume($user);
-                GenerateAiQuestionsJob::dispatch($quiz->id, $user->id, $targetCount, array_values($topics), '');
+                GenerateAiQuestionsJob::dispatch($quiz->id, $user->id, $targetCount, array_values($topics), '')->afterResponse();
                 $message = 'Quiz created. Questions are being generated in the background. Refresh this page in a moment, then click Approve All to add them to the quiz.';
                 $flashKey = 'success';
             } elseif (!$aiService->hasApiKey()) {
@@ -1164,7 +1164,7 @@ class QuizManagementController extends Controller
         }
 
         $tokenService->consume($user);
-        GenerateAiQuestionsJob::dispatch($quiz->id, $user->id, $targetCount, $topics, $sourceText);
+        GenerateAiQuestionsJob::dispatch($quiz->id, $user->id, $targetCount, $topics, $sourceText)->afterResponse();
 
         return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', ['quiz' => $quiz, 'tab' => 'overview'])
             ->with('success', 'AI generation started in the background. Refresh this page to see new questions as they are added. For 50+ questions, run a queue worker: php artisan queue:work');
