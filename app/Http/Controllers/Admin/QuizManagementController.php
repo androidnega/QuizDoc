@@ -1148,6 +1148,11 @@ class QuizManagementController extends Controller
         }
 
         $targetCount = (int) $validated['target_count'];
+        $perQuizLimit = max(1, $aiService->getPerQuizLimit());
+        if ($targetCount > $perQuizLimit) {
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)
+                ->with('error', 'Maximum questions per generation is ' . $perQuizLimit . '.');
+        }
         $topicsRaw = preg_split('/[\s,]+/', (string) $validated['topics'], -1, PREG_SPLIT_NO_EMPTY);
         $topics = array_map(fn ($t) => ['name' => trim($t)], array_filter(array_map('trim', $topicsRaw)));
         if (empty($topics)) {
@@ -1197,6 +1202,13 @@ class QuizManagementController extends Controller
         }
 
         $targetCount = (int) $validated['target_count'];
+        $perQuizLimit = max(1, $aiService->getPerQuizLimit());
+        if ($targetCount > $perQuizLimit) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Maximum questions per generation is ' . $perQuizLimit . '.',
+            ], 422);
+        }
         $topicsRaw = $validated['topics'];
         $topics = [];
         foreach (array_values($topicsRaw) as $t) {
@@ -1229,7 +1241,7 @@ class QuizManagementController extends Controller
             'updated_at' => now()->toIso8601String(),
         ];
 
-        Cache::put($this->aiGenerationCacheKey($quiz->id, $user->id), $state, now()->addMinutes(45));
+        Cache::put($this->aiGenerationCacheKey($quiz->id, $user->id), $state, now()->addMinutes(120));
         $tokenService->consume($user);
 
         return response()->json([
@@ -1248,7 +1260,7 @@ class QuizManagementController extends Controller
 
         $validated = $request->validate([
             'generation_id' => 'required|string',
-            'batch_size' => 'nullable|integer|min:1|max:10',
+            'batch_size' => 'nullable|integer|min:1|max:20',
         ]);
 
         $user = $this->adminUser();
@@ -1287,17 +1299,23 @@ class QuizManagementController extends Controller
             ]);
         }
 
-        $batchSize = min(max((int) ($validated['batch_size'] ?? 8), 1), 10, $remaining);
+        $batchSize = min(max((int) ($validated['batch_size'] ?? 12), 1), 20, $remaining);
         $aiService = app(AiQuestionService::class);
         $generatedThisBatch = 0;
 
         try {
             $topics = is_array($state['topics'] ?? null) ? $state['topics'] : [['name' => 'General knowledge']];
             $sourceText = (string) ($state['source_text'] ?? '');
-            if (mb_strlen($sourceText) > 8000) {
-                $sourceText = mb_substr($sourceText, 0, 8000) . "\n[... truncated ...]";
+            if (mb_strlen($sourceText) > 20000) {
+                $sourceText = mb_substr($sourceText, 0, 20000) . "\n[... truncated ...]";
             }
-            $attemptSizes = array_values(array_unique([min(5, $batchSize), 3, 2, 1]));
+            $attemptSizes = [];
+            foreach ([$batchSize, (int) ceil($batchSize * 0.75), (int) ceil($batchSize * 0.5), 8, 5, 3, 1] as $size) {
+                $size = min($remaining, max(1, (int) $size));
+                if (! in_array($size, $attemptSizes, true)) {
+                    $attemptSizes[] = $size;
+                }
+            }
 
             foreach ($attemptSizes as $attemptSize) {
                 if ($attemptSize < 1) {
@@ -1316,13 +1334,13 @@ class QuizManagementController extends Controller
                         break;
                     }
                 }
-                usleep(400000);
+                usleep(250000);
             }
         } catch (\Throwable $e) {
             $state['status'] = 'failed';
             $state['message'] = 'Generation failed: ' . $e->getMessage();
             $state['updated_at'] = now()->toIso8601String();
-            Cache::put($cacheKey, $state, now()->addMinutes(15));
+            Cache::put($cacheKey, $state, now()->addMinutes(30));
             return response()->json([
                 'success' => false,
                 'status' => 'failed',
@@ -1346,7 +1364,7 @@ class QuizManagementController extends Controller
             $state['message'] = 'Generated ' . $state['generated_count'] . ' of ' . $state['target_count'] . '...';
         }
 
-        Cache::put($cacheKey, $state, now()->addMinutes(45));
+        Cache::put($cacheKey, $state, now()->addMinutes(120));
 
         return response()->json([
             'success' => true,

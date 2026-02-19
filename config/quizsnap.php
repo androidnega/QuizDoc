@@ -14,6 +14,6 @@ return [
     */
 
     'ai' => [
-        'max_generation_per_quiz' => (int) env('QUIZSNAP_AI_MAX_PER_QUIZ', 100),
+        'max_generation_per_quiz' => (int) env('QUIZSNAP_AI_MAX_PER_QUIZ', 250),
     ],
 ];
