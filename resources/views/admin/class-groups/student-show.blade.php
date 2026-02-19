@@ -21,7 +21,8 @@
     <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
             <h2 class="text-lg font-semibold text-gray-900">Student information</h2>
-            <div class="flex gap-2">
+            <div class="flex gap-2 flex-wrap">
+                @can('update', $classGroup)
                 <a href="{{ route('dashboard.class-groups.students.edit', [$classGroup, $student]) }}" class="btn btn-sm btn-primary">
                     <i class="fas fa-pen mr-1"></i> Edit
                 </a>
@@ -34,6 +35,19 @@
                     </button>
                 </form>
                 @endif
+                @else
+                {{-- Examiner: can only generate one-time fallback code; cannot edit student or reset OTP --}}
+                @can('generateFallbackCode', $classGroup)
+                @if($phone)
+                <form action="{{ route('dashboard.class-groups.students.fallback-code', [$classGroup, $student]) }}" method="post" class="inline">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="fas fa-key mr-1"></i> Send one-time login code
+                    </button>
+                </form>
+                @endif
+                @endcan
+                @endcan
             </div>
         </div>
         

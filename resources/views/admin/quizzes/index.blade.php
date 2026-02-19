@@ -7,8 +7,8 @@
 <div class="w-full space-y-6">
     <div class="flex items-center justify-between flex-wrap gap-4">
         <p class="text-sm text-gray-600">Create and manage quizzes.</p>
-        <a href="{{ route('dashboard.quizzes.create') }}" class="btn btn-primary">
-            <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        <a href="{{ route('dashboard.quizzes.create') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Create Quiz
         </a>
     </div>
@@ -84,7 +84,7 @@
                                     <p class="text-gray-500 mb-4">No ended quizzes.</p>
                                 @else
                                     <p class="text-gray-500 mb-4">No active quizzes yet.</p>
-                                    <a href="{{ route('dashboard.quizzes.create') }}" class="btn btn-primary inline-flex">Create Your First Quiz</a>
+                                    <a href="{{ route('dashboard.quizzes.create') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors">Create Your First Quiz</a>
                                 @endif
                             </td>
                         </tr>

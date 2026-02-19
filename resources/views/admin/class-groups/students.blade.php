@@ -22,8 +22,8 @@
 
     <p class="text-sm text-gray-600 mb-4">Manage student indices for this class group. This list is used for all quizzes in the group.</p>
 
-    @if(!$isSuperAdmin)
-    {{-- Add index + Upload --}}
+    @can('update', $classGroup)
+    {{-- Add index + Upload (Super Admin / Coordinator only; examiner cannot manage students) --}}
     <div class="rounded-lg border border-sky-100 bg-sky-50/60 p-4 shadow-sm space-y-3">
         <div>
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Add index</p>
@@ -63,8 +63,8 @@
         </div>
     </div>
     @else
-    <p class="text-sm text-gray-500">Only examiners can add or remove indices for this class group.</p>
-    @endif
+    <p class="text-sm text-gray-500">You can view the student list and send one-time login codes from a student's detail page. Only coordinators and super admins can add, edit, or remove indices.</p>
+    @endcan
 
     {{-- Table: all indices with View, Edit, Remove; Phone column --}}
     <div class="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
@@ -93,9 +93,7 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Index</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Name</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Phone</th>
-                        @if(!$isSuperAdmin)
-                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
-                        @endif
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="students-tbody" class="divide-y divide-gray-200 bg-white">
@@ -103,7 +101,7 @@
                         @include('admin.class-groups.partials.students-rows', ['students' => collect([$s]), 'classGroup' => $classGroup, 'isSuperAdmin' => $isSuperAdmin])
                     @empty
                         <tr>
-                            <td colspan="{{ $isSuperAdmin ? 3 : 4 }}" class="px-4 py-8 text-center text-gray-500 text-sm">No students yet.@if(!$isSuperAdmin) Add indices above or upload Excel/CSV.@endif</td>
+                            <td colspan="4" class="px-4 py-8 text-center text-gray-500 text-sm">No students yet.@can('update', $classGroup) Add indices above or upload Excel/CSV.@endcan</td>
                         </tr>
                     @endforelse
                 </tbody>

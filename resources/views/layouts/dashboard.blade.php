@@ -161,12 +161,12 @@
     </aside>
 
     <div class="examiner-main flex flex-col flex-1 min-w-0">
-        <header class="flex h-14 flex-shrink-0 items-center border-b border-gray-200 bg-white z-10 min-w-0">
-            <div class="examiner-page flex h-14 w-full items-center gap-3 px-4 md:px-6">
-                <button type="button" id="examiner-sidebar-menu-btn" class="h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-300" aria-label="Open menu" title="Open menu" style="display: none;">
+        <header class="flex min-h-14 flex-shrink-0 items-stretch border-b border-gray-200 bg-white z-10 min-w-0 safe-area-header">
+            <div class="examiner-page flex flex-1 flex-wrap items-center gap-2 sm:gap-3 w-full min-w-0 px-3 py-2 sm:px-4 md:px-6">
+                <button type="button" id="examiner-sidebar-menu-btn" class="flex h-11 w-11 min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-300 touch-manipulation" aria-label="Open menu" title="Open menu" style="display: none;">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </button>
-                <h1 class="min-w-0 flex-1 truncate text-lg font-semibold text-gray-900">@yield('dashboard_heading', 'Dashboard')</h1>
+                <h1 class="min-w-0 flex-1 truncate text-base sm:text-lg font-semibold text-gray-900">@yield('dashboard_heading', 'Dashboard')</h1>
                 @php
                     $examiner = auth()->user();
                     $showSmsInHeader = $examiner && ($examiner->isExaminer() || $examiner->role === \App\Models\User::DM_ROLE_COORDINATOR);
@@ -179,33 +179,33 @@
                     $aiTokenStatus = app(\App\Services\AiQuizTokenService::class)->getStatus($examiner);
                     $aiTokenColor = $aiTokenStatus['remaining'] > 0 ? 'text-primary-600' : 'text-red-600';
                 @endphp
-                <div class="flex flex-shrink-0 items-center gap-3">
-                    <div class="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm {{ $aiTokenColor }}" title="AI quiz generations remaining">
-                        <span class="text-gray-500">AI Token:</span>
-                        <span class="font-semibold">{{ $aiTokenStatus['remaining'] }}</span>
+                <div class="flex flex-shrink-0 items-center gap-2 sm:gap-3 flex-wrap justify-end">
+                    <div class="flex items-center gap-1 sm:gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 sm:px-2.5 text-xs sm:text-sm {{ $aiTokenColor }}" title="AI quiz generations remaining">
+                        <span class="text-gray-500 hidden sm:inline">AI Token:</span>
+                        <span class="font-semibold">AI {{ $aiTokenStatus['remaining'] }}</span>
                     </div>
-                    <div class="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm {{ $smsColorClass }}" title="SMS balance">
-                        <span class="text-gray-500">SMS:</span>
+                    <div class="flex flex-shrink-0 items-center gap-1 sm:gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 sm:px-2.5 text-xs sm:text-sm {{ $smsColorClass }}" title="SMS balance">
+                        <span class="text-gray-500 hidden sm:inline">SMS:</span>
                         <span class="font-semibold">{{ $smsRemaining }}</span>
                     </div>
                 </div>
                 @endif
-                <div class="relative flex flex-shrink-0 items-center ml-2" id="profile-menu-wrap">
-                    <button type="button" class="flex items-center gap-2 rounded-full p-0.5 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2" aria-expanded="false" aria-haspopup="true" id="profile-menu-btn" title="Profile">
+                <div class="relative flex flex-shrink-0 items-center" id="profile-menu-wrap">
+                    <button type="button" class="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-full p-0.5 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 touch-manipulation" aria-expanded="false" aria-haspopup="true" id="profile-menu-btn" title="Profile">
                         @php $user = auth()->user(); @endphp
                         @if($user && $user->avatar_url)
-                            <img src="{{ $user->avatar_url }}" alt="Profile" class="h-9 w-9 rounded-full object-cover flex-shrink-0 border border-gray-200" />
+                            <img src="{{ $user->avatar_url }}" alt="Profile" class="h-9 w-9 sm:h-9 sm:w-9 rounded-full object-cover flex-shrink-0 border border-gray-200" />
                         @else
                             <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-gray-600 text-sm font-semibold border border-gray-200">{{ $user ? strtoupper(substr($user->name ?? $user->username ?? 'U', 0, 1)) : 'U' }}</span>
                         @endif
                         <svg class="h-4 w-4 flex-shrink-0 text-gray-500 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     <div id="profile-menu-dropdown" class="absolute right-0 top-full z-50 mt-1.5 w-48 sm:w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg hidden">
-                        <a href="{{ route('dashboard.profile.show') }}" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap">Profile &amp; info</a>
-                        <a href="{{ route('dashboard.profile.password') }}" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap">Reset password</a>
+                        <a href="{{ route('dashboard.profile.show') }}" class="block px-4 py-3 sm:py-2.5 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap touch-manipulation">Profile &amp; info</a>
+                        <a href="{{ route('dashboard.profile.password') }}" class="block px-4 py-3 sm:py-2.5 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap touch-manipulation">Reset password</a>
                         <form action="{{ route('logout') }}" method="post" class="border-t border-gray-100 mt-1">
                             @csrf
-                            <button type="submit" class="block w-full px-4 py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 whitespace-nowrap">Log out</button>
+                            <button type="submit" class="block w-full px-4 py-3 sm:py-2.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 whitespace-nowrap touch-manipulation">Log out</button>
                         </form>
                     </div>
                 </div>
@@ -214,7 +214,7 @@
 
         <main class="examiner-main-content flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-offwhite">
             @php $fullBleedPage = request()->routeIs('dashboard.profile.*') || request()->routeIs('dashboard.system.reset.*') || request()->routeIs('system.reset.*') || request()->is('dashboard/system/reset*'); @endphp
-            <div class="examiner-page w-full min-h-full {{ $fullBleedPage ? 'p-0' : 'px-4 py-6 md:px-6 md:py-8' }}">
+            <div class="examiner-page w-full min-h-full {{ $fullBleedPage ? 'p-0' : 'px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 safe-area-main' }}">
                 <div class="examiner-dashboard-content {{ $fullBleedPage ? 'px-0' : 'px-0 md:px-2' }}">
                     @if($isCoordinatorOnly && (request()->routeIs('dashboard') || request()->routeIs('dashboard.coordinators.*') || request()->routeIs('dashboard.class-groups.*') || request()->routeIs('dashboard.courses.*') || request()->routeIs('dashboard.profile.*')))
                     <nav class="coordinator-breadcrumb flex items-center gap-2 text-sm text-gray-600 mb-4" aria-label="Breadcrumb">

@@ -92,6 +92,15 @@
     .safe-area-t {
         padding-top: env(safe-area-inset-top, 0);
     }
+    .safe-area-header {
+        padding-left: max(0.75rem, env(safe-area-inset-left, 0)) !important;
+        padding-right: max(0.75rem, env(safe-area-inset-right, 0)) !important;
+    }
+    .safe-area-main {
+        padding-left: max(0.75rem, env(safe-area-inset-left, 0)) !important;
+        padding-right: max(0.75rem, env(safe-area-inset-right, 0)) !important;
+        padding-bottom: max(1rem, env(safe-area-inset-bottom, 0)) !important;
+    }
     .quizsnap-app--contain {
         min-width: 0;
         max-width: 100%;
@@ -280,6 +289,15 @@
 .examiner-nav-link {
     color: #4b5563;
     transition: all 0.15s ease-in-out;
+}
+@media (max-width: 767px) {
+    .examiner-nav-link {
+        min-height: 44px;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
 }
 
 .examiner-nav-link:hover {

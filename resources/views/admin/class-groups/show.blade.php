@@ -38,7 +38,7 @@
             @endif
             @if($isExaminer)
                 @if($students->total() > 0)
-                    <a href="{{ route('dashboard.quizzes.create') }}?class_group_id={{ $classGroup->id }}" class="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-primary-700"><i class="fas fa-plus text-xs"></i> Create quiz</a>
+                    <a href="{{ route('dashboard.quizzes.create') }}?class_group_id={{ $classGroup->id }}" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"><i class="fas fa-plus text-xs"></i> Create quiz</a>
                 @else
                     <span class="inline-flex items-center gap-1.5 rounded-md bg-primary-200 px-2.5 py-1.5 text-sm font-medium text-primary-800 opacity-70 cursor-not-allowed" title="Add at least one student first"><i class="fas fa-plus text-xs"></i> Create quiz</span>
                 @endif

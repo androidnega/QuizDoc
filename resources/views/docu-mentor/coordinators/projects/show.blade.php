@@ -218,7 +218,7 @@
                             </div>
                         @endif
                         <div class="flex flex-wrap items-center gap-2">
-                            <a href="{{ route('dashboard.projects.proposals.download', [$project, $p]) }}"
+                            <a href="{{ route('dashboard.docu-mentor.proposals.download', [$project, $p]) }}"
                                class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">
                                 <i class="fas fa-file-pdf text-red-500"></i>
                                 Open PDF

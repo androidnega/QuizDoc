@@ -12,6 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="QuizSnap">
     <meta name="format-detection" content="telephone=no">
     <title>@yield('title', 'QuizSnap')</title>
+    {{-- Favicon: global for all pages (dashboards, login, etc.) — do not override per page --}}
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <link rel="apple-touch-icon" href="{{ asset('favicon.svg') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">

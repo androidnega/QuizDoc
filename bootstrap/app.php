@@ -37,5 +37,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // On 419 (CSRF token expired), redirect back with a message instead of showing "419 Page Expired"
+        $exceptions->renderable(function (\Illuminate\Session\TokenMismatchException $e) {
+            return redirect()
+                ->back()
+                ->exceptInput('password', 'password_confirmation')
+                ->withErrors(['session' => 'Your session expired. Please refresh the page and try again.']);
+        });
     })->create();

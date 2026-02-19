@@ -72,6 +72,7 @@
                 </div>
                 <button type="button" id="btn-verify-otp" class="w-full py-2.5 px-4 text-sm font-semibold rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">Verify and continue</button>
                 <p class="text-center text-sm text-gray-500">Didn't get the code? <button type="button" id="btn-resend-otp" class="text-primary-600 hover:underline font-medium">Resend code</button></p>
+                <p id="otp-days-remaining" class="text-center text-sm text-gray-500 mt-1 hidden" aria-live="polite"></p>
                 <button type="button" id="btn-back-to-phone" class="w-full py-2 px-4 text-sm font-medium rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300">← Back</button>
             </div>
         </div>
@@ -166,13 +167,28 @@
             } else if (data.step === 'otp') {
                 var otpMsg = document.getElementById('otp-step-message');
                 if (otpMsg) otpMsg.textContent = data.message || 'Enter the 6-digit code sent to your phone.';
-                // Registered-phone login can resend without phone step
                 if (data.can_resend) {
                     lastPhoneUsed = '__registered__';
                 }
-                // Hide name field if student already has a name
                 if (data.has_name && nameInput) {
                     nameInput.closest('div').style.display = 'none';
+                }
+                var resendBtn = document.getElementById('btn-resend-otp');
+                var resendWrap = resendBtn && resendBtn.closest('p');
+                if (resendBtn) {
+                    resendBtn.disabled = data.can_resend === false;
+                    if (data.can_resend === false && data.days_remaining != null) {
+                        resendBtn.textContent = 'Resend available in ' + data.days_remaining + ' day(s)';
+                    } else {
+                        resendBtn.textContent = 'Resend code';
+                    }
+                }
+                if (data.days_remaining != null && resendWrap) {
+                    var daysEl = document.getElementById('otp-days-remaining');
+                    if (daysEl) {
+                        daysEl.textContent = 'Valid for ' + data.days_remaining + ' more day(s).';
+                        daysEl.style.display = 'block';
+                    }
                 }
                 showStep('otp');
                 initOtpBoxes();
@@ -241,6 +257,7 @@
             return;
         }
         var resendBtn = document.getElementById('btn-resend-otp');
+        if (resendBtn.disabled) return;
         resendBtn.disabled = true;
         resendBtn.textContent = 'Sending…';
         showError('otp-error', '');
@@ -255,12 +272,20 @@
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
-            resendBtn.disabled = false;
-            resendBtn.textContent = 'Resend code';
             if (data.success) {
-                document.getElementById('otp-step-message').textContent = 'A new code has been sent. Enter it above.';
+                document.getElementById('otp-step-message').textContent = data.message || 'A new code has been sent. Enter it above.';
+                resendBtn.disabled = true;
+                resendBtn.textContent = 'Resend available in ' + (data.days_remaining || 14) + ' day(s)';
+                var daysEl = document.getElementById('otp-days-remaining');
+                if (daysEl && data.days_remaining != null) {
+                    daysEl.textContent = 'Valid for ' + data.days_remaining + ' more day(s).';
+                    daysEl.style.display = 'block';
+                }
                 initOtpBoxes();
             } else {
+                resendBtn.disabled = data.can_resend === false;
+                resendBtn.textContent = (data.can_resend === false && data.days_remaining != null)
+                    ? 'Resend available in ' + data.days_remaining + ' day(s)' : 'Resend code';
                 showError('otp-error', data.message || 'Could not resend. Please try again.');
             }
         })

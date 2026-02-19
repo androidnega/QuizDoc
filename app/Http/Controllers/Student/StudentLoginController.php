@@ -7,10 +7,10 @@ use App\Models\ClassGroupStudent;
 use App\Models\Quiz;
 use App\Models\QuizSession;
 use App\Models\Setting;
+use App\Models\Otp;
 use App\Models\Student;
 use App\Services\ArkeselService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -156,23 +156,32 @@ class StudentLoginController extends Controller
             ], 422);
         }
 
-        $otpTtl = (int) config('quizsnap.otp_ttl_seconds', 14 * 86400);
-        // Check if there's an existing valid OTP (within validity period)
-        $cached = Cache::get('student_otp:' . $indexNumber);
-        if ($cached && isset($cached['code'])) {
+        // STEP 1 — Check last OTP for this index (type = student_login)
+        $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
+
+        // CASE A — OTP exists AND is within 14 days: do not generate/send; allow use of existing OTP
+        if ($lastOtp && $lastOtp->isWithinValidityWindow()) {
+            $daysRemaining = $lastOtp->daysRemaining();
+            $dayText = $daysRemaining === 1 ? '1 day' : $daysRemaining . ' days';
             return response()->json([
                 'success' => true,
                 'step' => 'otp',
                 'index_number' => $student->index_number,
-                'message' => 'Use your existing code sent within the last 14 days, or request a new one below.',
+                'message' => 'Your existing OTP is still valid. Please use the OTP previously sent to you. It expires in ' . $dayText . '.',
                 'has_name' => !empty($student->student_name),
-                'can_resend' => true,
+                'can_resend' => false,
+                'days_remaining' => $daysRemaining,
             ]);
         }
 
-        // No valid OTP, generate and send new one (deduct from examiner)
+        // CASE B — No OTP or older than 14 days: generate new OTP, save, send, replace old one
         $code = (string) random_int(100000, 999999);
-        Cache::put('student_otp:' . $indexNumber, ['code' => $code, 'phone' => $student->phone_contact], $otpTtl);
+        Otp::create([
+            'index_number_hash' => $indexHash,
+            'type' => Otp::TYPE_STUDENT_LOGIN,
+            'code' => $code,
+            'expires_at' => now()->addDays(Otp::STUDENT_LOGIN_VALID_DAYS),
+        ]);
         $message = 'Your QuizSnap code is: ' . $code . '. Use it to continue the quiz and as login for 14 days. Do not share.';
         $result = ArkeselService::sendSms($student->phone_contact, $message);
         if (!$result['success']) {
@@ -182,16 +191,15 @@ class StudentLoginController extends Controller
             }
             return response()->json(['success' => false, 'message' => $msg], 422);
         }
-        if ($result['success']) {
-            $examiner->increment('sms_used');
-        }
+        $examiner->increment('sms_used');
         return response()->json([
             'success' => true,
             'step' => 'otp',
             'index_number' => $student->index_number,
             'message' => 'A code has been sent to your registered number. This code is valid for 14 days.',
             'has_name' => !empty($student->student_name),
-            'can_resend' => true,
+            'can_resend' => false,
+            'days_remaining' => Otp::STUDENT_LOGIN_VALID_DAYS,
         ]);
     }
 

@@ -21,7 +21,7 @@
         }
     @endphp
         @if($canShowAddUser)
-            <a href="{{ route('dashboard.users.create') }}" class="inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-yellow-500 px-4 py-2 text-sm font-medium text-yellow-900 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-1 shrink-0">
+            <a href="{{ route('dashboard.users.create') }}" class="inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-yellow-500 px-4 py-2 min-h-[44px] text-sm font-medium text-yellow-900 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-1 shrink-0 touch-manipulation">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>

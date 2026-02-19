@@ -30,6 +30,11 @@
 </header>
 
 <section class="mb-8">
+    @if($errors->has('session'))
+        <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
+            {{ $errors->first('session') }}
+        </div>
+    @endif
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5">
         <form action="{{ route('dashboard.projects.store') }}" method="post" enctype="multipart/form-data" id="project-create-form" class="space-y-6">
             @csrf

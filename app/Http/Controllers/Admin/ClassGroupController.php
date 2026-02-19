@@ -11,11 +11,11 @@ use App\Models\ClassGroup;
 use App\Models\Semester;
 use App\Models\ClassGroupStudent;
 use App\Models\Course;
+use App\Models\Otp;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\ArkeselService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\RedirectResponse;
@@ -694,11 +694,9 @@ class ClassGroupController extends Controller
             ? 'Student list replaced with ' . count($byIndex) . ' indices.'
             : 'Merged ' . count($byIndex) . ' indices into the class group.';
 
-        // Send login tokens by SMS to students with phone numbers; deduct from examiner's SMS balance.
+        // Send 14-day reusable student_login OTP by SMS (Super Admin/Coordinator only; examiner cannot upload).
         $classGroup->load('examiner');
         $examiner = $classGroup->examiner;
-        $otpTtl = (int) config('quizsnap.otp_ttl_seconds', 14 * 86400);
-        $smsSent = 0;
         if ($examiner && $examiner->isExaminer()) {
             $examiner->refresh();
             $remaining = $examiner->sms_remaining;
@@ -709,21 +707,23 @@ class ClassGroupController extends Controller
                         break;
                     }
                     $indexNumber = strtoupper(trim($cgStudent->index_number));
-                    $studentAccount = Student::where('index_number_hash', Student::hashIndexNumber($indexNumber))->first();
+                    $indexHash = Student::hashIndexNumber($indexNumber);
+                    $studentAccount = Student::where('index_number_hash', $indexHash)->first();
                     if (!$studentAccount || !$studentAccount->hasPhone()) {
                         continue;
                     }
                     $code = (string) random_int(100000, 999999);
-                    Cache::put('student_otp:' . $indexNumber, [
+                    Otp::create([
+                        'index_number_hash' => $indexHash,
+                        'type' => Otp::TYPE_STUDENT_LOGIN,
                         'code' => $code,
-                        'phone' => $studentAccount->phone_contact,
-                    ], $otpTtl);
+                        'expires_at' => now()->addDays(Otp::STUDENT_LOGIN_VALID_DAYS),
+                    ]);
                     $smsMessage = 'Your QuizSnap login code is: ' . $code . '. Valid for 14 days. Do not share.';
                     $result = ArkeselService::sendSms($studentAccount->phone_contact, $smsMessage);
                     if ($result['success']) {
                         $examiner->increment('sms_used');
                         $remaining--;
-                        $smsSent++;
                     }
                 }
             }
@@ -753,9 +753,10 @@ class ClassGroupController extends Controller
         // Delete student account (phone, name, etc.) - complete reset; lookup by hash
         \App\Models\Student::where('index_number_hash', \App\Models\Student::hashIndexNumber($indexUpper))->delete();
         
-        // Clear any cached OTP data for this student
-        \Illuminate\Support\Facades\Cache::forget('student_otp:' . $indexNumber);
-        \Illuminate\Support\Facades\Cache::forget('student_otp:' . $indexUpper);
+        // Invalidate student_login OTPs for this index (DB)
+        Otp::where('index_number_hash', \App\Models\Student::hashIndexNumber($indexUpper))
+            ->where('type', Otp::TYPE_STUDENT_LOGIN)
+            ->delete();
         
         // Delete class group student record
         $student->delete();
@@ -773,15 +774,61 @@ class ClassGroupController extends Controller
         }
         $classGroup = $resolved;
         
-        // Find the Student record by index hash and remove phone
-        $studentAccount = \App\Models\Student::where('index_number_hash', \App\Models\Student::hashIndexNumber($student->index_number))->first();
+        $indexHash = \App\Models\Student::hashIndexNumber($student->index_number);
+        $studentAccount = \App\Models\Student::where('index_number_hash', $indexHash)->first();
         if ($studentAccount) {
             $studentAccount->phone_contact = null;
             $studentAccount->save();
+            Otp::where('index_number_hash', $indexHash)->where('type', Otp::TYPE_STUDENT_LOGIN)->delete();
             return redirect()->route($this->staffRoutePrefix() . '.class-groups.students.index', $classGroup)->with('success', 'Removed');
         }
         
         return redirect()->route($this->staffRoutePrefix() . '.class-groups.students.index', $classGroup)->with('error', 'Not found');
+    }
+
+    /**
+     * Generate a one-time fallback login code for a student (examiner or super admin/coordinator).
+     * Examiner can generate fallback code; cannot reset 14-day OTP or manage students.
+     */
+    public function generateFallbackCode(Request $request, string $classGroupId, ClassGroupStudent $student): RedirectResponse
+    {
+        $classGroup = $student->classGroup;
+        if (!$classGroup || (string) $classGroupId !== (string) $classGroup->getRouteKey()) {
+            abort(404);
+        }
+        $this->authorize('generateFallbackCode', $classGroup);
+
+        $studentAccount = Student::where('index_number_hash', Student::hashIndexNumber($student->index_number))->first();
+        if (!$studentAccount || !$studentAccount->hasPhone()) {
+            return redirect()->route($this->staffRoutePrefix() . '.class-groups.students.show', [$classGroup, $student])
+                ->with('error', 'Student has no phone number. They must add one on next login.');
+        }
+
+        $classGroup->load('examiner');
+        $examiner = $classGroup->examiner;
+        if (!$examiner || !$examiner->isExaminer() || $examiner->sms_remaining <= 0) {
+            return redirect()->route($this->staffRoutePrefix() . '.class-groups.students.show', [$classGroup, $student])
+                ->with('error', 'Unable to send code. No SMS balance.');
+        }
+
+        $code = (string) random_int(100000, 999999);
+        $indexHash = Student::hashIndexNumber($student->index_number);
+        Otp::create([
+            'index_number_hash' => $indexHash,
+            'type' => Otp::TYPE_EXAMINER_FALLBACK,
+            'code' => $code,
+            'expires_at' => now()->addMinutes(Otp::EXAMINER_FALLBACK_VALID_MINUTES),
+        ]);
+        $message = 'Your QuizSnap one-time login code is: ' . $code . '. Valid for ' . Otp::EXAMINER_FALLBACK_VALID_MINUTES . ' minutes. Do not share.';
+        $result = ArkeselService::sendSms($studentAccount->phone_contact, $message);
+        if (!$result['success']) {
+            return redirect()->route($this->staffRoutePrefix() . '.class-groups.students.show', [$classGroup, $student])
+                ->with('error', $result['message'] ?? 'Failed to send SMS.');
+        }
+        $examiner->increment('sms_used');
+
+        return redirect()->route($this->staffRoutePrefix() . '.class-groups.students.show', [$classGroup, $student])
+            ->with('success', 'One-time login code sent. It expires in ' . Otp::EXAMINER_FALLBACK_VALID_MINUTES . ' minutes.');
     }
 
     /**

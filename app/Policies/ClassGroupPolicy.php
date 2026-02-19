@@ -64,12 +64,30 @@ class ClassGroupPolicy
         return false;
     }
 
+    /**
+     * Only Super Admin and Coordinator can update class group or manage students.
+     * Examiner: can view class index list and generate fallback code only; cannot edit student,
+     * modify group, reset login OTP, or bypass 14-day rule.
+     */
     public function update(User $user, ClassGroup $classGroup): bool
     {
         if ($user->isSuperAdmin() || $user->isDocuMentorCoordinator()) {
             return true;
         }
-        // Examiner can add/manage students (update covers that) if assigned to the group
+        return false;
+    }
+
+    /**
+     * Examiner can generate a one-time fallback login code for a student (if assigned to the group).
+     */
+    public function generateFallbackCode(User $user, ClassGroup $classGroup): bool
+    {
+        if ($user->isSuperAdmin() || $user->isDocuMentorCoordinator()) {
+            return true;
+        }
+        if (!$user->isStaff()) {
+            return false;
+        }
         return $this->isExaminerAssignedToClassGroup($user, $classGroup);
     }
 
