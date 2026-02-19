@@ -16,6 +16,7 @@ use App\Models\Quiz;
 use App\Models\QuizSession;
 use App\Models\Question;
 use App\Models\Result;
+use App\Jobs\GenerateAiQuestionsJob;
 use App\Jobs\SendQuizResultReadyNotification;
 use App\Models\QuestionPool;
 use App\Models\Setting;
@@ -335,7 +336,8 @@ class QuizManagementController extends Controller
         $questionStats = $this->computeQuestionStats($quiz, $completedSessions);
 
         $liveProctorEnabled = Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') === '1';
-        $data = compact('quiz', 'unapprovedPools', 'unapprovedPoolsTotal', 'approvedQuestions', 'approvedQuestionsTotal', 'sessionsPaginator', 'sessionsStats', 'questionStats', 'liveProctorEnabled');
+        $aiProgress = Cache::get('quiz_ai_progress:' . $quiz->id);
+        $data = compact('quiz', 'unapprovedPools', 'unapprovedPoolsTotal', 'approvedQuestions', 'approvedQuestionsTotal', 'sessionsPaginator', 'sessionsStats', 'questionStats', 'liveProctorEnabled', 'aiProgress');
 
         // Live tab/pagination: return only the tab HTML fragment for AJAX requests
         if ($request->ajax()) {
@@ -1110,6 +1112,62 @@ class QuizManagementController extends Controller
         $quiz->update($updateData);
         broadcast(new DataUpdated('quizzes'))->toOthers();
         return redirect()->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)->with('success', 'Saved. Use "Generate AI Questions" below to run generation without timeout.');
+    }
+
+    /**
+     * Start AI question generation in the background (queue). No HTTP timeout; use for any number of questions.
+     * Form POST: target_count, topics (comma-separated string or array), optional source_text.
+     */
+    public function startAiGenerationBackground(Request $request, Quiz $quiz): RedirectResponse
+    {
+        $this->authorize('update', $quiz);
+
+        $validated = $request->validate([
+            'target_count' => 'required|integer|min:1|max:250',
+            'topics' => 'required|string',
+            'source_text' => 'nullable|string',
+        ]);
+
+        $user = $this->adminUser();
+        if (! $user) {
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)
+                ->with('error', 'Unauthorized.');
+        }
+
+        $aiService = app(AiQuestionService::class);
+        if (! $aiService->hasApiKey()) {
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)
+                ->with('error', 'AI generation requires a Gemini or DeepSeek API key in Dashboard → Settings → AI.');
+        }
+
+        $tokenService = app(AiQuizTokenService::class);
+        if (! $tokenService->canUse($user)) {
+            $status = $tokenService->getStatus($user);
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)
+                ->with('error', $status['message'] ?? 'No AI quiz tokens left. Try again later.');
+        }
+
+        $targetCount = (int) $validated['target_count'];
+        $topicsRaw = preg_split('/[\s,]+/', (string) $validated['topics'], -1, PREG_SPLIT_NO_EMPTY);
+        $topics = array_map(fn ($t) => ['name' => trim($t)], array_filter(array_map('trim', $topicsRaw)));
+        if (empty($topics)) {
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)
+                ->with('error', 'Enter at least one topic (e.g. Mathematics, Biology).');
+        }
+
+        $sourceText = trim((string) ($validated['source_text'] ?? ''));
+        if ($sourceText === '') {
+            $sourceText = (string) ($quiz->script_text ?? '');
+        }
+        if (mb_strlen($sourceText) > 50000) {
+            $sourceText = mb_substr($sourceText, 0, 50000) . "\n[... truncated ...]";
+        }
+
+        $tokenService->consume($user);
+        GenerateAiQuestionsJob::dispatch($quiz->id, $user->id, $targetCount, $topics, $sourceText);
+
+        return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', ['quiz' => $quiz, 'tab' => 'overview'])
+            ->with('success', 'AI generation started in the background. Refresh this page to see new questions as they are added. For 50+ questions, run a queue worker: php artisan queue:work');
     }
 
     public function startAiPoolGeneration(Request $request, Quiz $quiz): \Illuminate\Http\JsonResponse

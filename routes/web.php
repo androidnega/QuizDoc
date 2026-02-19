@@ -299,6 +299,7 @@ Route::middleware('admin.auth')->group(function () {
             Route::get('/quizzes/{quiz}', [QuizManagementController::class, 'show'])->name('quizzes.show');
             Route::get('/quizzes/{quiz}/edit', [QuizManagementController::class, 'edit'])->name('quizzes.edit');
             Route::put('/quizzes/{quiz}', [QuizManagementController::class, 'update'])->name('quizzes.update');
+            Route::post('/quizzes/{quiz}/ai-generate/background', [QuizManagementController::class, 'startAiGenerationBackground'])->name('quizzes.ai-generate.background');
             Route::post('/quizzes/{quiz}/ai-generate/start', [QuizManagementController::class, 'startAiPoolGeneration'])->name('quizzes.ai-generate.start');
             Route::post('/quizzes/{quiz}/ai-generate/chunk', [QuizManagementController::class, 'runAiPoolGenerationChunk'])->name('quizzes.ai-generate.chunk');
             Route::get('/quizzes/{quiz}/scores', [QuizManagementController::class, 'scores'])->name('quizzes.scores');

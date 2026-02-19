@@ -4,6 +4,18 @@
     $shortBy = max(0, $neededCount - $approvedCount);
 @endphp
 
+@if(!empty($aiProgress) && is_array($aiProgress))
+    <div class="mb-4 rounded-lg border-2 {{ ($aiProgress['status'] ?? '') === 'running' ? 'border-indigo-300 bg-indigo-50' : (($aiProgress['status'] ?? '') === 'completed' ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-50') }} p-4">
+        @if(($aiProgress['status'] ?? '') === 'running')
+            <p class="text-sm font-medium text-indigo-900">AI generation in progress: {{ (int)($aiProgress['generated_count'] ?? 0) }} of {{ (int)($aiProgress['target_count'] ?? 0) }} questions. Refresh this page to see new ones.</p>
+        @elseif(($aiProgress['status'] ?? '') === 'completed')
+            <p class="text-sm font-medium text-green-900">AI generation finished. {{ (int)($aiProgress['generated_count'] ?? 0) }} questions added to the pool. Approve them below.</p>
+        @elseif(($aiProgress['status'] ?? '') === 'failed')
+            <p class="text-sm font-medium text-gray-800">Background generation stopped. {{ (int)($aiProgress['generated_count'] ?? 0) }} questions were added. Check Settings → AI or try again from Edit quiz.</p>
+        @endif
+    </div>
+@endif
+
 {{-- Questions summary bar (top of page) --}}
 <section class="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
     <div class="px-5 py-4">

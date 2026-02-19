@@ -211,17 +211,20 @@
                 </div>
 
                 <div class="border-t border-gray-200 pt-6">
-                    <h3 class="text-base font-semibold text-gray-900 mb-2">AI generation (safe mode)</h3>
-                    <p class="text-sm text-gray-600 mb-3">Generate large question sets in small browser batches to avoid timeout (works better for 50-120 questions).</p>
-                    <div class="flex flex-wrap items-center gap-3">
-                        <button type="button" id="ai-generate-btn" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                            Generate AI Questions
+                    <h3 class="text-base font-semibold text-gray-900 mb-2">AI question generation (no timeout)</h3>
+                    <p class="text-sm text-gray-600 mb-3">Runs in the background so you can generate any number of questions (50, 120, 250) without timeout. Save the quiz first if you just changed topics or question count above.</p>
+                    <form action="{{ route('dashboard.quizzes.ai-generate.background', $quiz) }}" method="post" class="inline-flex flex-wrap items-end gap-3" id="ai-background-form">
+                        @csrf
+                        <input type="hidden" name="topics" id="ai-background-topics" value="{{ old('topics', $topicsStr ?? '') }}">
+                        <div>
+                            <label for="ai-target-count" class="block text-xs font-medium text-gray-600 mb-0.5">Number to generate</label>
+                            <input type="number" id="ai-target-count" name="target_count" min="1" max="250" value="{{ old('target_count', $quiz->number_of_questions) }}" class="w-24 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm">
+                        </div>
+                        <button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            Generate in background
                         </button>
-                        <span id="ai-generate-status-text" class="text-sm text-gray-600">Idle.</span>
-                    </div>
-                    <div class="mt-3 h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                        <div id="ai-generate-progress-bar" class="h-2 w-0 bg-indigo-600 transition-all duration-300"></div>
-                    </div>
+                    </form>
+                    <p class="text-xs text-gray-500 mt-2">Then refresh the quiz page to see new questions. On the server, run <code class="bg-gray-100 px-1 rounded">php artisan queue:work</code> (and set <code class="bg-gray-100 px-1 rounded">QUEUE_CONNECTION=database</code> in .env) so the job runs without blocking.</p>
                 </div>
 
                 <!-- Actions -->
@@ -322,6 +325,13 @@
     });
 
     renderTags();
+
+    var bgForm = document.getElementById('ai-background-form');
+    var bgTopics = document.getElementById('ai-background-topics');
+    var topicsVal = document.getElementById('topics-value');
+    if (bgForm && bgTopics && topicsVal) {
+        bgForm.addEventListener('submit', function() { bgTopics.value = topicsVal.value || bgTopics.value; });
+    }
 })();
 
 document.addEventListener('DOMContentLoaded', function() {
