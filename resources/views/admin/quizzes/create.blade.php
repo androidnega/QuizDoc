@@ -2,9 +2,41 @@
 
 @section('title', 'Create Quiz')
 @section('dashboard_heading', 'Create Quiz')
+@push('styles')
+<style>
+/* Clean, highly visible form fields for Create Quiz page */
+.quiz-create-form label { font-weight: 600; color: #1e293b; }
+.quiz-create-form input[type="text"],
+.quiz-create-form input[type="number"],
+.quiz-create-form input[type="datetime-local"],
+.quiz-create-form select,
+.quiz-create-form input[type="text"].input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #94a3b8;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 1rem;
+    min-height: 48px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.quiz-create-form input::placeholder { color: #64748b; }
+.quiz-create-form input:focus,
+.quiz-create-form select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+.quiz-create-form input.border-danger-500,
+.quiz-create-form select.border-danger-500 { border-color: #dc2626; }
+.quiz-create-form .text-gray-500 { color: #475569; }
+.quiz-create-form .text-xs.text-gray-500 { font-size: 0.8125rem; }
+</style>
+@endpush
 @section('dashboard_content')
 <div class="w-full space-y-6">
-    <div class="bg-white rounded-lg border border-gray-200 p-6 md:p-8">
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 md:p-8">
             @if(session('success'))
                 <div class="alert alert-success mb-6">
                     <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -72,7 +104,7 @@
                 <strong>Please select a course</strong> {{ $errors->has('course_id') ? $errors->first('course_id') : '(from Class Group or QuizSnap section) before creating the quiz.' }}
             </div>
 
-            <form action="{{ route('dashboard.quizzes.store') }}" method="post" class="space-y-6" id="quiz-create-form">
+            <form action="{{ route('dashboard.quizzes.store') }}" method="post" class="quiz-create-form space-y-6" id="quiz-create-form">
                 @csrf
 
                 <!-- Title -->
