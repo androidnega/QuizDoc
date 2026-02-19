@@ -182,8 +182,7 @@
                 @endphp
                 <div class="flex flex-shrink-0 items-center gap-2 sm:gap-3 flex-wrap justify-end">
                     <div class="flex items-center gap-1 sm:gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 sm:px-2.5 text-xs sm:text-sm {{ $aiTokenColor }}" title="AI quiz generations remaining">
-                        <span class="text-gray-500 hidden sm:inline">AI Token:</span>
-                        <span class="font-semibold">AI {{ $aiTokenStatus['remaining'] }}</span>
+                        <span class="font-semibold tabular-nums">{{ $aiTokenStatus['remaining'] }}</span>
                     </div>
                     <div class="flex flex-shrink-0 items-center gap-1 sm:gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 sm:px-2.5 text-xs sm:text-sm {{ $smsColorClass }}" title="SMS balance">
                         <span class="text-gray-500 hidden sm:inline">SMS:</span>

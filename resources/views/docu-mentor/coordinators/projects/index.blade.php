@@ -25,6 +25,7 @@
                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Group</th>
                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Year</th>
                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Budget</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Progress</th>
                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                         <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
@@ -36,6 +37,25 @@
                             <td class="px-3 py-2 text-sm text-gray-600 max-w-[10rem] truncate">{{ $project->group?->name }}</td>
                             <td class="px-3 py-2 text-sm text-gray-600 whitespace-nowrap">{{ $project->academicYear?->year ?? '—' }}</td>
                             <td class="px-3 py-2 text-sm text-gray-600">{{ $project->budget !== null ? number_format($project->budget, 2) : '—' }}</td>
+                            <td class="px-3 py-2">
+                                @php
+                                    $chaptersTotal = max(1, $project->chapters?->count() ?? 0);
+                                    $chaptersCompleted = $project->chapters?->where('completed', true)->count() ?? 0;
+                                    $progressPercent = (int) round(($chaptersCompleted / $chaptersTotal) * 100);
+                                @endphp
+                                <div class="flex flex-col gap-1 min-w-[140px]">
+                                    <div class="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+                                        <div
+                                            class="h-1.5 rounded-full transition-all duration-300"
+                                            style="width: {{ $progressPercent }}%; background: linear-gradient(to right, #9ca3af, #16a34a);"
+                                        ></div>
+                                    </div>
+                                    <div class="flex items-center justify-between text-[11px] text-gray-500">
+                                        <span>{{ $chaptersCompleted }}/{{ $chaptersTotal }} chapters</span>
+                                        <span class="font-medium text-gray-700">{{ $progressPercent }}%</span>
+                                    </div>
+                                </div>
+                            </td>
                             <td class="px-3 py-2 whitespace-nowrap">
                                 <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full {{ $project->approved ? 'bg-success-100 text-success-800' : 'bg-amber-100 text-amber-800' }}">
                                     {{ $project->approved ? 'Approved' : 'Pending' }}
