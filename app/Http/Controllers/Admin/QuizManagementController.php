@@ -531,7 +531,7 @@ class QuizManagementController extends Controller
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return $placeholderResponse;
         }
-        if ($quizSession->quiz_id !== $quiz->id) {
+        if ((int) $quizSession->quiz_id !== (int) $quiz->id) {
             return $placeholderResponse;
         }
         $path = storage_path('app/proctor_feed/' . $quizSession->id . '.jpg');
@@ -552,7 +552,7 @@ class QuizManagementController extends Controller
         if (Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') !== '1') {
             return response()->json(['success' => false, 'message' => 'Live examiner view is disabled.'], 403);
         }
-        if ($quizSession->quiz_id !== $quiz->id) {
+        if ((int) $quizSession->quiz_id !== (int) $quiz->id) {
             return response()->json(['success' => false, 'message' => 'Session not found.'], 404);
         }
         if ($quizSession->ended_at) {
