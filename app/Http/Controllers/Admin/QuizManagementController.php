@@ -1299,7 +1299,14 @@ class QuizManagementController extends Controller
             ]);
         }
 
-        $batchSize = min(max((int) ($validated['batch_size'] ?? 12), 1), 20, $remaining);
+        // Give this request enough wall-clock time for one Gemini call (≤60 s) plus DB writes.
+        // Do NOT lower this — the default XAMPP php.ini is often 30 s which kills the request.
+        @set_time_limit(90);
+
+        // ONE Gemini call per chunk (≤10 questions). The JS outer loop handles retries,
+        // so cascading 5-6 attempts inside a single PHP request is unnecessary and exceeds
+        // PHP execution limits, causing the "stuck on Waiting for server…" symptom.
+        $batchSize = min(max((int) ($validated['batch_size'] ?? 8), 1), 10, $remaining);
         $aiService = app(AiQuestionService::class);
         $generatedThisBatch = 0;
 
@@ -1309,32 +1316,15 @@ class QuizManagementController extends Controller
             if (mb_strlen($sourceText) > 20000) {
                 $sourceText = mb_substr($sourceText, 0, 20000) . "\n[... truncated ...]";
             }
-            $attemptSizes = [];
-            foreach ([$batchSize, (int) ceil($batchSize * 0.75), (int) ceil($batchSize * 0.5), 8, 5, 3, 1] as $size) {
-                $size = min($remaining, max(1, (int) $size));
-                if (! in_array($size, $attemptSizes, true)) {
-                    $attemptSizes[] = $size;
-                }
-            }
 
-            foreach ($attemptSizes as $attemptSize) {
-                if ($attemptSize < 1) {
-                    continue;
-                }
-                // Try topics-only first (no source) — often more reliable; add source only if topics-only fails.
-                $generatedIds = $aiService->generatePoolAndStore($quiz, $topics, $attemptSize, null);
+            // One Gemini call: topics-only is most reliable.
+            $generatedIds = $aiService->generatePoolAndStore($quiz, $topics, $batchSize, null);
+            $generatedThisBatch = count($generatedIds);
+
+            // Single fallback: if topics-only returned nothing AND source text exists, try once with it.
+            if ($generatedThisBatch === 0 && $sourceText !== '') {
+                $generatedIds = $aiService->generatePoolAndStore($quiz, $topics, $batchSize, $sourceText);
                 $generatedThisBatch = count($generatedIds);
-                if ($generatedThisBatch > 0) {
-                    break;
-                }
-                if ($sourceText !== '') {
-                    $generatedIds = $aiService->generatePoolAndStore($quiz, $topics, $attemptSize, $sourceText);
-                    $generatedThisBatch = count($generatedIds);
-                    if ($generatedThisBatch > 0) {
-                        break;
-                    }
-                }
-                usleep(250000);
             }
         } catch (\Throwable $e) {
             $state['status'] = 'failed';

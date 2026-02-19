@@ -453,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statusText.textContent = label || ('Generated ' + generated + ' / ' + target);
     }
 
-    var CHUNK_TIMEOUT_MS = 120000;
+    var CHUNK_TIMEOUT_MS = 100000; // 100 s — gives PHP's 90 s set_time_limit room to respond
 
     async function postJson(url, payload, opts) {
         opts = opts || {};
@@ -487,11 +487,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         while (running) {
             var chunk;
-            setProgress(genState.generated_count || 0, genState.target_count || 1, 'Waiting for server...');
+            var waitLabel = 'Generating ' + (genState.generated_count || 0) + ' / ' + (genState.target_count || 0) + '… (calling Gemini, please wait)';
+            setProgress(genState.generated_count || 0, genState.target_count || 1, waitLabel);
             try {
                 chunk = await postJson(chunkUrl, {
                     generation_id: genState.generation_id,
-                    batch_size: 15
+                    batch_size: 8
                 }, { timeoutMs: CHUNK_TIMEOUT_MS });
                 networkFailures = 0;
             } catch (err) {
@@ -534,7 +535,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            await new Promise(function(resolve) { setTimeout(resolve, 250); });
+            await new Promise(function(resolve) { setTimeout(resolve, 600); });
         }
     }
 
