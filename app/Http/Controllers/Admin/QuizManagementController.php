@@ -240,32 +240,27 @@ class QuizManagementController extends Controller
                     ->with('error', 'Failed');
             }
 
-            // Do not run heavy AI generation in this request to avoid browser/server timeouts.
-            // Generation is started from the edit page in browser-driven chunks.
+            // Run AI question generation in the background when API key and tokens are available.
             $aiService = app(AiQuestionService::class);
             $aiTokenService = app(AiQuizTokenService::class);
-            if (!empty($topics)) {
-                if (!$aiService->hasApiKey()) {
-                    $message = 'Quiz created. AI generation was skipped: no API key is set. Add a Gemini or DeepSeek key in Dashboard -> Settings, then generate from Edit Quiz.';
-                    $flashKey = 'warning';
-                } elseif (!$aiTokenService->canUse($user)) {
-                    $status = $aiTokenService->getStatus($user);
-                    $message = 'Quiz created. ' . ($status['message'] ?? 'You have no AI quiz tokens left. Tokens refill after a cooldown period.');
-                    $flashKey = 'warning';
-                } else {
-                    $message = 'Quiz created. AI generation is ready and will run in safe browser batches to prevent timeout.';
-                    $flashKey = 'success';
-                    return redirect()
-                        ->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)
-                        ->with($flashKey, $message)
-                        ->with('ai_autostart_payload', [
-                            'target_count' => (int) $request->number_of_questions,
-                            'topics' => array_values($topics),
-                            'source_text' => null,
-                        ]);
-                }
+            $targetCount = (int) $request->number_of_questions;
+            if (empty($topics)) {
+                $topics = [['name' => 'General knowledge']];
+            }
+            if ($aiService->hasApiKey() && $aiTokenService->canUse($user)) {
+                $aiTokenService->consume($user);
+                GenerateAiQuestionsJob::dispatch($quiz->id, $user->id, $targetCount, array_values($topics), '');
+                $message = 'Quiz created. Questions are being generated in the background. Refresh this page in a moment, then click Approve All to add them to the quiz.';
+                $flashKey = 'success';
+            } elseif (!$aiService->hasApiKey()) {
+                $message = 'Quiz created. AI generation was skipped: no API key is set. Add a Gemini or DeepSeek key in Dashboard → Settings → AI, then use "Generate questions" on this quiz.';
+                $flashKey = 'warning';
+            } elseif (!$aiTokenService->canUse($user)) {
+                $status = $aiTokenService->getStatus($user);
+                $message = 'Quiz created. ' . ($status['message'] ?? 'You have no AI quiz tokens left. Tokens refill after a cooldown period.');
+                $flashKey = 'warning';
             } else {
-                $message = 'Quiz created successfully! You can now add questions manually or use AI generation (set topics and ensure a Gemini or DeepSeek key in Settings).';
+                $message = 'Quiz created successfully.';
                 $flashKey = 'success';
             }
 
@@ -1124,40 +1119,36 @@ class QuizManagementController extends Controller
 
         $validated = $request->validate([
             'target_count' => 'required|integer|min:1|max:250',
-            'topics' => 'required|string',
+            'topics' => 'nullable|string',
             'source_text' => 'nullable|string',
         ]);
 
         $user = $this->adminUser();
+        $redirectShow = fn ($error) => redirect()->route($this->staffRoutePrefix() . '.quizzes.show', ['quiz' => $quiz, 'tab' => 'overview'])->with('error', $error);
         if (! $user) {
-            return redirect()->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)
-                ->with('error', 'Unauthorized.');
+            return $redirectShow('Unauthorized.');
         }
 
         $aiService = app(AiQuestionService::class);
         if (! $aiService->hasApiKey()) {
-            return redirect()->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)
-                ->with('error', 'AI generation requires a Gemini or DeepSeek API key in Dashboard → Settings → AI.');
+            return $redirectShow('AI generation requires a Gemini or DeepSeek API key in Dashboard → Settings → AI.');
         }
 
         $tokenService = app(AiQuizTokenService::class);
         if (! $tokenService->canUse($user)) {
             $status = $tokenService->getStatus($user);
-            return redirect()->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)
-                ->with('error', $status['message'] ?? 'No AI quiz tokens left. Try again later.');
+            return $redirectShow($status['message'] ?? 'No AI quiz tokens left. Try again later.');
         }
 
         $targetCount = (int) $validated['target_count'];
         $perQuizLimit = max(1, $aiService->getPerQuizLimit());
         if ($targetCount > $perQuizLimit) {
-            return redirect()->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)
-                ->with('error', 'Maximum questions per generation is ' . $perQuizLimit . '.');
+            return $redirectShow('Maximum questions per generation is ' . $perQuizLimit . '.');
         }
-        $topicsRaw = preg_split('/[\s,]+/', (string) $validated['topics'], -1, PREG_SPLIT_NO_EMPTY);
+        $topicsRaw = preg_split('/[\s,]+/', (string) ($validated['topics'] ?? ''), -1, PREG_SPLIT_NO_EMPTY);
         $topics = array_map(fn ($t) => ['name' => trim($t)], array_filter(array_map('trim', $topicsRaw)));
         if (empty($topics)) {
-            return redirect()->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)
-                ->with('error', 'Enter at least one topic (e.g. Mathematics, Biology).');
+            $topics = [['name' => 'General knowledge']];
         }
 
         $sourceText = trim((string) ($validated['source_text'] ?? ''));
@@ -1173,227 +1164,6 @@ class QuizManagementController extends Controller
 
         return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', ['quiz' => $quiz, 'tab' => 'overview'])
             ->with('success', 'AI generation started in the background. Refresh this page to see new questions as they are added. For 50+ questions, run a queue worker: php artisan queue:work');
-    }
-
-    public function startAiPoolGeneration(Request $request, Quiz $quiz): \Illuminate\Http\JsonResponse
-    {
-        $this->authorize('update', $quiz);
-
-        $validated = $request->validate([
-            'target_count' => 'required|integer|min:1|max:250',
-            'topics' => 'nullable|array',
-            'source_text' => 'nullable|string',
-        ]);
-
-        $user = $this->adminUser();
-        if (! $user) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 401);
-        }
-
-        $aiService = app(AiQuestionService::class);
-        if (! $aiService->hasApiKey()) {
-            return response()->json(['success' => false, 'message' => 'AI generation requires a Gemini or DeepSeek API key.'], 422);
-        }
-
-        $tokenService = app(AiQuizTokenService::class);
-        if (! $tokenService->canUse($user)) {
-            $status = $tokenService->getStatus($user);
-            return response()->json(['success' => false, 'message' => $status['message'] ?? 'You have no AI quiz tokens left.'], 422);
-        }
-
-        $targetCount = (int) $validated['target_count'];
-        $perQuizLimit = max(1, $aiService->getPerQuizLimit());
-        if ($targetCount > $perQuizLimit) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Maximum questions per generation is ' . $perQuizLimit . '.',
-            ], 422);
-        }
-        $topicsRaw = $validated['topics'] ?? [];
-        $topics = [];
-        foreach (array_values($topicsRaw) as $t) {
-            if (is_array($t) && isset($t['name']) && is_string($t['name'])) {
-                $topics[] = ['name' => trim($t['name'])];
-            } elseif (is_string($t) && trim($t) !== '') {
-                $topics[] = ['name' => trim($t)];
-            }
-        }
-        if (empty($topics)) {
-            $topics = [['name' => 'General knowledge']];
-        }
-        $sourceText = trim((string) ($validated['source_text'] ?? ''));
-        if ($sourceText === '') {
-            $sourceText = (string) ($quiz->script_text ?? '');
-        }
-        $generationId = 'gen_' . bin2hex(random_bytes(8));
-
-        $state = [
-            'quiz_id' => (int) $quiz->id,
-            'user_id' => (int) $user->id,
-            'generation_id' => $generationId,
-            'status' => 'running',
-            'target_count' => $targetCount,
-            'generated_count' => 0,
-            'empty_batches' => 0,
-            'topics' => $topics,
-            'source_text' => $sourceText,
-            'message' => 'Generation started.',
-            'updated_at' => now()->toIso8601String(),
-        ];
-
-        Cache::put($this->aiGenerationCacheKey($quiz->id, $user->id), $state, now()->addMinutes(120));
-        $tokenService->consume($user);
-
-        return response()->json([
-            'success' => true,
-            'generation_id' => $generationId,
-            'status' => $state['status'],
-            'target_count' => $targetCount,
-            'generated_count' => 0,
-            'message' => 'Generation started. Processing in browser-safe batches.',
-        ]);
-    }
-
-    public function runAiPoolGenerationChunk(Request $request, Quiz $quiz): \Illuminate\Http\JsonResponse
-    {
-        $this->authorize('update', $quiz);
-
-        $validated = $request->validate([
-            'generation_id' => 'required|string',
-            'batch_size' => 'nullable|integer|min:1|max:20',
-        ]);
-
-        $user = $this->adminUser();
-        if (! $user) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 401);
-        }
-
-        $cacheKey = $this->aiGenerationCacheKey($quiz->id, $user->id);
-        $state = Cache::get($cacheKey);
-        if (! is_array($state) || ($state['generation_id'] ?? null) !== $validated['generation_id']) {
-            return response()->json(['success' => false, 'message' => 'Generation session not found. Start again.'], 404);
-        }
-
-        if (($state['status'] ?? '') !== 'running') {
-            return response()->json([
-                'success' => true,
-                'status' => $state['status'] ?? 'failed',
-                'generated_count' => (int) ($state['generated_count'] ?? 0),
-                'target_count' => (int) ($state['target_count'] ?? 0),
-                'message' => $state['message'] ?? 'Generation stopped.',
-            ]);
-        }
-
-        $remaining = max(0, (int) $state['target_count'] - (int) $state['generated_count']);
-        if ($remaining < 1) {
-            $state['status'] = 'completed';
-            $state['message'] = 'Generation complete.';
-            $state['updated_at'] = now()->toIso8601String();
-            Cache::put($cacheKey, $state, now()->addMinutes(30));
-            return response()->json([
-                'success' => true,
-                'status' => 'completed',
-                'generated_count' => (int) $state['generated_count'],
-                'target_count' => (int) $state['target_count'],
-                'message' => $state['message'],
-            ]);
-        }
-
-        // Allow time for main AI call + simple fallback + one-question fallback (e.g. 90+45+30s).
-        @set_time_limit(180);
-
-        // ONE Gemini call per chunk (≤10 questions). The JS outer loop handles retries,
-        // so cascading 5-6 attempts inside a single PHP request is unnecessary and exceeds
-        // PHP execution limits, causing the "stuck on Waiting for server…" symptom.
-        $batchSize = min(max((int) ($validated['batch_size'] ?? 8), 1), 10, $remaining);
-        $aiService = app(AiQuestionService::class);
-        $generatedThisBatch = 0;
-
-        try {
-            $topics = is_array($state['topics'] ?? null) ? $state['topics'] : [['name' => 'General knowledge']];
-            $sourceText = (string) ($state['source_text'] ?? '');
-            if (mb_strlen($sourceText) > 20000) {
-                $sourceText = mb_substr($sourceText, 0, 20000) . "\n[... truncated ...]";
-            }
-
-            // One Gemini call: topics-only is most reliable.
-            $generatedIds = $aiService->generatePoolAndStore($quiz, $topics, $batchSize, null);
-            $generatedThisBatch = count($generatedIds);
-
-            // Single fallback: if topics-only returned nothing AND source text exists, try once with it.
-            if ($generatedThisBatch === 0 && $sourceText !== '') {
-                $generatedIds = $aiService->generatePoolAndStore($quiz, $topics, $batchSize, $sourceText);
-                $generatedThisBatch = count($generatedIds);
-            }
-
-            // Only throw on definitive auth failures so the user can fix the key. Timeout/quota/empty
-            // are left to the normal message so generation can retry or user can add DeepSeek.
-            if ($generatedThisBatch === 0) {
-                $apiError = $aiService->getLastApiError();
-                if ($apiError !== null) {
-                    $lower = strtolower($apiError);
-                    $isAuthError = str_contains($lower, 'api_key_invalid')
-                        || str_contains($lower, 'permission_denied')
-                        || str_contains($lower, 'invalid api key')
-                        || str_contains($lower, 'http 401')
-                        || str_contains($lower, 'http 403');
-                    if ($isAuthError) {
-                        throw new \RuntimeException(
-                            'API key error: ' . $apiError
-                            . ' — Go to Dashboard → Settings → AI and set a valid Gemini or DeepSeek API key.'
-                        );
-                    }
-                }
-            }
-        } catch (\Throwable $e) {
-            $state['status'] = 'failed';
-            $state['message'] = 'Generation failed: ' . $e->getMessage();
-            $state['updated_at'] = now()->toIso8601String();
-            Cache::put($cacheKey, $state, now()->addMinutes(30));
-            return response()->json([
-                'success' => false,
-                'status' => 'failed',
-                'generated_count' => (int) ($state['generated_count'] ?? 0),
-                'target_count' => (int) ($state['target_count'] ?? 0),
-                'message' => $state['message'],
-            ], 500);
-        }
-
-        $state['generated_count'] = min((int) $state['target_count'], (int) $state['generated_count'] + $generatedThisBatch);
-        $state['empty_batches'] = $generatedThisBatch > 0 ? 0 : ((int) ($state['empty_batches'] ?? 0) + 1);
-        $state['updated_at'] = now()->toIso8601String();
-
-        if ((int) $state['generated_count'] >= (int) $state['target_count']) {
-            $state['status'] = 'completed';
-            $state['message'] = 'Generation complete.';
-        } elseif ((int) $state['empty_batches'] >= 20) {
-            $apiError = $aiService->getLastApiError();
-            $state['status'] = 'failed';
-            $state['message'] = 'AI returned no questions after many attempts.'
-                . ($apiError ? ' Last Gemini error: ' . $apiError . '.' : '')
-                . ' Check Dashboard → Settings → AI: ensure a Gemini or DeepSeek API key is set with valid quota. Try 1–2 short topic names (e.g. "Mathematics", "Biology") then run again.';
-        } else {
-            $apiError = $aiService->getLastApiError();
-            $state['message'] = 'Generated ' . $state['generated_count'] . ' of ' . $state['target_count'] . '...'
-                . ($apiError ? ' (last attempt: ' . $apiError . ')' : '');
-        }
-
-        Cache::put($cacheKey, $state, now()->addMinutes(120));
-
-        return response()->json([
-            'success' => true,
-            'status' => $state['status'],
-            'generated_count' => (int) $state['generated_count'],
-            'target_count' => (int) $state['target_count'],
-            'generated_this_batch' => $generatedThisBatch,
-            'message' => $state['message'],
-            'pool_total' => $quiz->questionPools()->where('is_approved', false)->count(),
-        ]);
-    }
-
-    private function aiGenerationCacheKey(int|string $quizId, int|string $userId): string
-    {
-        return 'quiz_ai_generation:' . (int) $quizId . ':' . (int) $userId;
     }
 
     /**
