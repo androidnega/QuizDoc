@@ -3,7 +3,7 @@
 @section('title', 'Supervisor Dashboard – Docu Mentor')
 
 @section('content')
-<div class="max-w-5xl mx-auto w-full pt-4 sm:pt-6">
+<div class="max-w-6xl mx-auto w-full pt-4 sm:pt-6">
 <h1 class="text-2xl font-bold text-slate-900 mb-2">Supervisor Dashboard</h1>
 <p class="text-slate-500 text-sm mb-6">All assigned projects · Progress (Completed Chapters / 6) · Tagged previous project access</p>
 

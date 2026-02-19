@@ -3,7 +3,7 @@
 @section('title', $chapter->title . ' – Docu Mentor')
 
 @section('content')
-<div class="max-w-4xl mx-auto w-full px-4 sm:px-6 pt-4 sm:pt-6 pb-10">
+<div class="max-w-6xl mx-auto w-full pt-4 sm:pt-6 pb-10">
     {{-- Back + header --}}
     <div class="mb-6">
         <a href="{{ route('dashboard.docu-mentor.projects.show', $project) }}" class="inline-flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 mb-3">
@@ -44,40 +44,40 @@
         </div>
 
         {{-- Edit chapter form --}}
-        <form action="{{ route('dashboard.docu-mentor.chapters.update', [$project, $chapter->order]) }}" method="post" class="mt-6 pt-6 border-t border-slate-200">
+        <form action="{{ route('dashboard.docu-mentor.chapters.update', [$project, $chapter->order]) }}" method="post" class="mt-6 pt-6 border-t border-slate-200 min-w-0">
             @csrf
             @method('PUT')
-            <h3 class="text-sm font-semibold text-slate-800 mb-4">Edit chapter details</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
+            <h3 class="text-sm font-semibold text-slate-800 uppercase tracking-wide mb-4">Edit chapter details</h3>
+            <div class="flex flex-wrap items-end gap-4">
+                <div class="min-w-0 flex-1 basis-40">
                     <label for="ch_title" class="block text-xs font-medium text-slate-600 uppercase tracking-wide mb-1.5">Title</label>
                     <input id="ch_title" type="text" name="title" value="{{ old('title', $chapter->title) }}" required
-                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        class="w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
-                <div>
+                <div class="w-20 shrink-0">
                     <label for="ch_order" class="block text-xs font-medium text-slate-600 uppercase tracking-wide mb-1.5">Order</label>
                     <input id="ch_order" type="number" name="order" value="{{ old('order', $chapter->order) }}" min="0"
                         class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
-                <div>
+                <div class="w-24 shrink-0">
                     <label for="ch_max_score" class="block text-xs font-medium text-slate-600 uppercase tracking-wide mb-1.5">Max score</label>
                     <input id="ch_max_score" type="number" name="max_score" value="{{ old('max_score', $chapter->max_score) }}" min="0"
                         class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
-                <div class="flex flex-col justify-end gap-3 sm:flex-row sm:items-end sm:gap-4">
-                    <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                <div class="flex flex-wrap items-center gap-4 shrink-0">
+                    <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer whitespace-nowrap">
                         <input type="hidden" name="is_open" value="0">
                         <input type="checkbox" name="is_open" value="1" {{ $chapter->is_open ? 'checked' : '' }}
                             class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
                         Open
                     </label>
-                    <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                    <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer whitespace-nowrap">
                         <input type="hidden" name="completed" value="0">
                         <input type="checkbox" name="completed" value="1" {{ $chapter->completed ? 'checked' : '' }}
                             class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
                         Completed
                     </label>
-                    <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shrink-0">
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 whitespace-nowrap">
                         Save
                     </button>
                 </div>
