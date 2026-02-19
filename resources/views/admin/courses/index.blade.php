@@ -61,7 +61,7 @@
                 <form id="bulk-delete-courses-form" action="{{ route('dashboard.courses.bulk-destroy') }}" method="post" onsubmit="return confirm('Delete all selected courses? Courses with quizzes will be skipped. This cannot be undone.');">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" id="bulk-delete-courses-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-danger-600 border border-danger-600 rounded hover:bg-danger-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button type="submit" id="bulk-delete-courses-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-red-600 border border-red-600 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">
                         <i class="fas fa-trash-alt"></i>
                         Delete selected
                     </button>
