@@ -83,7 +83,7 @@ class Student extends Model implements Authenticatable
     }
 
     /** @deprecated Use StudentLevel::allowsDocuMentor for dynamic check */
-    public const LEVEL_DOCU_MENTOR = 400;
+    public const LEVEL_DOCU_MENTOR = 300;
 
     public function canAccessDocuMentor(): bool
     {
