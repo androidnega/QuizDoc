@@ -10,6 +10,13 @@
     @if(session('success'))
         <div class="alert alert-success mb-4">{{ session('success') }}</div>
     @endif
+    @if(session('fallback_code'))
+        <div class="rounded-lg border-2 border-amber-400 bg-amber-100 p-4 mb-4">
+            <p class="text-sm font-medium text-amber-900 mb-1">One-time login code — give this to the student</p>
+            <p class="text-2xl font-bold font-mono tracking-widest text-amber-900 bg-yellow-300 inline-block px-4 py-2 rounded">{{ session('fallback_code') }}</p>
+            <p class="text-xs text-amber-800 mt-2">Valid for {{ \App\Models\Otp::EXAMINER_FALLBACK_VALID_MINUTES }} minutes. Student enters index number and this code on the login page.</p>
+        </div>
+    @endif
     @if(session('error'))
         <div class="alert alert-error mb-4">{{ session('error') }}</div>
     @endif
@@ -38,14 +45,12 @@
                 @else
                 {{-- Examiner: can only generate one-time fallback code; cannot edit student or reset OTP --}}
                 @can('generateFallbackCode', $classGroup)
-                @if($phone)
                 <form action="{{ route('dashboard.class-groups.students.fallback-code', [$classGroup, $student]) }}" method="post" class="inline">
                     @csrf
                     <button type="submit" class="btn btn-sm btn-primary">
-                        <i class="fas fa-key mr-1"></i> Send one-time login code
+                        <i class="fas fa-key mr-1"></i> Generate one-time login code
                     </button>
                 </form>
-                @endif
                 @endcan
                 @endcan
             </div>

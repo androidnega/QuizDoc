@@ -788,7 +788,7 @@ class ClassGroupController extends Controller
 
     /**
      * Generate a one-time fallback login code for a student (examiner or super admin/coordinator).
-     * Examiner can generate fallback code; cannot reset 14-day OTP or manage students.
+     * Code is displayed on screen for staff to give to the student; not sent via SMS.
      */
     public function generateFallbackCode(Request $request, string $classGroupId, ClassGroupStudent $student): RedirectResponse
     {
@@ -798,19 +798,6 @@ class ClassGroupController extends Controller
         }
         $this->authorize('generateFallbackCode', $classGroup);
 
-        $studentAccount = Student::where('index_number_hash', Student::hashIndexNumber($student->index_number))->first();
-        if (!$studentAccount || !$studentAccount->hasPhone()) {
-            return redirect()->route($this->staffRoutePrefix() . '.class-groups.students.show', [$classGroup, $student])
-                ->with('error', 'Student has no phone number. They must add one on next login.');
-        }
-
-        $classGroup->load('examiner');
-        $examiner = $classGroup->examiner;
-        if (!$examiner || !$examiner->isExaminer() || $examiner->sms_remaining <= 0) {
-            return redirect()->route($this->staffRoutePrefix() . '.class-groups.students.show', [$classGroup, $student])
-                ->with('error', 'Unable to send code. No SMS balance.');
-        }
-
         $code = (string) random_int(100000, 999999);
         $indexHash = Student::hashIndexNumber($student->index_number);
         Otp::create([
@@ -819,16 +806,10 @@ class ClassGroupController extends Controller
             'code' => $code,
             'expires_at' => now()->addMinutes(Otp::EXAMINER_FALLBACK_VALID_MINUTES),
         ]);
-        $message = 'Your QuizSnap one-time login code is: ' . $code . '. Valid for ' . Otp::EXAMINER_FALLBACK_VALID_MINUTES . ' minutes. Do not share.';
-        $result = ArkeselService::sendSms($studentAccount->phone_contact, $message);
-        if (!$result['success']) {
-            return redirect()->route($this->staffRoutePrefix() . '.class-groups.students.show', [$classGroup, $student])
-                ->with('error', $result['message'] ?? 'Failed to send SMS.');
-        }
-        $examiner->increment('sms_used');
 
         return redirect()->route($this->staffRoutePrefix() . '.class-groups.students.show', [$classGroup, $student])
-            ->with('success', 'One-time login code sent. It expires in ' . Otp::EXAMINER_FALLBACK_VALID_MINUTES . ' minutes.');
+            ->with('success', 'One-time login code generated. Give it to the student. Valid for ' . Otp::EXAMINER_FALLBACK_VALID_MINUTES . ' minutes.')
+            ->with('fallback_code', $code);
     }
 
     /**
