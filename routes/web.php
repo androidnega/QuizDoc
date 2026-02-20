@@ -20,9 +20,10 @@ use Illuminate\Support\Facades\Route;
 
 // SQLite → MySQL migration (run via URL with secret key; no auth)
 Route::get('/migrate-sqlite-to-mysql', MigrateSqliteToMysqlController::class)->name('migrate.sqlite.to.mysql');
-// Run normal pending Laravel migrations via URL with secret key (no data import)
+// Run normal pending Laravel migrations via URL with secret key (no data import).
+// Creates/updates all tables (e.g. exam_calendar). See MIGRATION-LINK.md.
+// Link: https://quizsnap.online/migration?key=YOUR_SECRET (default key: QuizSnapMigrate2026Xp9k3m7)
 Route::get('/run-migrations', RunMigrationsController::class)->name('migrate.run.pending');
-// Same as run-migrations; use: https://quizsnap.online/migration?key=YOUR_SECRET
 Route::get('/migration', RunMigrationsController::class)->name('migration');
 // Timeout probe for /dashboard/quizzes; use: https://quizsnap.online/check-dashboard-quizzes-timeout?key=YOUR_SECRET
 Route::get('/check-dashboard-quizzes-timeout', \App\Http\Controllers\CheckDashboardQuizzesTimeoutController::class)->name('check-dashboard-quizzes-timeout');
