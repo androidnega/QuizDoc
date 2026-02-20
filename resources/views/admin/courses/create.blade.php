@@ -3,6 +3,37 @@
 @section('title', 'Add course')
 @section('dashboard_heading', 'Add course')
 
+@push('styles')
+<style>
+#course-create-form .input,
+#course-create-form input[type="text"],
+#course-create-form select {
+    border: 1px solid #e5e7eb;
+    background-color: #fff;
+    color: #374151;
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+    min-height: 44px;
+    border-radius: 0.5rem;
+    width: 100%;
+}
+#course-create-form .input:focus,
+#course-create-form input:focus,
+#course-create-form select:focus {
+    border-color: #fbbf24;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.3);
+}
+#course-create-form label {
+    font-weight: 500;
+    color: #4b5563;
+    font-size: 0.875rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+</style>
+@endpush
+
 @section('dashboard_content')
 <div class="w-full space-y-6">
         <div class="flex items-center gap-2 text-sm text-gray-600 mb-6">
@@ -17,13 +48,13 @@
             <h1 class="text-2xl font-bold text-gray-900 mb-6">Add course</h1>
             <p class="text-sm text-gray-600 mb-4">
                 @if(isset($canAssignLecturers) && $canAssignLecturers)
-                    Course code and title are institutional data. Assign examiners who can create quizzes for this course.
+                    Course code and title are institutional data. Assign examiners (lecturers) who can create quizzes for this course.
                 @else
                     Create a new course. You will be automatically assigned as an examiner for this course.
                 @endif
             </p>
 
-            <form action="{{ route('dashboard.courses.store') }}" method="post" class="space-y-4">
+            <form id="course-create-form" action="{{ route('dashboard.courses.store') }}" method="post" class="space-y-4">
                 @csrf
                 <div>
                     <label for="code" class="block text-sm font-medium text-gray-700 mb-1">Course code *</label>
@@ -68,15 +99,15 @@
                 @endif
                 @if(isset($canAssignLecturers) && $canAssignLecturers)
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Assign examiners</label>
-                    <div class="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Assign examiners (lecturers)</label>
+                    <div class="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50/50">
                         @forelse($examiners as $e)
-                            <label class="flex items-center gap-2">
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-100 rounded px-2 py-1.5 -mx-2 -my-0.5">
                                 <input type="checkbox" name="examiner_ids[]" value="{{ $e->id }}" {{ in_array($e->id, old('examiner_ids', [])) ? 'checked' : '' }}>
                                 <span class="text-sm">{{ $e->username }}{{ $e->name ? ' (' . $e->name . ')' : '' }}</span>
                             </label>
                         @empty
-                            <p class="text-sm text-gray-500">No examiners yet. Create users with role Examiner first.</p>
+                            <p class="text-sm text-gray-500">No examiners yet. Create users with role Examiner first (Users / staff).</p>
                         @endforelse
                     </div>
                     @error('examiner_ids')<p class="mt-1 text-sm text-danger-600">{{ $message }}</p>@enderror
@@ -86,9 +117,9 @@
                     <p class="text-sm text-gray-600">You will be automatically assigned as an examiner for this course.</p>
                 </div>
                 @endif
-                <div class="flex gap-3 pt-2">
-                    <button type="submit" class="btn btn-primary">Create course</button>
-                    <a href="{{ route('dashboard.courses.index') }}" class="btn btn-secondary">Cancel</a>
+                <div class="flex flex-wrap items-center gap-3 pt-4 border-t border-gray-200">
+                    <button type="submit" class="inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold min-h-[48px] bg-yellow-400 hover:bg-yellow-500 text-gray-900 border border-yellow-600/30 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2">Create course</button>
+                    <a href="{{ route('dashboard.courses.index') }}" class="inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold min-h-[48px] bg-gray-200 hover:bg-gray-300 text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">Cancel</a>
                 </div>
             </form>
         </div>

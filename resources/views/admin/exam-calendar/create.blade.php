@@ -52,20 +52,15 @@
                 </select>
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2">
-                <div>
-                    <label for="course_id" class="block text-sm font-medium text-gray-700 mb-1.5">Course (optional)</label>
-                    <select name="course_id" id="course_id" class="form-input">
-                        <option value="">— None / use name below —</option>
-                        @foreach($courses as $c)
-                            <option value="{{ $c->id }}" {{ old('course_id') == $c->id ? 'selected' : '' }}>{{ $c->name }} ({{ $c->code }})</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label for="course_name" class="block text-sm font-medium text-gray-700 mb-1.5">Course name (if not linked)</label>
-                    <input type="text" name="course_name" id="course_name" value="{{ old('course_name') }}" maxlength="255" placeholder="e.g. Introduction to Programming" class="form-input">
-                </div>
+            <div>
+                <label for="course_id" class="block text-sm font-medium text-gray-700 mb-1.5">Course *</label>
+                <select name="course_id" id="course_id" required class="form-input">
+                    <option value="">— Select course —</option>
+                    @foreach($courses as $c)
+                        <option value="{{ $c->id }}" data-lecturers="{{ $c->examiners->map(fn($e) => $e->name ?: $e->username)->join(', ') }}" {{ old('course_id') == $c->id ? 'selected' : '' }}>{{ $c->name }} ({{ $c->code }})</option>
+                    @endforeach
+                </select>
+                <p id="course_lecturer_display" class="mt-1.5 text-sm text-gray-600 hidden">Lecturer: <span id="course_lecturer_text"></span></p>
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
@@ -83,19 +78,13 @@
                 </div>
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2">
-                <div>
-                    <label for="lecturer" class="block text-sm font-medium text-gray-700 mb-1.5">Lecturer</label>
-                    <input type="text" name="lecturer" id="lecturer" value="{{ old('lecturer') }}" maxlength="255" placeholder="e.g. Dr. Jane Doe" class="form-input">
-                </div>
-                <div>
-                    <label for="mode" class="block text-sm font-medium text-gray-700 mb-1.5">Mode *</label>
-                    <select name="mode" id="mode" required class="form-input">
-                        @foreach($modeOptions as $value => $label)
-                            <option value="{{ $value }}" {{ old('mode', 'online') == $value ? 'selected' : '' }}>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
+            <div>
+                <label for="mode" class="block text-sm font-medium text-gray-700 mb-1.5">Mode *</label>
+                <select name="mode" id="mode" required class="form-input">
+                    @foreach($modeOptions as $value => $label)
+                        <option value="{{ $value }}" {{ old('mode', 'online') == $value ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
+                </select>
             </div>
 
             <div>
@@ -110,4 +99,26 @@
         </form>
     </div>
 </div>
+@push('scripts')
+<script>
+(function() {
+    var sel = document.getElementById('course_id');
+    var display = document.getElementById('course_lecturer_display');
+    var text = document.getElementById('course_lecturer_text');
+    if (!sel || !display || !text) return;
+    function update() {
+        var opt = sel.options[sel.selectedIndex];
+        var lecturers = opt && opt.getAttribute('data-lecturers');
+        if (lecturers) {
+            text.textContent = lecturers;
+            display.classList.remove('hidden');
+        } else {
+            display.classList.add('hidden');
+        }
+    }
+    sel.addEventListener('change', update);
+    update();
+})();
+</script>
+@endpush
 @endsection

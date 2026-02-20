@@ -53,7 +53,7 @@ class ExamCalendarController extends Controller
         $this->authorize('create', ExamCalendar::class);
         $ids = $this->classGroupIds();
         $classGroups = ClassGroup::whereIn('id', $ids)->orderBy('name')->get(['id', 'name']);
-        $courses = Course::where('is_archived', false)->orderBy('name')->get(['id', 'name', 'code']);
+        $courses = Course::where('is_archived', false)->with('examiners:id,username,name')->orderBy('name')->get(['id', 'name', 'code']);
 
         return view('admin.exam-calendar.create', [
             'classGroups' => $classGroups,
@@ -70,22 +70,26 @@ class ExamCalendarController extends Controller
 
         $request->validate([
             'class_group_id' => 'required|exists:class_groups,id|in:' . implode(',', $ids),
-            'course_id' => 'nullable|exists:courses,id',
-            'course_name' => 'nullable|string|max:255',
+            'course_id' => 'required|exists:courses,id',
             'exam_type' => 'required|in:' . implode(',', array_keys(ExamCalendar::examTypeOptions())),
             'scheduled_at' => 'required|date',
-            'lecturer' => 'nullable|string|max:255',
             'mode' => 'required|in:' . implode(',', array_keys(ExamCalendar::modeOptions())),
             'venue' => 'nullable|string|max:255',
         ]);
 
+        $courseId = (int) $request->course_id;
+        $course = Course::with('examiners:id,username,name')->find($courseId);
+        $lecturer = $course && $course->examiners->isNotEmpty()
+            ? $course->examiners->map(fn ($e) => $e->name ?: $e->username)->join(', ')
+            : null;
+
         ExamCalendar::create([
             'class_group_id' => $request->class_group_id,
-            'course_id' => $request->filled('course_id') ? (int) $request->course_id : null,
-            'course_name' => $request->filled('course_name') ? trim($request->course_name) : null,
+            'course_id' => $courseId,
+            'course_name' => null,
             'exam_type' => $request->exam_type,
             'scheduled_at' => $request->scheduled_at,
-            'lecturer' => $request->filled('lecturer') ? trim($request->lecturer) : null,
+            'lecturer' => $lecturer,
             'mode' => $request->mode,
             'venue' => $request->filled('venue') ? trim($request->venue) : null,
         ]);
@@ -101,7 +105,7 @@ class ExamCalendarController extends Controller
             abort(404);
         }
         $classGroups = ClassGroup::whereIn('id', $ids)->orderBy('name')->get(['id', 'name']);
-        $courses = Course::where('is_archived', false)->orderBy('name')->get(['id', 'name', 'code']);
+        $courses = Course::where('is_archived', false)->with('examiners:id,username,name')->orderBy('name')->get(['id', 'name', 'code']);
 
         return view('admin.exam-calendar.edit', [
             'entry' => $examCalendar,
@@ -122,22 +126,26 @@ class ExamCalendarController extends Controller
 
         $request->validate([
             'class_group_id' => 'required|exists:class_groups,id|in:' . implode(',', $ids),
-            'course_id' => 'nullable|exists:courses,id',
-            'course_name' => 'nullable|string|max:255',
+            'course_id' => 'required|exists:courses,id',
             'exam_type' => 'required|in:' . implode(',', array_keys(ExamCalendar::examTypeOptions())),
             'scheduled_at' => 'required|date',
-            'lecturer' => 'nullable|string|max:255',
             'mode' => 'required|in:' . implode(',', array_keys(ExamCalendar::modeOptions())),
             'venue' => 'nullable|string|max:255',
         ]);
 
+        $courseId = (int) $request->course_id;
+        $course = Course::with('examiners:id,username,name')->find($courseId);
+        $lecturer = $course && $course->examiners->isNotEmpty()
+            ? $course->examiners->map(fn ($e) => $e->name ?: $e->username)->join(', ')
+            : null;
+
         $examCalendar->update([
             'class_group_id' => $request->class_group_id,
-            'course_id' => $request->filled('course_id') ? (int) $request->course_id : null,
-            'course_name' => $request->filled('course_name') ? trim($request->course_name) : null,
+            'course_id' => $courseId,
+            'course_name' => null,
             'exam_type' => $request->exam_type,
             'scheduled_at' => $request->scheduled_at,
-            'lecturer' => $request->filled('lecturer') ? trim($request->lecturer) : null,
+            'lecturer' => $lecturer,
             'mode' => $request->mode,
             'venue' => $request->filled('venue') ? trim($request->venue) : null,
         ]);

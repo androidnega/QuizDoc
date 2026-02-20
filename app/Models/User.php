@@ -237,12 +237,15 @@ class User extends Authenticatable
         return $q;
     }
 
-    /** Examiners visible to this coordinator (same department). Coordinator without department sees none. */
+    /** Examiners visible to this coordinator (same department). Super Admin or coordinator without department sees all examiners. */
     public function examinersInScope(): \Illuminate\Database\Eloquent\Builder
     {
         $q = User::where('role', self::ROLE_EXAMINER)->orderBy('name');
+        if ($this->isSuperAdmin()) {
+            return $q;
+        }
         if (!$this->department_id) {
-            return $q->whereRaw('1 = 0');
+            return $q;
         }
         return $q->where('department_id', $this->department_id);
     }
