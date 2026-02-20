@@ -8,6 +8,7 @@ use App\Models\QuestionPool;
 use App\Models\Quiz;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class AiQuestionService
@@ -41,6 +42,17 @@ class AiQuestionService
         return ($key !== null && $key !== '') ? $key : null;
     }
 
+    /** OpenAI API key (fallback): Dashboard → Settings → AI first, then .env OPENAI_API_KEY. */
+    private function getOpenAiKey(): ?string
+    {
+        $key = Setting::getValue(Setting::KEY_OPENAI_API);
+        if ($key !== null && $key !== '') {
+            return $key;
+        }
+        $key = config('services.openai.key');
+        return ($key !== null && $key !== '') ? $key : null;
+    }
+
     /**
      * Call Gemini API (Google AI). Tries primary model, then fallback on 404.
      * Sets $this->lastApiError on every failure path so callers can surface the real reason.
@@ -51,10 +63,11 @@ class AiQuestionService
         $emptyUsage = ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0];
         $triedModels = [];
         $lastError = null;
+        $timeout = config('services.gemini.timeout', 120);
         foreach ([self::GEMINI_MODEL_PRIMARY, self::GEMINI_MODEL_FALLBACK, self::GEMINI_MODEL_LAST_RESORT] as $model) {
             $triedModels[] = $model;
             $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . urlencode($apiKey);
-            $response = Http::timeout(90)
+            $response = Http::timeout($timeout)
                 ->post($url, [
                     'contents' => [
                         ['parts' => [['text' => $prompt]]],
@@ -89,6 +102,7 @@ class AiQuestionService
                 $parsed = $response->json() ?? [];
                 $apiMsg = $parsed['error']['message'] ?? $parsed['error']['status'] ?? null;
                 $lastError = $this->lastApiError = '[' . $model . ' HTTP ' . $status . ']' . ($apiMsg ? ' ' . $apiMsg : '');
+                Log::warning('Gemini API request failed', ['model' => $model, 'status' => $status, 'message' => $apiMsg]);
                 return ['text' => null, 'usage' => $emptyUsage];
             }
 
@@ -129,6 +143,7 @@ class AiQuestionService
         $this->lastApiError = 'All Gemini models failed (' . implode(', ', $triedModels) . '). '
             . ($lastError ? 'Last error: ' . $lastError . '. ' : '')
             . $hint;
+        Log::warning('Gemini API: all models failed', ['last_error' => $lastError, 'tried_models' => $triedModels]);
         return ['text' => null, 'usage' => $emptyUsage];
     }
 
@@ -163,6 +178,48 @@ class AiQuestionService
             }
         }
         return 'Empty or blocked response from Gemini. Check API key and quota, or try again.';
+    }
+
+    /**
+     * Call OpenAI API (chat completions). Sets $this->lastApiError on failure.
+     * Returns ['text' => string|null, 'usage' => [...]].
+     */
+    private function callOpenAi(string $apiKey, string $prompt): array
+    {
+        $emptyUsage = ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0];
+        $model = config('services.openai.model', 'gpt-4o-mini');
+        $response = Http::withToken($apiKey)
+            ->timeout(90)
+            ->post('https://api.openai.com/v1/chat/completions', [
+                'model' => $model,
+                'messages' => [['role' => 'user', 'content' => $prompt]],
+                'temperature' => 0.7,
+                'max_tokens' => 8192,
+            ]);
+        if (! $response->successful()) {
+            $status = $response->status();
+            $parsed = $response->json() ?? [];
+            $apiMsg = $parsed['error']['message'] ?? $parsed['message'] ?? null;
+            $this->lastApiError = '[OpenAI HTTP ' . $status . ']' . ($apiMsg ? ' ' . $apiMsg : '');
+            return ['text' => null, 'usage' => $emptyUsage];
+        }
+        $body = $response->json();
+        if (! is_array($body) || empty($body['choices'][0]['message']['content'])) {
+            $this->lastApiError = '[OpenAI] Empty or unexpected response structure.';
+            return ['text' => null, 'usage' => $emptyUsage];
+        }
+        $usage = $emptyUsage;
+        if (isset($body['usage']) && is_array($body['usage'])) {
+            $u = $body['usage'];
+            $usage = [
+                'prompt_tokens' => (int) ($u['prompt_tokens'] ?? 0),
+                'completion_tokens' => (int) ($u['completion_tokens'] ?? 0),
+                'total_tokens' => (int) ($u['total_tokens'] ?? 0),
+            ];
+        }
+        $text = $body['choices'][0]['message']['content'];
+        $this->lastApiError = null;
+        return ['text' => $text, 'usage' => $usage];
     }
 
     /**
@@ -209,15 +266,18 @@ class AiQuestionService
     }
 
     /**
-     * Test AI connection: try Gemini first, then always fall through to DeepSeek as fallback.
-     * Returns result for API/UI.
+     * Test AI connection: try Gemini first (primary), then OpenAI, then DeepSeek.
+     * Returns result for API/UI. On failure, detail includes each provider's reason.
      */
     public function testConnection(): array
     {
         $prompt = 'Reply with exactly: OK';
-        $geminiKey = $this->getGeminiKey();
-        $geminiFailDetail = null;
 
+        $geminiFailDetail = null;
+        $openaiFailDetail = null;
+
+        // Primary provider: Gemini
+        $geminiKey = $this->getGeminiKey();
         if ($geminiKey !== null) {
             foreach ([self::GEMINI_MODEL_PRIMARY, self::GEMINI_MODEL_FALLBACK] as $model) {
                 $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . urlencode($geminiKey);
@@ -229,10 +289,9 @@ class AiQuestionService
                     continue;
                 }
                 if ($response->status() === 429) {
-                    // Rate-limited — fall through to DeepSeek fallback
                     $parsed = $response->json() ?? [];
                     $geminiFailDetail = 'Gemini quota exceeded (HTTP 429).'
-                        . ($parsed['error']['message'] ? ' ' . mb_substr((string)$parsed['error']['message'], 0, 200) : '');
+                        . ($parsed['error']['message'] ? ' ' . mb_substr((string) $parsed['error']['message'], 0, 200) : '');
                     break;
                 }
                 if ($response->successful()) {
@@ -248,15 +307,31 @@ class AiQuestionService
                     $geminiFailDetail = 'Gemini HTTP ' . $response->status() . ': '
                         . (strlen($response->body()) > 300 ? substr($response->body(), 0, 300) . '…' : $response->body());
                 }
-                break; // non-404, non-429 error — stop trying Gemini models
+                break;
             }
             if ($geminiFailDetail === null) {
-                // All models returned 404
                 $geminiFailDetail = 'Gemini: all models returned 404. Check model availability.';
             }
+        } else {
+            $geminiFailDetail = 'No Gemini key set. Add a Gemini key in Settings → AI (primary provider).';
         }
 
-        // Always try DeepSeek as fallback when Gemini fails or has no key.
+        // Fallback 1: OpenAI
+        $openaiKey = $this->getOpenAiKey();
+        if ($openaiKey !== null) {
+            $result = $this->callOpenAi($openaiKey, $prompt);
+            if (isset($result['text']) && $result['text'] !== null && trim($result['text']) !== '') {
+                $msg = $geminiFailDetail
+                    ? 'OpenAI OK (Gemini unavailable — ' . $geminiFailDetail . ').'
+                    : 'AI connection OK (OpenAI).';
+                return ['success' => true, 'provider' => 'openai', 'message' => $msg, 'reply' => trim($result['text'])];
+            }
+            $openaiFailDetail = $this->getLastApiError() ?: 'OpenAI returned an empty or invalid response.';
+        } else {
+            $openaiFailDetail = 'No OpenAI key set (optional fallback).';
+        }
+
+        // Fallback 2: DeepSeek
         $deepseekKey = $this->getDeepSeekKey();
         if ($deepseekKey !== null) {
             $response = Http::withToken($deepseekKey)
@@ -271,29 +346,39 @@ class AiQuestionService
                 $body = $response->json();
                 $text = $body['choices'][0]['message']['content'] ?? null;
                 if (is_string($text) && trim($text) !== '') {
-                    $msg = $geminiFailDetail
-                        ? 'DeepSeek OK (Gemini fallback active — ' . $geminiFailDetail . ').'
-                        : 'AI connection OK (DeepSeek).';
-                    return ['success' => true, 'provider' => 'deepseek', 'message' => $msg, 'reply' => trim($text)];
+                    return ['success' => true, 'provider' => 'deepseek', 'message' => 'DeepSeek OK (Gemini and OpenAI fallback path).', 'reply' => trim($text)];
                 }
             }
             $dsDetail = 'HTTP ' . $response->status() . ': ' . (strlen($response->body()) > 200 ? substr($response->body(), 0, 200) . '…' : $response->body());
-            $combined = trim(($geminiFailDetail ? $geminiFailDetail . ' ' : '') . 'DeepSeek: ' . $dsDetail);
-            return ['success' => false, 'provider' => 'deepseek', 'message' => 'Both Gemini and DeepSeek failed.', 'detail' => $combined];
+            $parts = [];
+            if ($geminiFailDetail) {
+                $parts[] = 'Gemini: ' . $geminiFailDetail;
+            }
+            if ($openaiFailDetail) {
+                $parts[] = 'OpenAI: ' . $openaiFailDetail;
+            }
+            $parts[] = 'DeepSeek: ' . $dsDetail;
+            return ['success' => false, 'provider' => 'deepseek', 'message' => 'No working AI connection.', 'detail' => implode(' ', $parts)];
         }
 
-        if ($geminiFailDetail !== null) {
-            return ['success' => false, 'provider' => 'gemini', 'message' => 'Gemini failed and no DeepSeek key is configured.', 'detail' => $geminiFailDetail];
+        $parts = [];
+        if ($geminiFailDetail) {
+            $parts[] = 'Gemini: ' . $geminiFailDetail;
         }
-        return ['success' => false, 'provider' => null, 'message' => 'No API key set. Add a Gemini or DeepSeek key in Settings.', 'detail' => null];
+        if ($openaiFailDetail) {
+            $parts[] = 'OpenAI: ' . $openaiFailDetail;
+        }
+        $parts[] = 'DeepSeek: No DeepSeek key set (optional fallback).';
+
+        return ['success' => false, 'provider' => null, 'message' => 'No working AI connection.', 'detail' => implode(' ', $parts)];
     }
 
     /**
-     * Whether any AI API key (Gemini or DeepSeek) is configured. When false, AI generation is blocked.
+     * Whether any AI API key (OpenAI, Gemini or DeepSeek) is configured. When false, AI generation is blocked.
      */
     public function hasApiKey(): bool
     {
-        return $this->getGeminiKey() !== null || $this->getDeepSeekKey() !== null;
+        return $this->getOpenAiKey() !== null || $this->getGeminiKey() !== null || $this->getDeepSeekKey() !== null;
     }
 
     /**
@@ -316,13 +401,101 @@ class AiQuestionService
     }
 
     /**
-     * Call AI: try Gemini first when both keys exist, then DeepSeek as fallback.
-     * When $geminiOnly is true, only Gemini is used (no DeepSeek) — use for a clear Gemini-only flow.
+     * Validate pasted AI JSON for the ChatGPT/manual flow.
+     * Accepts both key conventions: "text"/"question" and "correct"/"correctAnswer".
+     * Returns ['valid' => bool, 'errors' => string[], 'parsed' => array|null]. When valid, 'parsed' is the decoded array.
+     */
+    public function validateAiJson(string $json, int $expectedCount): array
+    {
+        $errors = [];
+        $json = trim($json);
+        if ($json === '') {
+            return ['valid' => false, 'errors' => ['JSON is empty.'], 'parsed' => null];
+        }
+        $decoded = $this->parseJsonArray($json);
+        if (! is_array($decoded)) {
+            $err = json_last_error_msg();
+            return ['valid' => false, 'errors' => ['Invalid JSON: ' . ($err ?: 'could not parse array.')], 'parsed' => null];
+        }
+        $count = count($decoded);
+        if ($count !== $expectedCount) {
+            $errors[] = 'Number of questions is ' . $count . '; expected ' . $expectedCount . '.';
+        }
+        foreach ($decoded as $index => $item) {
+            if (! is_array($item)) {
+                $errors[] = 'Question ' . ($index + 1) . ': must be an object.';
+                continue;
+            }
+            $hasText = isset($item['text']) || isset($item['question']);
+            if (! $hasText) {
+                $errors[] = 'Question ' . ($index + 1) . ': missing required key "text" or "question".';
+            }
+            if (! isset($item['options']) || ! is_array($item['options'])) {
+                $errors[] = 'Question ' . ($index + 1) . ': missing or invalid "options" (must be an object).';
+            } else {
+                $opts = $item['options'];
+                $keys = array_keys($opts);
+                sort($keys);
+                if ($keys !== ['A', 'B', 'C', 'D']) {
+                    $errors[] = 'Question ' . ($index + 1) . ': options must have exactly 4 keys: A, B, C, D.';
+                }
+            }
+            $hasCorrect = isset($item['correct']) || isset($item['correctAnswer']);
+            if (! $hasCorrect) {
+                $errors[] = 'Question ' . ($index + 1) . ': missing required key "correct" or "correctAnswer".';
+            } else {
+                $correct = $item['correct'] ?? $item['correctAnswer'];
+                if (! in_array((string) $correct, ['A', 'B', 'C', 'D'], true)) {
+                    $errors[] = 'Question ' . ($index + 1) . ': correct answer must be one of A, B, C, D.';
+                }
+            }
+        }
+        $valid = empty($errors);
+        return ['valid' => $valid, 'errors' => $errors, 'parsed' => $valid ? $decoded : null];
+    }
+
+    /**
+     * Create question pools from validated AI JSON (ChatGPT/manual flow).
+     * Each item may use "text"/"question" and "correct"/"correctAnswer".
+     * Returns array of question_pool IDs.
+     */
+    public function createPoolsFromValidatedJson(Quiz $quiz, array $items): array
+    {
+        $ids = [];
+        $topicFallback = 'General knowledge';
+        foreach ($items as $item) {
+            $text = (string) ($item['text'] ?? $item['question'] ?? 'AI Question');
+            $opts = $item['options'] ?? [];
+            $correct = (string) ($item['correct'] ?? $item['correctAnswer'] ?? 'A');
+            if (! in_array($correct, ['A', 'B', 'C', 'D'], true)) {
+                $correct = 'A';
+            }
+            $topic = isset($item['topic']) && is_string($item['topic']) ? $item['topic'] : $topicFallback;
+            $options = $this->normalizeOptions($opts, $topic);
+            $pool = QuestionPool::create([
+                'quiz_id' => $quiz->id,
+                'question_text' => $text,
+                'options' => $options,
+                'correct_answer' => $correct,
+                'topic' => $topic,
+                'is_approved' => false,
+                'explanation_wrong' => null,
+                'explanation_correct' => null,
+            ]);
+            $ids[] = $pool->id;
+        }
+        return $ids;
+    }
+
+    /**
+     * Call AI: Gemini first (primary), then OpenAI, then DeepSeek.
+     * When $geminiOnly is true, only Gemini is used — use for Gemini-only flow.
      * Returns ['text' => ..., 'provider' => ..., 'usage' => ...].
      */
     private function callAiWithUsage(string $prompt, bool $geminiOnly = false): array
     {
         $empty = ['text' => null, 'provider' => null, 'usage' => ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0]];
+        $openaiKey = $this->getOpenAiKey();
         $geminiKey = $this->getGeminiKey();
         $deepseekKey = $this->getDeepSeekKey();
         $firstError = null;
@@ -331,16 +504,23 @@ class AiQuestionService
         if ($geminiOnly) {
             $order = $geminiKey !== null ? [['provider' => 'gemini', 'key' => $geminiKey]] : [];
         } else {
-            // Gemini first, then DeepSeek (e.g. when Gemini has quota and DeepSeek balance is low).
-            $order = $geminiKey !== null && $deepseekKey !== null
-                ? [['provider' => 'gemini', 'key' => $geminiKey], ['provider' => 'deepseek', 'key' => $deepseekKey]]
-                : ($geminiKey !== null
-                    ? [['provider' => 'gemini', 'key' => $geminiKey]]
-                    : ($deepseekKey !== null ? [['provider' => 'deepseek', 'key' => $deepseekKey]] : []));
+            // Primary: Gemini, then OpenAI, then DeepSeek.
+            $order = [];
+            if ($geminiKey !== null) {
+                $order[] = ['provider' => 'gemini', 'key' => $geminiKey];
+            }
+            if ($openaiKey !== null) {
+                $order[] = ['provider' => 'openai', 'key' => $openaiKey];
+            }
+            if ($deepseekKey !== null) {
+                $order[] = ['provider' => 'deepseek', 'key' => $deepseekKey];
+            }
         }
 
         foreach ($order as $item) {
-            if ($item['provider'] === 'deepseek') {
+            if ($item['provider'] === 'openai') {
+                $result = $this->callOpenAi($item['key'], $prompt);
+            } elseif ($item['provider'] === 'deepseek') {
                 $result = $this->callDeepSeek($item['key'], $prompt);
             } else {
                 $result = $this->callGemini($item['key'], $prompt);
@@ -364,7 +544,11 @@ class AiQuestionService
             ($firstError ? $firstError . '.' : '') . ($secondError ? ' ' . $secondError : '')
         ) ?: ($geminiOnly
             ? 'Gemini API key not set or invalid. Set GEMINI_API_KEY in .env or add a key in Dashboard → Settings → AI.'
-            : 'No API key set. Add a Gemini or DeepSeek key in Dashboard → Settings → AI.');
+            : 'No API key set. Add Gemini (primary), OpenAI or DeepSeek key in Dashboard → Settings → AI.');
+        Log::warning('AI question generation: no provider returned text', [
+            'gemini_only' => $geminiOnly,
+            'last_api_error' => $this->lastApiError,
+        ]);
         return $empty;
     }
 
@@ -445,12 +629,24 @@ class AiQuestionService
     }
 
     /**
+     * Backup: current Gemini-based question generation (no DeepSeek).
+     * Used by generatePoolAndStoreGeminiOnly and for possible revert of the AI flow.
+     * Keep this method intact when adding the ChatGPT JSON flow in Phase 2.
+     * Returns array of question_pool IDs. Requires GEMINI_API_KEY or Settings → AI Gemini key.
+     */
+    public function generatePoolAndStoreGeminiOnlyBackup(Quiz $quiz, array $topics, int $count, ?string $sourceText = null): array
+    {
+        return $this->generatePoolAndStore($quiz, $topics, $count, $sourceText, true);
+    }
+
+    /**
      * Generate questions via Gemini only (no DeepSeek). Use for a clear Gemini-only flow and clearer errors.
+     * Delegates to generatePoolAndStoreGeminiOnlyBackup so the original Gemini flow can be reverted if needed.
      * Returns array of question_pool IDs. Requires GEMINI_API_KEY or Settings → AI Gemini key.
      */
     public function generatePoolAndStoreGeminiOnly(Quiz $quiz, array $topics, int $count, ?string $sourceText = null): array
     {
-        return $this->generatePoolAndStore($quiz, $topics, $count, $sourceText, true);
+        return $this->generatePoolAndStoreGeminiOnlyBackup($quiz, $topics, $count, $sourceText);
     }
 
     /**

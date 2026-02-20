@@ -18,15 +18,21 @@ class Setting extends Model
     protected $fillable = ['key', 'value'];
 
     /**
-     * Get a setting value by key. Cached for the request. Decrypts if key is sensitive.
+     * Get a setting value by key.
+     * AI keys bypass cache so changes apply immediately after save.
+     * Decrypts if key is sensitive.
      */
     public static function getValue(string $key, ?string $default = null): ?string
     {
-        $cacheKey = 'setting:' . $key;
-        $value = Cache::remember($cacheKey, 3600, function () use ($key) {
-            $row = static::where('key', $key)->first();
-            return $row?->value;
-        });
+        if (in_array($key, [self::KEY_OPENAI_API, self::KEY_GEMINI_API, self::KEY_DEEPSEEK_API], true)) {
+            $value = static::where('key', $key)->value('value');
+        } else {
+            $cacheKey = 'setting:' . $key;
+            $value = Cache::remember($cacheKey, 3600, function () use ($key) {
+                $row = static::where('key', $key)->first();
+                return $row?->value;
+            });
+        }
         if ($value === null) {
             return $default;
         }
@@ -34,7 +40,7 @@ class Setting extends Model
             try {
                 return Crypt::decryptString($value);
             } catch (DecryptException $e) {
-                \Illuminate\Support\Facades\Log::warning('Setting decryption failed (wrong APP_KEY?). Key: ' . $key);
+                \Illuminate\Support\Facades\Log::warning('Setting decryption failed (wrong APP_KEY?). Re-save this key in Settings.', ['key' => $key]);
                 return $default;
             }
         }

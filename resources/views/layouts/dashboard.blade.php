@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', $dashboardTitle ?? 'Dashboard')
-@section('body_class', 'bg-slate-200')
+@section('body_class', 'bg-slate-200 h-screen overflow-hidden')
 
 @php
     $layoutAdminUser = auth()->user();
@@ -14,7 +14,6 @@
     $isStudentDashboardView = $isDocuMentorStudent || session()->has('student_id') || $isStudentProjectRoute;
     $isQuizSnapStaff = $isSuperAdmin || $isExaminer;
 @endphp
-
 @section('content')
 <div class="examiner-wrap flex h-screen bg-offwhite overflow-hidden">
     <div id="examiner-overlay" class="examiner-overlay fixed inset-0 z-30 bg-black/40 md:hidden hidden" aria-hidden="true"></div>
@@ -158,7 +157,7 @@
         </div>
     </aside>
 
-    <div class="examiner-main flex flex-col flex-1 min-w-0">
+    <div class="examiner-main flex flex-col flex-1 min-w-0 min-h-0">
         <header class="flex min-h-14 flex-shrink-0 items-stretch border-b border-gray-200 bg-white z-10 min-w-0 safe-area-header">
             <div class="examiner-page flex flex-1 flex-wrap items-center gap-2 sm:gap-3 w-full min-w-0 px-3 py-2 sm:px-4 md:px-6">
                 <button type="button" id="examiner-sidebar-menu-btn" class="flex h-11 w-11 min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-300 touch-manipulation" aria-label="Open menu" title="Open menu" style="display: none;">
@@ -212,10 +211,10 @@
         <main class="examiner-main-content flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-offwhite">
             @php
                 $fullBleedPage = request()->routeIs('dashboard.profile.*') || request()->routeIs('dashboard.system.reset.*') || request()->routeIs('system.reset.*') || request()->is('dashboard/system/reset*');
-                $fullWidthFormPage = request()->routeIs('dashboard.quizzes.create');
+                $fullWidthFormPage = request()->routeIs('dashboard.quizzes.create') || request()->routeIs('dashboard.quizzes.edit');
             @endphp
-            <div class="examiner-page w-full min-h-full {{ $fullBleedPage ? 'p-0' : ($fullWidthFormPage ? 'px-0 py-4 sm:py-6 md:py-8 safe-area-main' : 'px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 safe-area-main') }}">
-                <div class="examiner-dashboard-content w-full max-w-none {{ $fullBleedPage ? 'px-0' : ($fullWidthFormPage ? 'px-0' : 'px-0 md:px-2') }}">
+            <div class="examiner-page w-full min-h-full {{ $fullBleedPage ? 'p-0' : 'px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 safe-area-main' }}">
+                <div class="examiner-dashboard-content w-full max-w-none {{ $fullBleedPage ? 'px-0' : 'px-0 md:px-2' }}">
                     @if($isCoordinatorOnly && (request()->routeIs('dashboard') || request()->routeIs('dashboard.coordinators.*') || request()->routeIs('dashboard.class-groups.*') || request()->routeIs('dashboard.courses.*') || request()->routeIs('dashboard.profile.*')))
                     <nav class="coordinator-breadcrumb flex items-center gap-2 text-sm text-gray-600 mb-4" aria-label="Breadcrumb">
                         <a href="{{ route('dashboard') }}" class="hover:text-primary-600">Dashboard</a>

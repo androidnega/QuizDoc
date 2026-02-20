@@ -16,7 +16,6 @@ use App\Models\Quiz;
 use App\Models\QuizSession;
 use App\Models\Question;
 use App\Models\Result;
-use App\Jobs\GenerateAiQuestionsJob;
 use App\Jobs\SendQuizResultReadyNotification;
 use App\Models\QuestionPool;
 use App\Models\Setting;
@@ -96,6 +95,133 @@ class QuizManagementController extends Controller
         return view('admin.quizzes.index', compact('quizzes', 'tab'));
     }
 
+    /**
+     * Test quiz page: create a minimal quiz and open it to test "Generate questions with Gemini" flow.
+     */
+    public function testQuizPage(): View|RedirectResponse
+    {
+        $this->authorize('create', Quiz::class);
+        $user = $this->adminUser();
+        if (! $user) {
+            return redirect()->route('login')->with('error', 'Unauthorized.');
+        }
+        $classGroupIds = $this->classGroupIds();
+        $classGroups = ClassGroup::with(['courses' => fn ($q) => $q->withPivot('examiner_id')])
+            ->whereIn('id', $classGroupIds)
+            ->withCount('students')
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (ClassGroup $g) => $g->students_count > 0);
+        if ($user?->isExaminer()) {
+            $classGroups = $classGroups->map(function (ClassGroup $g) use ($user) {
+                $g->setRelation('courses', $g->courses->filter(fn ($c) => (int) ($c->pivot->examiner_id ?? 0) === (int) $user->id)->values());
+                return $g;
+            })->filter(fn (ClassGroup $g) => $g->courses->isNotEmpty());
+        }
+        $hasAiKey = app(AiQuestionService::class)->hasApiKey();
+        return view('admin.quizzes.test-quiz', compact('classGroups', 'hasAiKey'));
+    }
+
+    /**
+     * Create a minimal test quiz and redirect to its show page (to test Gemini generation).
+     */
+    public function createTestQuiz(Request $request): RedirectResponse
+    {
+        $this->authorize('create', Quiz::class);
+        $user = $this->adminUser();
+        if (! $user) {
+            return redirect()->route('login')->with('error', 'Unauthorized.');
+        }
+        $classGroupIds = $this->classGroupIds();
+        $classGroups = ClassGroup::with(['courses' => fn ($q) => $q->withPivot('examiner_id')])
+            ->whereIn('id', $classGroupIds)
+            ->withCount('students')
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (ClassGroup $g) => $g->students_count > 0);
+        if ($user?->isExaminer()) {
+            $classGroups = $classGroups->map(function (ClassGroup $g) use ($user) {
+                $g->setRelation('courses', $g->courses->filter(fn ($c) => (int) ($c->pivot->examiner_id ?? 0) === (int) $user->id)->values());
+                return $g;
+            })->filter(fn (ClassGroup $g) => $g->courses->isNotEmpty());
+        }
+        $firstGroup = $classGroups->first();
+        $firstCourse = $firstGroup?->courses->first();
+        if (! $firstGroup || ! $firstCourse) {
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.test-quiz')
+                ->with('error', 'No class group with courses and students found. Create a class group, attach a course, and add students first.');
+        }
+        $createData = [
+            'title' => 'Test Quiz (Gemini)',
+            'class_group_id' => $firstGroup->id,
+            'course_id' => $firstCourse->id,
+            'examiner_id' => $user->id,
+            'status' => Quiz::STATUS_DRAFT,
+            'number_of_questions' => 10,
+            'duration_minutes' => 30,
+            'topics' => json_encode([['name' => 'General knowledge']]),
+            'is_active' => true,
+            'is_published' => false,
+            'result_visibility' => Quiz::RESULT_VISIBILITY_FULL_REVIEW_AFTER_END,
+        ];
+        if (Schema::hasColumn('quizzes', 'questions_per_student')) {
+            $createData['questions_per_student'] = 10;
+        }
+        $aiService = app(AiQuestionService::class);
+        Cache::forget('setting:' . \App\Models\Setting::KEY_OPENAI_API);
+        Cache::forget('setting:' . \App\Models\Setting::KEY_GEMINI_API);
+        Cache::forget('setting:' . \App\Models\Setting::KEY_DEEPSEEK_API);
+        if (! $aiService->hasApiKey()) {
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.test-quiz')
+                ->with('error', 'Add an AI key in Dashboard → Settings → AI (OpenAI, Gemini or DeepSeek). Test quiz is not created without a key.');
+        }
+        $tokenService = app(AiQuizTokenService::class);
+        if (! $tokenService->canUse($user)) {
+            $status = $tokenService->getStatus($user);
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.test-quiz')
+                ->with('error', $status['message'] ?? 'No AI quiz tokens left.');
+        }
+
+        $quiz = Quiz::create($createData);
+        if (! $quiz || ! $quiz->id) {
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.test-quiz')->with('error', 'Failed to create quiz.');
+        }
+
+        $tokenService->consume($user);
+        $topicList = [['name' => 'General knowledge']];
+        $target = 10;
+        @set_time_limit(300);
+        $maxAttempts = 3;
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            for ($i = 0; $i < 3; $i++) {
+                $poolCount = $quiz->questionPools()->count();
+                $remaining = max(0, $target - $poolCount);
+                if ($remaining <= 0) {
+                    break 2;
+                }
+                $toGenerate = min(5, $remaining);
+                $ids = $aiService->generatePoolAndStoreGeminiOnly($quiz, $topicList, $toGenerate, null);
+                if (empty($ids) && $quiz->questionPools()->count() === 0) {
+                    break;
+                }
+            }
+            if ($quiz->questionPools()->count() >= 1) {
+                break;
+            }
+        }
+
+        $generatedCount = $quiz->questionPools()->count();
+        if ($generatedCount < 1) {
+            $quiz->questionPools()->delete();
+            $quiz->delete();
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.test-quiz')
+                ->with('error', 'Question generation failed after several attempts. Check Gemini API key and billing, then try again.');
+        }
+
+        return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', ['quiz' => $quiz->id])
+            ->with('success', 'Test quiz created. ' . $generatedCount . ' question(s) generated. Approve them below.');
+    }
+
     public function create(): View
     {
         $this->authorize('create', Quiz::class);
@@ -128,6 +254,26 @@ class QuizManagementController extends Controller
         return view('admin.quizzes.create', compact('classGroups', 'aiApiAvailable', 'aiTokenStatus', 'quizCategories', 'levels', 'semesters', 'academicYears'));
     }
 
+    /**
+     * Validate pasted AI JSON (Phase 3 – ChatGPT/manual flow). Returns JSON with valid and errors.
+     */
+    public function validateAiJson(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'ai_json' => 'required|string|max:50000',
+            'number_of_questions' => 'required|integer|min:1|max:250',
+        ]);
+        $aiService = app(AiQuestionService::class);
+        $result = $aiService->validateAiJson(
+            $request->input('ai_json'),
+            (int) $request->number_of_questions
+        );
+        return response()->json([
+            'valid' => $result['valid'],
+            'errors' => $result['errors'],
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         try {
@@ -151,6 +297,7 @@ class QuizManagementController extends Controller
                 'questions_per_student' => 'required|integer|min:1|max:250',
                 'duration_minutes' => 'required|integer|min:1|max:300',
                 'topics' => 'nullable|string|max:1000',
+                'ai_json' => 'nullable|string|max:50000',
                 'is_active' => 'boolean',
                 'starts_at' => 'nullable|date',
                 'ends_at' => 'nullable|date|after_or_equal:starts_at',
@@ -236,24 +383,112 @@ class QuizManagementController extends Controller
             if (Schema::hasColumn('quizzes', 'questions_per_student')) {
                 $createData['questions_per_student'] = (int) $request->questions_per_student;
             }
-            $quiz = Quiz::create($createData);
 
-            if (!$quiz || !$quiz->id) {
+            $aiService = app(AiQuestionService::class);
+
+            // JSON flow (Phase 3): pasted AI JSON – validate and create pools from it; no API key or token required.
+            if ($request->filled('ai_json')) {
+                $expectedCount = (int) $request->number_of_questions;
+                $result = $aiService->validateAiJson($request->input('ai_json'), $expectedCount);
+                if (! $result['valid']) {
+                    return redirect()->route($this->staffRoutePrefix() . '.quizzes.create')
+                        ->withInput()
+                        ->withErrors(['ai_json' => $result['errors']]);
+                }
+                $quiz = Quiz::create($createData);
+                if (! $quiz || ! $quiz->id) {
+                    return redirect()->route($this->staffRoutePrefix() . '.quizzes.create')
+                        ->withInput()
+                        ->with('error', 'Failed to create quiz.');
+                }
+                $aiService->createPoolsFromValidatedJson($quiz, $result['parsed']);
+                $generatedCount = $quiz->questionPools()->count();
+                $message = 'Quiz created. ' . $generatedCount . ' question(s) from pasted JSON. Approve them below to publish.';
+                try {
+                    broadcast(new DataUpdated('quizzes'))->toOthers();
+                } catch (\Exception $e) {
+                    // Ignore broadcast errors
+                }
+                try {
+                    QuizBackupService::sendIfConfigured($quiz);
+                } catch (\Throwable $e) {
+                    // Do not fail the request if backup send fails
+                }
+                return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', ['quiz' => $quiz->id])->with('success', $message);
+            }
+
+            // Legacy: require at least one AI key and generate via Gemini (backup flow).
+            Cache::forget('setting:' . \App\Models\Setting::KEY_OPENAI_API);
+            Cache::forget('setting:' . \App\Models\Setting::KEY_GEMINI_API);
+            Cache::forget('setting:' . \App\Models\Setting::KEY_DEEPSEEK_API);
+            if (! $aiService->hasApiKey()) {
                 return redirect()->route($this->staffRoutePrefix() . '.quizzes.create')
                     ->withInput()
-                    ->with('error', 'Failed');
+                    ->with('error', 'Add an AI key in Dashboard → Settings → AI (Gemini primary, or OpenAI/DeepSeek). Or paste AI-generated JSON above and validate to create the quiz.');
             }
 
-            // Do not run background job here — on shared hosting it often never runs.
-            // User should open the quiz and click "Generate questions with Gemini" (batch flow, no queue needed).
-            $aiService = app(AiQuestionService::class);
-            if ($aiService->hasGeminiKey()) {
-                $message = 'Quiz created. Open the quiz below and click "Generate questions with Gemini" to add questions (no cron or queue needed).';
-                $flashKey = 'success';
-            } else {
-                $message = 'Quiz created. Set GEMINI_API_KEY in .env or add a key in Dashboard → Settings → AI, then open this quiz and click "Generate questions with Gemini".';
-                $flashKey = 'warning';
+            $tokenService = app(AiQuizTokenService::class);
+            if (! $tokenService->canUse($user)) {
+                $status = $tokenService->getStatus($user);
+                return redirect()->route($this->staffRoutePrefix() . '.quizzes.create')
+                    ->withInput()
+                    ->with('error', $status['message'] ?? 'No AI quiz tokens left. Try again later.');
             }
+
+            $quiz = Quiz::create($createData);
+
+            if (! $quiz || ! $quiz->id) {
+                return redirect()->route($this->staffRoutePrefix() . '.quizzes.create')
+                    ->withInput()
+                    ->with('error', 'Failed to create quiz.');
+            }
+
+            // Generate questions immediately; retry until we get at least 1 (do not exit with 0 questions).
+            $tokenService->consume($user);
+            $target = $quiz->getQuestionsPerStudent();
+            $topicList = !empty($topics) ? $topics : [['name' => 'General knowledge']];
+            $sourceText = (string) ($quiz->script_text ?? '');
+            if (mb_strlen($sourceText) > 50000) {
+                $sourceText = mb_substr($sourceText, 0, 50000) . "\n[... truncated ...]";
+            }
+            @set_time_limit(300);
+            $batchSize = 5;
+            $maxBatches = (int) ceil($target / $batchSize) + 2;
+            $maxAttempts = 3; // retry whole generation up to 3 times if we get 0
+            $generatedCount = 0;
+
+            for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+                for ($i = 0; $i < $maxBatches; $i++) {
+                    $poolCount = $quiz->questionPools()->count();
+                    $remaining = max(0, $target - $poolCount);
+                    if ($remaining <= 0) {
+                        break 2;
+                    }
+                    $toGenerate = min($batchSize, $remaining);
+                    $ids = $aiService->generatePoolAndStoreGeminiOnly($quiz, $topicList, $toGenerate, $sourceText ?: null);
+                    if (! empty($ids)) {
+                        $generatedCount += count($ids);
+                    } elseif ($quiz->questionPools()->count() === 0) {
+                        break; // this attempt got nothing; try next attempt
+                    }
+                }
+                if ($quiz->questionPools()->count() >= 1) {
+                    break;
+                }
+            }
+
+            $generatedCount = $quiz->questionPools()->count();
+
+            if ($generatedCount < 1) {
+                // Do not exit with 0 questions: delete quiz and return to create form.
+                $quiz->questionPools()->delete();
+                $quiz->delete();
+                return redirect()->route($this->staffRoutePrefix() . '.quizzes.create')
+                    ->withInput()
+                    ->with('error', 'Question generation failed after several attempts. Quiz not created. Check Gemini API key and billing at aistudio.google.com, then try again.');
+            }
+
+            $message = 'Quiz created. ' . $generatedCount . ' question(s) generated. Approve them below to publish.';
 
             try {
                 broadcast(new DataUpdated('quizzes'))->toOthers();
@@ -267,7 +502,7 @@ class QuizManagementController extends Controller
                 // Do not fail the request if backup send fails
             }
 
-            return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', ['quiz' => $quiz->id])->with($flashKey ?? 'success', $message);
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', ['quiz' => $quiz->id])->with('success', $message);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;
@@ -322,8 +557,7 @@ class QuizManagementController extends Controller
         $questionStats = $this->computeQuestionStats($quiz, $completedSessions);
 
         $liveProctorEnabled = Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') === '1';
-        $aiProgress = Cache::get('quiz_ai_progress:' . $quiz->id);
-        $data = compact('quiz', 'unapprovedPools', 'unapprovedPoolsTotal', 'approvedQuestions', 'approvedQuestionsTotal', 'sessionsPaginator', 'sessionsStats', 'questionStats', 'liveProctorEnabled', 'aiProgress');
+        $data = compact('quiz', 'unapprovedPools', 'unapprovedPoolsTotal', 'approvedQuestions', 'approvedQuestionsTotal', 'sessionsPaginator', 'sessionsStats', 'questionStats', 'liveProctorEnabled');
 
         // Live tab/pagination: return only the tab HTML fragment for AJAX requests
         if ($request->ajax()) {
@@ -1097,64 +1331,7 @@ class QuizManagementController extends Controller
         }
         $quiz->update($updateData);
         broadcast(new DataUpdated('quizzes'))->toOthers();
-        return redirect()->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)->with('success', 'Saved. Use "Generate AI Questions" below to run generation without timeout.');
-    }
-
-    /**
-     * Start AI question generation in the background (queue). No HTTP timeout; use for any number of questions.
-     * Form POST: target_count, topics (comma-separated string or array), optional source_text.
-     */
-    public function startAiGenerationBackground(Request $request, Quiz $quiz): RedirectResponse
-    {
-        $this->authorize('update', $quiz);
-
-        $validated = $request->validate([
-            'target_count' => 'required|integer|min:1|max:250',
-            'topics' => 'nullable|string',
-            'source_text' => 'nullable|string',
-        ]);
-
-        $user = $this->adminUser();
-        $redirectShow = fn ($error) => redirect()->route($this->staffRoutePrefix() . '.quizzes.show', ['quiz' => $quiz, 'tab' => 'overview'])->with('error', $error);
-        if (! $user) {
-            return $redirectShow('Unauthorized.');
-        }
-
-        $aiService = app(AiQuestionService::class);
-        if (! $aiService->hasApiKey()) {
-            return $redirectShow('AI generation requires a Gemini or DeepSeek API key in Dashboard → Settings → AI.');
-        }
-
-        $tokenService = app(AiQuizTokenService::class);
-        if (! $tokenService->canUse($user)) {
-            $status = $tokenService->getStatus($user);
-            return $redirectShow($status['message'] ?? 'No AI quiz tokens left. Try again later.');
-        }
-
-        $targetCount = (int) $validated['target_count'];
-        $perQuizLimit = max(1, $aiService->getPerQuizLimit());
-        if ($targetCount > $perQuizLimit) {
-            return $redirectShow('Maximum questions per generation is ' . $perQuizLimit . '.');
-        }
-        $topicsRaw = preg_split('/[\s,]+/', (string) ($validated['topics'] ?? ''), -1, PREG_SPLIT_NO_EMPTY);
-        $topics = array_map(fn ($t) => ['name' => trim($t)], array_filter(array_map('trim', $topicsRaw)));
-        if (empty($topics)) {
-            $topics = [['name' => 'General knowledge']];
-        }
-
-        $sourceText = trim((string) ($validated['source_text'] ?? ''));
-        if ($sourceText === '') {
-            $sourceText = (string) ($quiz->script_text ?? '');
-        }
-        if (mb_strlen($sourceText) > 50000) {
-            $sourceText = mb_substr($sourceText, 0, 50000) . "\n[... truncated ...]";
-        }
-
-        $tokenService->consume($user);
-        GenerateAiQuestionsJob::dispatch($quiz->id, $user->id, $targetCount, $topics, $sourceText)->afterResponse();
-
-        return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', ['quiz' => $quiz, 'tab' => 'overview'])
-            ->with('success', 'AI generation started in the background. Refresh this page to see new questions as they are added. For 50+ questions, run a queue worker: php artisan queue:work');
+        return redirect()->route($this->staffRoutePrefix() . '.quizzes.edit', $quiz)->with('success', 'Saved. On the quiz overview, use "Generate questions with Gemini" to add more questions.');
     }
 
     /**
@@ -1178,7 +1355,7 @@ class QuizManagementController extends Controller
 
         $aiService = app(AiQuestionService::class);
         if (! $aiService->hasApiKey()) {
-            return response()->json(['error' => 'No AI API key set. Add a Gemini or DeepSeek key in Dashboard → Settings → AI.'], 422);
+            return response()->json(['error' => 'No AI API key set. Add OpenAI, Gemini or DeepSeek key in Dashboard → Settings → AI.'], 422);
         }
 
         $target      = (int) $validated['target'];
@@ -1229,7 +1406,7 @@ class QuizManagementController extends Controller
             $sourceText = mb_substr($sourceText, 0, 50000) . "\n[... truncated ...]";
         }
 
-        @set_time_limit(120);
+        @set_time_limit(300);
         $ids       = $aiService->generatePoolAndStore($quiz, $topics, $batchSize, $sourceText ?: null);
         $generated = count($ids);
 
@@ -1334,7 +1511,7 @@ class QuizManagementController extends Controller
             $sourceText = mb_substr($sourceText, 0, 50000) . "\n[... truncated ...]";
         }
 
-        @set_time_limit(120);
+        @set_time_limit(300);
         $ids       = $aiService->generatePoolAndStoreGeminiOnly($quiz, $topics, $batchSize, $sourceText ?: null);
         $generated = count($ids);
 

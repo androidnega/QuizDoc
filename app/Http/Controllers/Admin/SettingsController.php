@@ -21,8 +21,10 @@ class SettingsController extends Controller
      */
     public function index(): View
     {
+        $openaiKey = Setting::getValue(Setting::KEY_OPENAI_API);
         $geminiKey = Setting::getValue(Setting::KEY_GEMINI_API);
         $deepseekKey = Setting::getValue(Setting::KEY_DEEPSEEK_API);
+        $openaiKeyMasked = $openaiKey ? substr($openaiKey, 0, 8) . '…' . substr($openaiKey, -4) : null;
         $geminiKeyMasked = $geminiKey ? substr($geminiKey, 0, 8) . '…' . substr($geminiKey, -4) : null;
         $deepseekKeyMasked = $deepseekKey ? substr($deepseekKey, 0, 8) . '…' . substr($deepseekKey, -4) : null;
 
@@ -41,6 +43,8 @@ class SettingsController extends Controller
         $backupEmailConfigured = $digestRecipient !== null && trim($digestRecipient) !== '';
 
         return view('admin.settings.index', [
+            'openai_key_set' => (bool) $openaiKey,
+            'openai_key_masked' => $openaiKeyMasked,
             'gemini_key_set' => (bool) $geminiKey,
             'gemini_key_masked' => $geminiKeyMasked,
             'deepseek_key_set' => (bool) $deepseekKey,
@@ -106,6 +110,8 @@ class SettingsController extends Controller
             'mail_from_name' => 'nullable|string|max:255',
             'notify_result_ready' => 'nullable|boolean',
             'notify_result_email' => 'nullable|email|max:255',
+            'openai_api_key' => 'nullable|string|max:512',
+            'clear_openai_key' => 'nullable|boolean',
             'gemini_api_key' => 'nullable|string|max:512',
             'clear_gemini_key' => 'nullable|boolean',
             'deepseek_api_key' => 'nullable|string|max:512',
@@ -167,6 +173,11 @@ class SettingsController extends Controller
         Setting::setValue(Setting::KEY_NOTIFY_RESULT_READY, $request->boolean('notify_result_ready') ? '1' : '0');
         Setting::setValue(Setting::KEY_NOTIFY_RESULT_EMAIL, $request->filled('notify_result_email') ? trim($request->notify_result_email) : null);
 
+        if ($request->boolean('clear_openai_key')) {
+            Setting::setValue(Setting::KEY_OPENAI_API, null);
+        } elseif ($request->filled('openai_api_key')) {
+            Setting::setValue(Setting::KEY_OPENAI_API, trim($request->openai_api_key));
+        }
         if ($request->boolean('clear_gemini_key')) {
             Setting::setValue(Setting::KEY_GEMINI_API, null);
         } elseif ($request->filled('gemini_api_key')) {
@@ -179,9 +190,19 @@ class SettingsController extends Controller
         }
 
         // Ensure AI key caches are cleared so admin dashboard and question generation use fresh DB values
-        if ($request->hasAny(['gemini_api_key', 'clear_gemini_key', 'deepseek_api_key', 'clear_deepseek_key'])) {
+        if ($request->hasAny(['openai_api_key', 'clear_openai_key', 'gemini_api_key', 'clear_gemini_key', 'deepseek_api_key', 'clear_deepseek_key'])) {
+            Cache::forget('setting:' . Setting::KEY_OPENAI_API);
             Cache::forget('setting:' . Setting::KEY_GEMINI_API);
             Cache::forget('setting:' . Setting::KEY_DEEPSEEK_API);
+
+            \Illuminate\Support\Facades\Log::info('AI settings updated', [
+                'openai_updated' => $request->filled('openai_api_key'),
+                'openai_cleared' => $request->boolean('clear_openai_key'),
+                'gemini_updated' => $request->filled('gemini_api_key'),
+                'gemini_cleared' => $request->boolean('clear_gemini_key'),
+                'deepseek_updated' => $request->filled('deepseek_api_key'),
+                'deepseek_cleared' => $request->boolean('clear_deepseek_key'),
+            ]);
         }
 
         Setting::setValue(Setting::KEY_CLOUDINARY_CLOUD_NAME, $request->filled('cloudinary_cloud_name') ? trim($request->cloudinary_cloud_name) : null);
@@ -280,8 +301,31 @@ class SettingsController extends Controller
      */
     public function aiTest(AiQuestionService $ai): JsonResponse
     {
+        // Always read the latest saved keys when testing.
+        Cache::forget('setting:' . Setting::KEY_OPENAI_API);
+        Cache::forget('setting:' . Setting::KEY_GEMINI_API);
+        Cache::forget('setting:' . Setting::KEY_DEEPSEEK_API);
+
+        $openaiPresent = Setting::getValue(Setting::KEY_OPENAI_API) !== null;
+        $geminiPresent = Setting::getValue(Setting::KEY_GEMINI_API) !== null;
+        $deepseekPresent = Setting::getValue(Setting::KEY_DEEPSEEK_API) !== null;
+
         $result = $ai->testConnection();
-        return response()->json($result, $result['success'] ? 200 : 422);
+
+        \Illuminate\Support\Facades\Log::info('AI connection test executed', [
+            'openai_key_present' => $openaiPresent,
+            'gemini_key_present' => $geminiPresent,
+            'deepseek_key_present' => $deepseekPresent,
+            'success' => (bool) ($result['success'] ?? false),
+            'provider' => $result['provider'] ?? null,
+            'message' => $result['message'] ?? null,
+        ]);
+
+        return response()
+            ->json($result, $result['success'] ? 200 : 422)
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     /**

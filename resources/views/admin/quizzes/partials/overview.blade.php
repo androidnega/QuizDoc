@@ -4,18 +4,6 @@
     $shortBy = max(0, $neededCount - $approvedCount);
 @endphp
 
-@if(!empty($aiProgress) && is_array($aiProgress))
-    <div class="mb-4 rounded-lg border-2 {{ ($aiProgress['status'] ?? '') === 'running' ? 'border-indigo-300 bg-indigo-50' : (($aiProgress['status'] ?? '') === 'completed' ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-50') }} p-4">
-        @if(($aiProgress['status'] ?? '') === 'running')
-            <p class="text-sm font-medium text-indigo-900">AI generation in progress: {{ (int)($aiProgress['generated_count'] ?? 0) }} of {{ (int)($aiProgress['target_count'] ?? 0) }} questions. Refresh this page to see new ones.</p>
-        @elseif(($aiProgress['status'] ?? '') === 'completed')
-            <p class="text-sm font-medium text-green-900">AI generation finished. {{ (int)($aiProgress['generated_count'] ?? 0) }} questions added to the pool. Approve them below.</p>
-        @elseif(($aiProgress['status'] ?? '') === 'failed')
-            <p class="text-sm font-medium text-gray-800">Background generation stopped. {{ (int)($aiProgress['generated_count'] ?? 0) }} questions were added. Check Settings → AI or try again from Edit quiz.</p>
-        @endif
-    </div>
-@endif
-
 {{-- Questions summary bar (top of page) --}}
 <section class="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
     <div class="px-5 py-4">
@@ -24,10 +12,17 @@
                 <h2 class="text-lg font-semibold text-gray-900">Questions</h2>
                 <span class="text-sm text-gray-500">{{ $approvedQuestionsTotal ?? 0 }} question(s) in quiz (showing {{ $approvedQuestions->count() ?? 0 }} on this page)</span>
             </div>
+            @if(($approvedQuestionsTotal ?? 0) > 0)
             <a href="{{ route('dashboard.quizzes.questions.export.txt', $quiz) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 transition-colors" download>
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                 Download questions TXT
             </a>
+            @else
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-400 bg-gray-50 rounded-lg border border-gray-200 cursor-not-allowed" title="Approve questions to enable download" aria-disabled="true">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                Download questions TXT
+            </span>
+            @endif
             <div class="flex-1 min-w-[200px] max-w-sm">
                 <label for="questions-search" class="sr-only">Search questions</label>
                 <input type="text" id="questions-search" placeholder="Type to filter by question text, topic, type…" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" autocomplete="off">
@@ -204,13 +199,13 @@ function startAiBatchGeneration(quizId, batchUrl, topics, target) {
             @if(!$quizEnded)
             @php $shareUrl = route('student.rules.show.quiz', ['token' => $quiz->link_token]); @endphp
             <span class="text-xs font-medium text-primary-800 shrink-0">Token:</span>
-            <input type="text" readonly value="{{ $quiz->link_token }}" id="quiz-token-{{ $quiz->id }}" class="w-36 text-xs font-mono font-semibold text-gray-800 bg-white border border-primary-300 rounded px-1.5 py-0.5" />
-            <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('quiz-token-{{ $quiz->id }}').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 1500)" class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded text-white bg-primary-600 hover:bg-primary-700">Copy</button>
+            <input type="text" readonly value="{{ $quiz->link_token }}" id="quiz-token-{{ $quiz->id }}" class="w-36 text-xs font-mono font-semibold text-gray-800 bg-white border border-primary-300 rounded px-2 py-1.5 cursor-pointer focus:ring-2 focus:ring-primary-500" title="Click Copy to copy" />
+            <button type="button" data-quiz-copy-from="quiz-token-{{ $quiz->id }}" class="quiz-copy-btn inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-primary-500">Copy</button>
             <details class="text-xs ml-1">
-                <summary class="cursor-pointer text-primary-600 hover:text-primary-800">link</summary>
-                <div class="flex items-center gap-1 mt-0.5 flex-wrap">
-                    <input type="text" readonly value="{{ $shareUrl }}" id="quiz-share-url-{{ $quiz->id }}" class="flex-1 min-w-0 max-w-xs text-xs font-mono text-gray-600 bg-white border border-primary-200 rounded px-1.5 py-0.5" />
-                    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('quiz-share-url-{{ $quiz->id }}').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 1500)" class="inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded text-gray-700 bg-gray-200 hover:bg-gray-300">Copy</button>
+                <summary class="cursor-pointer text-primary-600 hover:text-primary-800 font-medium">Share link</summary>
+                <div class="flex items-center gap-2 mt-2 flex-wrap">
+                    <input type="text" readonly value="{{ $shareUrl }}" id="quiz-share-url-{{ $quiz->id }}" class="flex-1 min-w-0 max-w-xs text-xs font-mono text-gray-600 bg-white border border-primary-200 rounded px-2 py-1.5" title="Copy with button" />
+                    <button type="button" data-quiz-copy-from="quiz-share-url-{{ $quiz->id }}" class="quiz-copy-btn inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300">Copy</button>
                 </div>
             </details>
             <span class="flex-1"></span>
@@ -415,3 +410,63 @@ function startAiBatchGeneration(quizId, batchUrl, topics, target) {
         @endif
     </section>
 </div>
+
+<script>
+(function() {
+    function copyFromInput(inputEl) {
+        if (!inputEl || !inputEl.value) return false;
+        try {
+            inputEl.focus();
+            inputEl.setSelectionRange(0, inputEl.value.length);
+            return document.execCommand('copy');
+        } catch (e) { return false; }
+    }
+    function copyViaTempTextarea(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:0;left:0;width:2px;height:2px;padding:0;border:0;opacity:0.01;z-index:-1;';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+            var ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            return ok;
+        } catch (e) {
+            try { document.body.removeChild(ta); } catch (e2) {}
+            return false;
+        }
+    }
+    function showDone(btn) {
+        if (!btn) return;
+        var orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('bg-green-600', 'hover:bg-green-700');
+        setTimeout(function() { btn.textContent = orig; btn.classList.remove('bg-green-600', 'hover:bg-green-700'); }, 2000);
+    }
+    function doCopy(text, btn, sourceEl) {
+        if (!text) return;
+        if (sourceEl && copyFromInput(sourceEl)) {
+            showDone(btn);
+            return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() { showDone(btn); }).catch(function() {
+                if (copyViaTempTextarea(text)) showDone(btn);
+            });
+        } else {
+            if (copyViaTempTextarea(text)) showDone(btn);
+        }
+    }
+    document.querySelectorAll('.quiz-copy-btn').forEach(function(btn) {
+        var id = btn.getAttribute('data-quiz-copy-from');
+        if (!id) return;
+        var el = document.getElementById(id);
+        if (!el) return;
+        btn.addEventListener('click', function() {
+            doCopy(el.value, btn, el);
+        });
+    });
+})();
+</script>

@@ -238,8 +238,24 @@
                 <!-- Tab: AI -->
                 <div class="settings-tab-content p-6 hidden" data-tab-content="ai" id="tab-content-ai">
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">AI Question Generation</p>
-                <p class="text-sm text-gray-500 mb-4">All API keys below are stored in the database and used for question generation: Gemini (primary), then DeepSeek (fallback) if Gemini is missing or fails. Cloudinary (Cloudinary tab) is also stored in the database and used for proctoring and institution logo.</p>
+                <p class="text-sm text-gray-500 mb-4">Question generation tries <strong>Gemini (primary)</strong>, then OpenAI, then DeepSeek. Set Gemini first; others are fallbacks. Keys are stored in the database. Cloudinary (Cloudinary tab) is used for proctoring and institution logo.</p>
+                <p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">If Test fails: <strong>Gemini 429</strong> — quota exceeded, check <a href="https://aistudio.google.com/" target="_blank" rel="noopener" class="underline">AI Studio</a> billing/limits. <strong>OpenAI 429</strong> — add billing/credits at <a href="https://platform.openai.com/account/billing" target="_blank" rel="noopener" class="underline">platform.openai.com → Billing</a>. <strong>DeepSeek 402</strong> — add balance at <a href="https://platform.deepseek.com/" target="_blank" rel="noopener" class="underline">DeepSeek</a>.</p>
                 <div class="space-y-5">
+                    <div>
+                        <label for="openai_api_key" class="block text-xs font-medium text-gray-500 mb-0.5">OpenAI API Key (fallback)</label>
+                        @if($openai_key_set ?? false)
+                            <p class="text-sm text-gray-600 mb-1.5">Current key: <code class="px-2 py-0.5 bg-gray-100 rounded text-gray-700">{{ $openai_key_masked ?? '' }}</code></p>
+                            <input type="password" name="openai_api_key" id="openai_api_key" autocomplete="off" placeholder="Enter new key to replace, or leave blank to keep" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none @error('openai_api_key') border-red-500 @enderror">
+                            <label class="flex items-center gap-2 cursor-pointer mt-1.5">
+                                <input type="checkbox" name="clear_openai_key" value="1" class="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500">
+                                <span class="text-sm text-gray-600">Remove OpenAI key</span>
+                            </label>
+                        @else
+                            <input type="password" name="openai_api_key" id="openai_api_key" autocomplete="off" placeholder="sk-..." class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none @error('openai_api_key') border-red-500 @enderror">
+                            <p class="text-xs text-gray-500 mt-1">Get a key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" class="text-gray-600 hover:underline">OpenAI API keys</a>. Used when Gemini is unavailable or fails. New accounts may need <a href="https://platform.openai.com/account/billing" target="_blank" rel="noopener" class="text-gray-600 hover:underline">Billing</a> set up before the key works.</p>
+                        @endif
+                        @error('openai_api_key')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
                     <div>
                         <label for="gemini_api_key" class="block text-xs font-medium text-gray-500 mb-0.5">Gemini API Key (primary)</label>
                         @if($gemini_key_set ?? false)
@@ -251,7 +267,7 @@
                             </label>
                         @else
                             <input type="password" name="gemini_api_key" id="gemini_api_key" autocomplete="off" placeholder="AIza..." class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none @error('gemini_api_key') border-red-500 @enderror">
-                            <p class="text-xs text-gray-500 mt-1">Get a key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="text-gray-600 hover:underline">Google AI Studio</a> (Gemini API).</p>
+                            <p class="text-xs text-gray-500 mt-1">Get a key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="text-gray-600 hover:underline">Google AI Studio</a> (Gemini). Used first for question generation.</p>
                         @endif
                         @error('gemini_api_key')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
@@ -266,7 +282,7 @@
                             </label>
                         @else
                             <input type="password" name="deepseek_api_key" id="deepseek_api_key" autocomplete="off" placeholder="sk-..." class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none @error('deepseek_api_key') border-red-500 @enderror">
-                            <p class="text-xs text-gray-500 mt-1">Get a key from <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener" class="text-gray-600 hover:underline">DeepSeek Platform</a>. Used when Gemini is not set or fails.</p>
+                            <p class="text-xs text-gray-500 mt-1">Get a key from <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener" class="text-gray-600 hover:underline">DeepSeek Platform</a>. Used when Gemini and OpenAI are not set or fail.</p>
                         @endif
                         @error('deepseek_api_key')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
@@ -279,7 +295,7 @@
                     @unless(app()->environment('production'))
                     <div class="pt-4 border-t border-gray-100">
                         <p class="text-xs font-medium text-gray-500 mb-0.5">Test connection</p>
-                        <p class="text-xs text-gray-500 mb-2">Uses the saved API key (Gemini first, then DeepSeek). Save settings first if you just changed a key.</p>
+                        <p class="text-xs text-gray-500 mb-2">Tries Gemini first, then OpenAI, then DeepSeek. Save settings first if you just changed a key.</p>
                         <button type="button" id="ai-test-btn" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300">
                             Test AI connection
                         </button>
@@ -626,7 +642,9 @@ if (aiTestBtn) {
         resultEl.textContent = 'Testing…';
         resultEl.classList.add('border', 'border-gray-200', 'text-gray-700');
         btn.disabled = true;
-        fetch('{{ route('dashboard.settings.ai-test') }}', {
+        var aiTestUrl = '{{ route('dashboard.settings.ai-test') }}' + '?_ts=' + Date.now();
+        fetch(aiTestUrl, {
+            cache: 'no-store',
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })

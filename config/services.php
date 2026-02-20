@@ -3,9 +3,11 @@
 return [
     'openai' => [
         'key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
     ],
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
+        'timeout' => (int) env('GEMINI_REQUEST_TIMEOUT', 120),
     ],
     'deepseek' => [
         'key' => env('DEEPSEEK_API_KEY'),

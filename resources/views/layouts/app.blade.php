@@ -145,6 +145,29 @@
                 overflow-x: hidden;
             }
         }
+
+        /* Quiz create/edit: single scrollbar (window only), no inline scroll, no grey gap at bottom */
+        .examiner-wrap--doc-scroll {
+            min-height: 100vh;
+            height: auto;
+            overflow: visible;
+        }
+        .examiner-wrap--doc-scroll .examiner-sidebar {
+            position: sticky;
+            top: 0;
+            align-self: flex-start;
+            max-height: 100vh;
+        }
+        .examiner-wrap--doc-scroll .examiner-main {
+            min-height: 0;
+            flex: 1 1 auto;
+        }
+        .examiner-main-content--doc-scroll {
+            overflow: visible !important;
+            min-height: auto;
+            flex: none;
+            background: #fff !important;
+        }
     </style>
     <style>
         /* No flash: key off html.quizsnap-js (set by head script before body paints). When JS is off, head script does not run. */

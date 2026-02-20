@@ -13,7 +13,7 @@
     .home-input.token-valid { background-color: #f0fdf4 !important; border-color: #22c55e !important; color: #15803d; }
     .home-input.token-invalid { background-color: #fef2f2 !important; border-color: #ef4444 !important; color: #dc2626; }
     .home-input.token-loading { background-color: #fffbeb !important; border-color: #f59e0b !important; color: #d97706; }
-    .btn-home-cta.btn-cta-disabled, .btn-home-cta:disabled { background: #cbd5e1 !important; color: #fff !important; cursor: not-allowed; pointer-events: none; }
+    .btn-home-cta.bt–––––n-cta-disabled, .btn-home-cta:disabled { background: #cbd5e1 !important; color: #fff !important; cursor: not-allowed; pointer-events: none; }
     .btn-home-cta:not(.btn-cta-disabled):not(:disabled) { background: #3b82f6; color: #fff !important; font-weight: 600; border: none; }
     .btn-home-cta:not(.btn-cta-disabled):not(:disabled):hover { background: #2563eb; }
     .logo-text { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; display: inline-flex; align-items: center; gap: 0.375rem; }

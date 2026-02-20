@@ -28,6 +28,10 @@ class Quiz extends Model
 
     public const STATUS_DRAFT = 'Draft';
     public const STATUS_PUBLISHED = 'Published';
+    /** Display status: published but window not yet open (starts_at in future). */
+    public const STATUS_SCHEDULED = 'Scheduled';
+    /** Display status: published and window open (between starts_at and ends_at). */
+    public const STATUS_ACTIVE = 'Active';
 
     protected static function booted(): void
     {
@@ -261,10 +265,29 @@ class Quiz extends Model
     public static function resultVisibilityOptions(): array
     {
         return [
-            self::RESULT_VISIBILITY_SCORE_ONLY => 'Score only (no correct answers)',
-            self::RESULT_VISIBILITY_FULL_REVIEW_AFTER_END => 'Full review after quiz end',
-            self::RESULT_VISIBILITY_DISABLED => 'Disabled (no score or review)',
+            self::RESULT_VISIBILITY_SCORE_ONLY => 'Immediately (score only)',
+            self::RESULT_VISIBILITY_FULL_REVIEW_AFTER_END => 'After Deadline (full review)',
+            self::RESULT_VISIBILITY_DISABLED => 'Manual Release (no score or review until released)',
         ];
+    }
+
+    /**
+     * Display status for examiner UI: Draft | Scheduled | Active | Ended.
+     * Draft = not published. Scheduled = published, starts_at in future. Active = published and window open. Ended = published and ends_at past.
+     */
+    public function getDisplayStatus(): string
+    {
+        if (! $this->is_published) {
+            return self::STATUS_DRAFT;
+        }
+        $now = now();
+        if ($this->starts_at && $this->starts_at->isFuture()) {
+            return self::STATUS_SCHEDULED;
+        }
+        if ($this->ends_at && $this->ends_at->isPast()) {
+            return 'Ended';
+        }
+        return self::STATUS_ACTIVE;
     }
 
     public static function examTypeOptions(): array

@@ -15,5 +15,6 @@ return [
 
     'ai' => [
         'max_generation_per_quiz' => (int) env('QUIZSNAP_AI_MAX_PER_QUIZ', 250),
+        'request_timeout_seconds' => (int) env('QUIZSNAP_AI_REQUEST_TIMEOUT', 120),
     ],
 ];

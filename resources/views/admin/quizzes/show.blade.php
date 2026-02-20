@@ -19,18 +19,18 @@
                         <span>{{ $quiz->duration_minutes }} min</span>
                     </div>
                     <div class="flex flex-wrap gap-1">
-                        @if($quiz->is_active && $quiz->hasEnoughApprovedQuestions())
+                        @php $displayStatus = $quiz->getDisplayStatus(); @endphp
+                        @if($displayStatus === 'Draft')
+                            <span class="inline-flex px-1.5 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600">Draft</span>
+                        @elseif($displayStatus === 'Scheduled')
+                            <span class="inline-flex px-1.5 py-0.5 text-xs font-medium rounded bg-amber-100 text-amber-800">Scheduled</span>
+                        @elseif($displayStatus === 'Active')
                             <span class="inline-flex px-1.5 py-0.5 text-xs font-medium rounded bg-success-100 text-success-700">Active</span>
-                        @elseif($quiz->is_active && !$quiz->hasEnoughApprovedQuestions())
-                            <span class="inline-flex px-1.5 py-0.5 text-xs font-medium rounded bg-warning-100 text-warning-700">Locked</span>
-                        @else
-                            <span class="inline-flex px-1.5 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600">Inactive</span>
-                        @endif
-                        @if($quiz->is_published)
-                            <span class="inline-flex px-1.5 py-0.5 text-xs font-medium rounded bg-primary-100 text-primary-700">Published</span>
-                        @endif
-                        @if($quiz->hasEnded())
+                        @elseif($displayStatus === 'Ended')
                             <span class="inline-flex px-1.5 py-0.5 text-xs font-medium rounded bg-gray-200 text-gray-700">Ended</span>
+                        @endif
+                        @if(!$quiz->hasEnded() && $quiz->is_active && !$quiz->hasEnoughApprovedQuestions())
+                            <span class="inline-flex px-1.5 py-0.5 text-xs font-medium rounded bg-warning-100 text-warning-700">Locked</span>
                         @endif
                     </div>
                 </div>
