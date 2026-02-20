@@ -101,6 +101,8 @@ class Setting extends Model
     public const KEY_FOOTER_COPYRIGHT = 'footer_copyright';
     /** Mobile landing hero: 1 = show on phones, 0 = hide (Super Admin). */
     public const KEY_LANDING_HERO_ENABLED = 'landing_hero_enabled';
+    /** Landing page: show quiz token input (1 = show, 0 = hide). Super Admin only. Default 0 = hidden. */
+    public const KEY_LANDING_SHOW_QUIZ_TOKEN = 'landing_show_quiz_token';
     /** Mobile landing hero image URL (Super Admin). Shown on phone only when enabled. Can be set via URL or local upload (stored on Cloudinary). */
     public const KEY_LANDING_HERO_IMAGE = 'landing_hero_image';
     public const KEY_INSTITUTION_NAME = 'institution_name';

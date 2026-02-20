@@ -109,8 +109,9 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
     $student = $studentId ? \App\Models\Student::find($studentId) : null;
     $landingHeroImage = \App\Models\Setting::getValue(\App\Models\Setting::KEY_LANDING_HERO_IMAGE);
     $landingHeroEnabled = \App\Models\Setting::getValue(\App\Models\Setting::KEY_LANDING_HERO_ENABLED, '1') === '1';
+    $landingShowQuizToken = \App\Models\Setting::getValue(\App\Models\Setting::KEY_LANDING_SHOW_QUIZ_TOKEN, '0') === '1';
 
-    return view('student.landing', compact('student', 'landingHeroImage', 'landingHeroEnabled'));
+    return view('student.landing', compact('student', 'landingHeroImage', 'landingHeroEnabled', 'landingShowQuizToken'));
 })->name('student.landing');
 
 Route::get('/about-system', function () {

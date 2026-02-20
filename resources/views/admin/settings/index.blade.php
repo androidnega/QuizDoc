@@ -154,6 +154,17 @@
                             </div>
                         </div>
                         @endif
+
+                        @if(session('admin_role') === 'super_admin')
+                        <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-4">
+                            <h3 class="text-sm font-semibold text-gray-800">Landing page – Quiz token</h3>
+                            <label class="flex items-start gap-3 cursor-pointer group">
+                                <input type="checkbox" name="landing_show_quiz_token" value="1" {{ old('landing_show_quiz_token', $landing_show_quiz_token ?? false) ? 'checked' : '' }} class="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 shrink-0">
+                                <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Show quiz token input on landing page</span>
+                            </label>
+                            <p class="text-xs text-gray-500 ml-7">When on, students see the quiz token field on the homepage. When off, the token field is hidden (students can still start quizzes via direct links or from their dashboard).</p>
+                        </div>
+                        @endif
                     </div>
                 </div>
 

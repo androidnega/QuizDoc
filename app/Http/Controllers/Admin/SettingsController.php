@@ -84,6 +84,7 @@ class SettingsController extends Controller
             'ai_quiz_cooldown_hours' => Setting::getValue(Setting::KEY_AI_QUIZ_COOLDOWN_HOURS, '24'),
             'landing_hero_image' => Setting::getValue(Setting::KEY_LANDING_HERO_IMAGE),
             'landing_hero_enabled' => Setting::getValue(Setting::KEY_LANDING_HERO_ENABLED, '1') === '1',
+            'landing_show_quiz_token' => Setting::getValue(Setting::KEY_LANDING_SHOW_QUIZ_TOKEN, '0') === '1',
             'can_manage_proctoring' => $canManageProctoring,
             'can_manage_backup' => $canManageBackup,
             'show_backup_tab' => $canManageBackup, // only primary sees the Backup tab
@@ -138,6 +139,7 @@ class SettingsController extends Controller
             'landing_hero_image_url' => 'nullable|string|max:2048',
             'landing_hero_image_file' => 'nullable|image|max:5120',
             'landing_hero_enabled' => 'nullable|boolean',
+            'landing_show_quiz_token' => 'nullable|boolean',
             'notify_digest_recipient' => 'nullable|email|max:255',
         ]);
 
@@ -252,6 +254,10 @@ class SettingsController extends Controller
         if (session('admin_role') === 'super_admin') {
             Setting::setValue(Setting::KEY_LANDING_HERO_ENABLED, $request->boolean('landing_hero_enabled') ? '1' : '0');
             Cache::forget('setting:' . Setting::KEY_LANDING_HERO_ENABLED);
+            if ($request->user() && $request->user()->role === \App\Models\User::ROLE_SUPER_ADMIN) {
+                Setting::setValue(Setting::KEY_LANDING_SHOW_QUIZ_TOKEN, $request->boolean('landing_show_quiz_token') ? '1' : '0');
+                Cache::forget('setting:' . Setting::KEY_LANDING_SHOW_QUIZ_TOKEN);
+            }
             if ($request->hasFile('landing_hero_image_file')) {
                 $url = CloudinaryService::uploadFromFile($request->file('landing_hero_image_file'));
                 if ($url) {

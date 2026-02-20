@@ -153,6 +153,7 @@
                 <div class="home-hero">
                     <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mb-1 tracking-tight">Welcome to QuizSnap</h1>
                     <p class="text-sm text-slate-500 mb-4">A modern platform for secure and efficient online assessments</p>
+                    @if($landingShowQuizToken ?? false)
                     <form action="{{ route('student.start-quiz') }}" method="post" id="start-quiz-form" class="mb-4 home-quiz-form-mobile-hide">
                         @csrf
                         <div class="home-quiz-row">
@@ -168,6 +169,7 @@
                             <div class="text-xs text-red-600 mt-1">{{ $message }}</div>
                         @enderror
                     </form>
+                    @endif
                     <div class="home-features-row">
                         <div class="home-feature-card card-secure">
                             <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -232,6 +234,7 @@
     }
 })();
 </script>
+@if($landingShowQuizToken ?? false)
 <script>
 (function() {
     var DEBOUNCE_MS = 350;
@@ -350,4 +353,5 @@
     }
 })();
 </script>
+@endif
 @endpush
