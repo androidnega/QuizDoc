@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\ClassGroup;
 use App\Models\ClassGroupStudent;
+use App\Models\ExamCalendar;
 use App\Models\Quiz;
 use App\Models\QuizSession;
 use App\Models\Student;
@@ -46,6 +47,7 @@ class StudentDashboardController extends Controller
                 'student' => null,
                 'user' => $user,
                 'classGroups' => collect(),
+                'examCalendarEntries' => collect(),
                 'sessionsCount' => 0,
                 'recentSessions' => collect(),
                 'scheduledQuiz' => null,
@@ -90,6 +92,14 @@ class StudentDashboardController extends Controller
             ->with(['quiz.course', 'result'])
             ->orderByDesc('created_at')
             ->first();
+
+        $examCalendarEntries = collect();
+        if (!empty($classGroupIds)) {
+            $examCalendarEntries = ExamCalendar::with('course')
+                ->whereIn('class_group_id', $classGroupIds)
+                ->orderBy('scheduled_at')
+                ->get();
+        }
 
         $scheduledQuiz = null;
         $scheduledQuizSession = null;
@@ -152,6 +162,7 @@ class StudentDashboardController extends Controller
             'student' => $student,
             'user' => null,
             'classGroups' => $classGroups,
+            'examCalendarEntries' => $examCalendarEntries,
             'sessionsCount' => $sessionsCount,
             'recentSessions' => $recentSessions,
             'scheduledQuiz' => $scheduledQuiz,
@@ -164,6 +175,44 @@ class StudentDashboardController extends Controller
             'isClassRep' => $isClassRep,
             'isGroupLeader' => $isGroupLeader,
             'leaderWithoutGroup' => $leaderWithoutGroup,
+        ]);
+    }
+
+    /**
+     * Exam calendar page: midsem & end-of-semester exams for the student's class(es).
+     * Shows countdown when an exam is within a few hours.
+     */
+    public function calendar(): View|RedirectResponse
+    {
+        $user = auth()->user();
+        $isDocuMentorOnly = $user instanceof User && $user->isDocuMentorStudent() && !session('student_id');
+        if ($isDocuMentorOnly) {
+            return redirect()->route('dashboard')->with('info', 'Exam calendar is available when you are assigned to a class.');
+        }
+
+        $student = $this->student();
+        $student->load(['classGroupStudents.classGroup']);
+        $classGroupIds = ClassGroupStudent::whereRaw('LOWER(TRIM(index_number)) = ?', [strtolower(trim($student->index_number ?? ''))])
+            ->pluck('class_group_id')
+            ->unique()
+            ->values()
+            ->all();
+        $classGroups = $student->classGroupStudents->map(fn ($s) => $s->classGroup)->filter()->unique('id')->values();
+        if (empty($classGroupIds) && $classGroups->isNotEmpty()) {
+            $classGroupIds = $classGroups->pluck('id')->filter()->values()->all();
+        }
+
+        $examCalendarEntries = collect();
+        if (!empty($classGroupIds)) {
+            $examCalendarEntries = ExamCalendar::with('course')
+                ->whereIn('class_group_id', $classGroupIds)
+                ->orderBy('scheduled_at')
+                ->get();
+        }
+
+        return view('student.dashboard.calendar', [
+            'student' => $student,
+            'examCalendarEntries' => $examCalendarEntries,
         ]);
     }
 

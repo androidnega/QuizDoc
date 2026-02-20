@@ -27,6 +27,12 @@
             <i class="fas fa-clipboard-list mr-1.5 text-[10px] sm:text-xs text-slate-500"></i>
             Quizzes
         </a>
+        <a href="{{ route('dashboard.calendar') }}"
+           class="inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap
+                  {{ request()->routeIs('dashboard.calendar') ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' }}">
+            <i class="fas fa-calendar-alt mr-1.5 text-[10px] sm:text-xs text-slate-500"></i>
+            Calendar
+        </a>
         <a href="{{ route('dashboard.course-materials') }}"
            class="inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap
                   {{ request()->routeIs('dashboard.course-materials') ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' }}">
@@ -176,6 +182,16 @@
             </div>
             <i class="fas fa-chevron-right text-slate-400 text-xs shrink-0 hidden sm:inline-block"></i>
         </a>
+        <a href="{{ route('dashboard.calendar') }}" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3.5 sm:p-4 flex items-center justify-between no-underline hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition-colors min-h-[56px] sm:min-h-[72px] overflow-hidden">
+            <div class="flex items-center gap-3 min-w-0">
+                <span class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0"><i class="fas fa-calendar-alt text-sm"></i></span>
+                <div class="min-w-0">
+                    <span class="text-sm font-semibold text-slate-900 block truncate">Exam calendar</span>
+                    <span class="text-xs text-slate-600 block truncate">Midsem & end-of-semester</span>
+                </div>
+            </div>
+            <i class="fas fa-chevron-right text-slate-400 text-xs shrink-0 hidden sm:inline-block"></i>
+        </a>
         @endif
         @if($student && ($hasQuizAccess ?? true))
         <button type="button" id="enter-token-open-btn" class="bg-white rounded-2xl border border-dashed border-slate-300 shadow-sm p-3.5 sm:p-4 flex items-center justify-between text-left w-full cursor-pointer hover:bg-slate-50 hover:border-slate-400 active:bg-slate-100 transition-colors min-h-[56px] sm:min-h-[72px] overflow-hidden">
@@ -265,7 +281,24 @@
     </div>
 </section>
 
-{{-- Scheduled quiz is surfaced via the second \"At a glance\" card (replacing generic course materials text) --}}
+{{-- Calendar: single card linking to full exam calendar page --}}
+@if($hasQuizAccess ?? true)
+<section class="mb-6 sm:mb-8" aria-label="Exam calendar">
+    <h2 class="text-xs sm:text-sm font-semibold text-slate-900 mb-2.5 sm:mb-3 uppercase tracking-wide">Calendar</h2>
+    <a href="{{ route('dashboard.calendar') }}" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 flex items-center justify-between no-underline hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition-colors min-h-[72px] sm:min-h-[80px]">
+        <div class="flex items-center gap-3 min-w-0">
+            <span class="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0"><i class="fas fa-calendar-alt text-lg"></i></span>
+            <div class="min-w-0">
+                <span class="text-sm font-semibold text-slate-900 block">Exam calendar</span>
+                <span class="text-xs text-slate-600 block truncate">Midsem & end-of-semester exams · View times & countdown</span>
+            </div>
+        </div>
+        <i class="fas fa-chevron-right text-slate-400 text-sm shrink-0"></i>
+    </a>
+</section>
+@endif
+
+{{-- Scheduled quiz is surfaced via the second At a glance card (replacing generic course materials text) --}}
 
 @if($hasQuizAccess ?? true)
 {{-- Enter quiz token modal --}}

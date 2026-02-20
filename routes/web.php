@@ -13,6 +13,7 @@ use App\Http\Controllers\Student\PostQuizCaptureController;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\ClassGroupController;
+use App\Http\Controllers\Admin\ExamCalendarController;
 use App\Http\Controllers\Admin\QuizManagementController;
 use App\Http\Controllers\Admin\SettingsController;
 use Illuminate\Support\Facades\Route;
@@ -212,6 +213,7 @@ Route::middleware(['dashboard.auth', 'student.auth', 'student.has-level'])->pref
     Route::get('/my-profile', [\App\Http\Controllers\Student\StudentDashboardController::class, 'profile'])->name('my-profile');
     Route::put('/my-profile', [\App\Http\Controllers\Student\StudentDashboardController::class, 'updateProfile'])->name('my-profile.update');
     Route::get('/course-materials', [\App\Http\Controllers\Student\StudentDashboardController::class, 'courseMaterials'])->name('course-materials');
+    Route::get('/calendar', [\App\Http\Controllers\Student\StudentDashboardController::class, 'calendar'])->name('calendar');
 });
 
 // Project (student) routes under /dashboard — same controllers as docu-mentor, unified URLs
@@ -284,6 +286,14 @@ Route::middleware('admin.auth')->group(function () {
         Route::delete('/class-groups/{classGroupId}/students/{student}', [ClassGroupController::class, 'destroyStudent'])->name('class-groups.students.destroy');
         Route::delete('/class-groups/{classGroupId}/students/{student}/phone', [ClassGroupController::class, 'removeStudentPhone'])->name('class-groups.students.remove-phone');
         Route::post('/class-groups/{classGroupId}/students/{student}/fallback-code', [ClassGroupController::class, 'generateFallbackCode'])->name('class-groups.students.fallback-code');
+
+        // Exam calendar (midsem & end-of-semester) — coordinator assigns by class group; students see on dashboard
+        Route::get('/exam-calendar', [ExamCalendarController::class, 'index'])->name('exam-calendar.index');
+        Route::get('/exam-calendar/create', [ExamCalendarController::class, 'create'])->name('exam-calendar.create');
+        Route::post('/exam-calendar', [ExamCalendarController::class, 'store'])->name('exam-calendar.store');
+        Route::get('/exam-calendar/{examCalendar}/edit', [ExamCalendarController::class, 'edit'])->name('exam-calendar.edit');
+        Route::put('/exam-calendar/{examCalendar}', [ExamCalendarController::class, 'update'])->name('exam-calendar.update');
+        Route::delete('/exam-calendar/{examCalendar}', [ExamCalendarController::class, 'destroy'])->name('exam-calendar.destroy');
 
         // Quiz session detail — all staff (examiners + super admins) so session/student data always shows
         // Keep quiz ID in URL for readability, but resolve by quizSession in controller

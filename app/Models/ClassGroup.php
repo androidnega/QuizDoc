@@ -109,6 +109,11 @@ class ClassGroup extends Model
         return $this->hasMany(Quiz::class, 'class_group_id');
     }
 
+    public function examCalendarEntries(): HasMany
+    {
+        return $this->hasMany(ExamCalendar::class, 'class_group_id');
+    }
+
     /** Whether this class group has at least one student (required for quiz creation). */
     public function hasStudents(): bool
     {

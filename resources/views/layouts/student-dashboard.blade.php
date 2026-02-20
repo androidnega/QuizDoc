@@ -6,11 +6,12 @@
 
 @section('content')
 @php
-    $studentNavHome = request()->routeIs('dashboard') && !request()->routeIs('dashboard.my-*') && !request()->routeIs('dashboard.projects*') && !request()->routeIs('dashboard.public-projects') && !request()->routeIs('dashboard.group*') && !request()->routeIs('dashboard.course-materials') && !request()->routeIs('dashboard.class-results*');
+    $studentNavHome = request()->routeIs('dashboard') && !request()->routeIs('dashboard.my-*') && !request()->routeIs('dashboard.projects*') && !request()->routeIs('dashboard.public-projects') && !request()->routeIs('dashboard.group*') && !request()->routeIs('dashboard.course-materials') && !request()->routeIs('dashboard.calendar') && !request()->routeIs('dashboard.class-results*');
     $breadcrumbLabel = 'Dashboard';
     if (request()->routeIs('dashboard.projects*') || request()->routeIs('dashboard.public-projects') || request()->routeIs('dashboard.group*')) { $breadcrumbLabel = 'Projects'; }
     elseif (request()->routeIs('dashboard.my-quizzes*')) { $breadcrumbLabel = 'Quizzes'; }
     elseif (request()->routeIs('dashboard.course-materials')) { $breadcrumbLabel = 'Materials'; }
+    elseif (request()->routeIs('dashboard.calendar')) { $breadcrumbLabel = 'Calendar'; }
     elseif (request()->routeIs('dashboard.my-profile')) { $breadcrumbLabel = 'Profile'; }
     elseif (request()->routeIs('dashboard.class-results*')) { $breadcrumbLabel = 'Class Results'; }
 @endphp
@@ -48,6 +49,7 @@
                 @endif
                 @if($hasQuizAccess ?? true)
                 <a href="{{ route('dashboard.my-quizzes') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('dashboard.my-quizzes*') ? 'bg-blue-600 text-white' : 'text-slate-800 hover:bg-amber-500/20' }}"><i class="fas fa-clipboard-list mr-1.5 text-slate-700 text-xs"></i>Quizzes</a>
+                <a href="{{ route('dashboard.calendar') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('dashboard.calendar') ? 'bg-blue-600 text-white' : 'text-slate-800 hover:bg-amber-500/20' }}"><i class="fas fa-calendar-alt mr-1.5 text-slate-700 text-xs"></i>Calendar</a>
                 <a href="{{ route('dashboard.course-materials') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('dashboard.course-materials') ? 'bg-blue-600 text-white' : 'text-slate-800 hover:bg-amber-500/20' }}"><i class="fas fa-book mr-1.5 text-slate-700 text-xs"></i>Materials</a>
                 @endif
             </nav>
@@ -126,6 +128,7 @@
             @endif
             @if($hasQuizAccess ?? true)
             <a href="{{ route('dashboard.my-quizzes') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-800 no-underline {{ request()->routeIs('dashboard.my-quizzes*') ? 'bg-blue-600 text-white' : 'hover:bg-slate-100' }}"><i class="fas fa-clipboard-list w-5 text-center text-slate-600"></i><span>Quizzes</span></a>
+            <a href="{{ route('dashboard.calendar') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-800 no-underline {{ request()->routeIs('dashboard.calendar') ? 'bg-blue-600 text-white' : 'hover:bg-slate-100' }}"><i class="fas fa-calendar-alt w-5 text-center text-slate-600"></i><span>Calendar</span></a>
             <a href="{{ route('dashboard.course-materials') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-800 no-underline {{ request()->routeIs('dashboard.course-materials') ? 'bg-blue-600 text-white' : 'hover:bg-slate-100' }}"><i class="fas fa-book w-5 text-center text-slate-600"></i><span>Materials</span></a>
             @endif
             <a href="{{ route('dashboard.my-profile') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-800 no-underline {{ request()->routeIs('dashboard.my-profile') ? 'bg-blue-600 text-white' : 'hover:bg-slate-100' }}"><i class="fas fa-user w-5 text-center text-slate-600"></i><span>Profile</span></a>
