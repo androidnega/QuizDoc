@@ -41,7 +41,7 @@
                     <input type="checkbox" id="accept-checkbox" required class="mt-1 w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500">
                     <span class="text-gray-700 select-none text-sm">I have read the note above and agree.</span>
                 </label>
-                <button type="submit" class="btn btn-action w-full sm:w-auto py-2.5 px-5 text-sm font-semibold" id="accept-btn" disabled>
+                <button type="submit" class="btn btn-action w-full sm:w-auto py-2.5 px-5 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white border-0" id="accept-btn" disabled>
                     Accept & Continue
                 </button>
             </form>
