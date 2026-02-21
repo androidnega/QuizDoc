@@ -592,7 +592,7 @@ class QuizManagementController extends Controller
             return response()->json(['sessions' => []]);
         }
         $heartbeatCutoff = now()->subSeconds(120);
-        $startedCutoff = now()->subMinutes(3);
+        $startedCutoff = now()->subMinutes(5);
         $sessions = QuizSession::query()
             ->whereIn('quiz_id', $quizIds)
             ->whereNotNull('start_time')
@@ -639,11 +639,17 @@ class QuizManagementController extends Controller
         if (Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') !== '1') {
             return response()->json(['sessions' => []], 403);
         }
-        $cutoff = now()->subSeconds(60);
+        $heartbeatCutoff = now()->subSeconds(120);
+        $startedCutoff = now()->subMinutes(5);
         $sessions = $quiz->sessions()
             ->whereNotNull('start_time')
             ->whereNull('ended_at')
-            ->where('last_heartbeat_at', '>=', $cutoff)
+            ->where(function ($q) use ($heartbeatCutoff, $startedCutoff) {
+                $q->where('last_heartbeat_at', '>=', $heartbeatCutoff)
+                    ->orWhere(function ($q2) use ($startedCutoff) {
+                        $q2->whereNull('last_heartbeat_at')->where('start_time', '>=', $startedCutoff);
+                    });
+            })
             ->orderBy('student_index')
             ->get(['id', 'student_index', 'last_heartbeat_at']);
         $studentNames = [];

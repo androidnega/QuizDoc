@@ -4,7 +4,7 @@
 @section('dashboard_heading', 'Dashboard')
 
 @section('dashboard_content')
-<div class="w-full space-y-8">
+<div class="w-full space-y-8 min-w-0 overflow-x-hidden">
     @php
         $examiner = auth()->user();
         $smsRemaining = $examiner && $examiner->isExaminer() ? $examiner->sms_remaining : 0;

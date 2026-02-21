@@ -60,6 +60,7 @@
                     <li><a href="{{ route('dashboard.exam-calendar.index') }}" class="examiner-nav-link {{ request()->routeIs('dashboard.exam-calendar.*') ? 'examiner-nav-link--active' : '' }} group flex items-center gap-3 rounded-lg py-3 px-3 text-sm font-medium min-w-0 transition-all" title="Midsem & end-of-semester exam calendar by class"><svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><span class="examiner-nav-text truncate">Exam Calendar</span></a></li>
                     <li><a href="{{ route('dashboard.coordinators.students.index') }}" class="examiner-nav-link {{ request()->routeIs('dashboard.coordinators.students.*') ? 'examiner-nav-link--active' : '' }} group flex items-center gap-3 rounded-lg py-3 px-3 text-sm font-medium min-w-0 transition-all" title="View and search students"><svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg><span class="examiner-nav-text truncate">Students</span></a></li>
                     <li><a href="{{ route('dashboard.courses.index') }}" class="examiner-nav-link {{ request()->routeIs('dashboard.courses.*') ? 'examiner-nav-link--active' : '' }} group flex items-center gap-3 rounded-lg py-3 px-3 text-sm font-medium min-w-0 transition-all" title="Create courses and assign lecturers"><svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg><span class="examiner-nav-text truncate">Courses</span></a></li>
+                    <li><a href="{{ route('dashboard.quizzes.live-proctor-all') }}" class="examiner-nav-link {{ request()->routeIs('dashboard.quizzes.live-proctor-all*') ? 'examiner-nav-link--active' : '' }} group flex items-center gap-3 rounded-lg py-3 px-3 text-sm font-medium min-w-0 transition-all" title="Live feed of all quiz sessions (CCTV)"><svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg><span class="examiner-nav-text truncate">Live proctor (all)</span></a></li>
                     <li class="pt-3"><div class="px-3 mb-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider examiner-nav-text">Docu Mentor</div></li>
                     <li><a href="{{ route('dashboard.coordinators.categories.index') }}" class="examiner-nav-link {{ request()->routeIs('dashboard.coordinators.categories.*') ? 'examiner-nav-link--active' : '' }} group flex items-center gap-3 rounded-lg py-3 px-3 text-sm font-medium min-w-0 transition-all"><svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg><span class="examiner-nav-text truncate">Project Categories</span></a></li>
                     <li><a href="{{ route('dashboard.coordinators.groups.index') }}" class="examiner-nav-link {{ request()->routeIs('dashboard.coordinators.groups.*') ? 'examiner-nav-link--active' : '' }} group flex items-center gap-3 rounded-lg py-3 px-3 text-sm font-medium min-w-0 transition-all"><svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span class="examiner-nav-text truncate">Project Groups</span></a></li>
@@ -97,6 +98,12 @@
                         <a href="{{ route('dashboard.courses.index') }}" class="examiner-nav-link {{ request()->routeIs('dashboard.courses.*') ? 'examiner-nav-link--active' : '' }} group flex items-center gap-3 rounded-lg py-3 px-3 text-sm font-medium min-w-0 transition-all" title="View your assigned courses (read-only)">
                             <svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                             <span class="examiner-nav-text truncate">Courses</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('dashboard.quizzes.live-proctor-all') }}" class="examiner-nav-link {{ request()->routeIs('dashboard.quizzes.live-proctor-all*') ? 'examiner-nav-link--active' : '' }} group flex items-center gap-3 rounded-lg py-3 px-3 text-sm font-medium min-w-0 transition-all" title="Live feed of all your quiz sessions (CCTV)">
+                            <svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            <span class="examiner-nav-text truncate">Live proctor (all)</span>
                         </a>
                     </li>
                     @endif
@@ -215,13 +222,13 @@
             </div>
         </header>
 
-        <main class="examiner-main-content flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-offwhite">
+        <main class="examiner-main-content flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-offwhite overscroll-behavior-y-contain">
             @php
                 $fullBleedPage = request()->routeIs('dashboard.profile.*') || request()->routeIs('dashboard.system.reset.*') || request()->routeIs('system.reset.*') || request()->is('dashboard/system/reset*');
                 $fullWidthFormPage = request()->routeIs('dashboard.quizzes.create') || request()->routeIs('dashboard.quizzes.edit');
             @endphp
-            <div class="examiner-page w-full min-h-full {{ $fullBleedPage ? 'p-0' : 'px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 safe-area-main' }}">
-                <div class="examiner-dashboard-content w-full max-w-none {{ $fullBleedPage ? 'px-0' : 'px-0 md:px-2' }}">
+            <div class="examiner-page w-full min-h-full max-w-full {{ $fullBleedPage ? 'p-0' : 'px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 safe-area-main' }}">
+                <div class="examiner-dashboard-content w-full max-w-none overflow-x-hidden {{ $fullBleedPage ? 'px-0' : 'px-0 md:px-2' }}">
                     @if($isCoordinatorOnly && (request()->routeIs('dashboard') || request()->routeIs('dashboard.coordinators.*') || request()->routeIs('dashboard.class-groups.*') || request()->routeIs('dashboard.courses.*') || request()->routeIs('dashboard.profile.*')))
                     <nav class="coordinator-breadcrumb flex items-center gap-2 text-sm text-gray-600 mb-4" aria-label="Breadcrumb">
                         <a href="{{ route('dashboard') }}" class="hover:text-primary-600">Dashboard</a>
@@ -280,6 +287,12 @@
         var collapseBtn = e.target && e.target.closest && e.target.closest('[data-examiner-collapse]');
         if (collapseBtn) { e.preventDefault(); e.stopPropagation(); if (isDesktop()) setCollapsed(!collapsed); else setCollapsed(true); }
     }, true);
+    /* On mobile: close sidebar when any nav link is clicked */
+    var nav = sidebar && sidebar.querySelector('.examiner-sidebar-nav');
+    if (nav) nav.addEventListener('click', function(e) {
+        var link = e.target && e.target.closest && e.target.closest('a[href]');
+        if (link && link.getAttribute('href') && link.getAttribute('href') !== '#' && !isDesktop()) setCollapsed(true);
+    });
     window.addEventListener('resize', function() {
         if (!isDesktop()) setCollapsed(true);
         updateMenuButton();

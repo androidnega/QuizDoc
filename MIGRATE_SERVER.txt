@@ -1,5 +1,0 @@
-To run migrations on the live server:
-  Option 1: https://quizsnap.online/the?key=YOUR_KEY
-  Option 2: php artisan migrate --force
-
-New migration in this release: 2026_02_21_000001_add_out_of_frame_fields_to_quiz_violations (adds out_of_frame_duration, evidence_timestamp to quiz_violations).

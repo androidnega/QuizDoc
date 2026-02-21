@@ -153,15 +153,24 @@ class ClassGroupController extends Controller
         $quizCategories = \App\Models\QuizCategory::ordered();
         $academicYears = \App\Models\DocuMentor\AcademicYear::orderBy('year', 'desc')->get(['id', 'year']);
 
-        // Class groups that have at least one student currently live writing a quiz (for breathing indicator)
+        // Class groups that have at least one session with recent activity (same criteria as live proctor: heartbeat in last 2 min or started in last 5 min)
         $classGroupIdsWithLiveSessions = [];
         if ($classGroups->isNotEmpty()) {
             $pageIds = $classGroups->pluck('id')->all();
+            $heartbeatCutoff = now()->subSeconds(120);
+            $startedCutoff = now()->subMinutes(5);
             $classGroupIdsWithLiveSessions = \Illuminate\Support\Facades\DB::table('quiz_sessions')
                 ->join('quizzes', 'quizzes.id', '=', 'quiz_sessions.quiz_id')
                 ->whereNotNull('quiz_sessions.start_time')
                 ->whereNull('quiz_sessions.ended_at')
                 ->whereIn('quizzes.class_group_id', $pageIds)
+                ->where(function ($q) use ($heartbeatCutoff, $startedCutoff) {
+                    $q->where('quiz_sessions.last_heartbeat_at', '>=', $heartbeatCutoff)
+                        ->orWhere(function ($q2) use ($startedCutoff) {
+                            $q2->whereNull('quiz_sessions.last_heartbeat_at')
+                                ->where('quiz_sessions.start_time', '>=', $startedCutoff);
+                        });
+                })
                 ->distinct()
                 ->pluck('quizzes.class_group_id')
                 ->all();

@@ -5,15 +5,7 @@
     $levelLabel = $g->level ? 'L' . (int) $g->level->value : null;
     $hasLiveSessions = isset($classGroupIdsWithLiveSessions) && in_array($g->id, $classGroupIdsWithLiveSessions);
 @endphp
-<div class="group rounded-lg {{ $accent['bg'] }} border {{ $accent['border'] }} p-3 hover:opacity-95 transition-opacity text-left flex flex-col min-w-0 {{ $hasLiveSessions ? 'relative overflow-visible' : '' }}">
-    @if($hasLiveSessions)
-        <div class="absolute -top-0.5 -right-0.5 flex items-center gap-1" title="Students are live writing a quiz">
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/90 text-white shadow-sm breathe-dot">
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-                Live
-            </span>
-        </div>
-    @endif
+<div class="group rounded-lg {{ $accent['bg'] }} border {{ $accent['border'] }} p-3 hover:opacity-95 transition-opacity text-left flex flex-col min-w-0 overflow-hidden">
     <div class="flex items-start justify-between gap-2 min-h-0">
         <a href="{{ route('dashboard.class-groups.show', $g) }}" class="flex-1 min-w-0">
             <h3 class="font-display text-sm font-semibold text-gray-900 tracking-tight break-words line-clamp-2 group-hover:text-primary-600" title="{{ $g->name }}">{{ $g->name }}</h3>
@@ -21,7 +13,13 @@
                 <span class="inline-block mt-1.5 px-2 py-0.5 rounded text-xs font-bold {{ $levelTagClasses }}">{{ $levelLabel }}</span>
             @endif
         </a>
-        <div class="flex items-center gap-0.5 shrink-0" onclick="event.stopPropagation();">
+        <div class="flex items-center gap-1 shrink-0 flex-shrink-0" onclick="event.stopPropagation();">
+            @if($hasLiveSessions)
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/90 text-white shadow-sm breathe-dot flex-shrink-0" title="Students are live writing a quiz">
+                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-white animate-pulse flex-shrink-0"></span>
+                    <span class="truncate max-w-[3rem] sm:max-w-none">Live</span>
+                </span>
+            @endif
             <a href="{{ route('dashboard.class-groups.show', $g) }}" class="p-1 rounded text-gray-400 hover:text-primary-600 hover:bg-primary-50" title="View"><i class="fas fa-eye text-xs"></i></a>
             @if(!$isExaminer)
             <a href="{{ route('dashboard.class-groups.edit', $g) }}" class="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100" title="Edit"><i class="fas fa-pen text-xs"></i></a>

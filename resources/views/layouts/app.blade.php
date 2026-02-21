@@ -139,10 +139,60 @@
             display: none;             /* Chrome, Safari, Opera */
         }
 
-        /* Mobile: prevent horizontal scroll but allow natural vertical scrolling */
-        @media (max-width: 768px) {
+        /* Mobile: prevent horizontal scroll, fluid app-like layout */
+        @media (max-width: 767px) {
             html, body {
                 overflow-x: hidden;
+                -webkit-overflow-scrolling: touch;
+            }
+            .examiner-wrap {
+                overflow-x: hidden;
+                min-height: 100vh;
+                min-height: 100dvh;
+            }
+            /* Sidebar: fixed drawer, off-screen when collapsed */
+            .examiner-sidebar {
+                position: fixed !important;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                z-index: 40;
+                width: min(85vw, 18rem) !important;
+                min-width: 0 !important;
+                transition: transform 0.25s ease-out, box-shadow 0.25s ease-out;
+                box-shadow: none;
+            }
+            .examiner-sidebar.examiner-sidebar--collapsed {
+                transform: translateX(-100%);
+                pointer-events: none;
+            }
+            .examiner-sidebar:not(.examiner-sidebar--collapsed) {
+                transform: translateX(0);
+                box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            }
+            .examiner-overlay {
+                transition: opacity 0.2s ease-out;
+            }
+            .examiner-main,
+            .examiner-main-content {
+                overflow-x: hidden;
+                min-width: 0;
+            }
+            .examiner-page {
+                overflow-x: hidden;
+                max-width: 100%;
+            }
+            .examiner-dashboard-content {
+                overflow-x: hidden;
+                max-width: 100%;
+            }
+            .examiner-overlay:not(.hidden) {
+                display: block !important;
+                pointer-events: auto;
+            }
+            .examiner-sidebar-nav a {
+                min-height: 44px;
+                -webkit-tap-highlight-color: transparent;
             }
         }
 

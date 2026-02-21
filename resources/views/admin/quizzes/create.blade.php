@@ -57,8 +57,8 @@
 @endpush
 
 @section('dashboard_content')
-<div class="w-full max-w-5xl mx-auto">
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 md:p-8">
+<div class="w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-5 md:p-8">
             @if(session('success'))
                 <div class="alert alert-success mb-6">
                     <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
