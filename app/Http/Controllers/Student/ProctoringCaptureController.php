@@ -28,11 +28,23 @@ class ProctoringCaptureController extends Controller
         $quizId = session('quiz_id');
         $indexNumber = session('index_number');
         if (!$quizId || !$indexNumber) {
-            return redirect()->route('student.landing')->with('error', 'Error');
+            $quizToken = session('quiz_link_token');
+            if ($quizToken) {
+                return redirect()->route('student.rules.show.quiz', ['token' => $quizToken])
+                    ->with('error', 'Your quiz session expired. Please accept the rules again.');
+            }
+            return redirect()->route('student.landing')->with('error', 'Your quiz session expired. Please open your quiz link again.');
         }
         $quiz = Quiz::find($quizId);
         if (!$quiz || !$quiz->isAvailableForStudent()) {
-            return redirect()->route('student.landing')->with('error', 'Error');
+            if ($quiz && $quiz->starts_at && $quiz->starts_at->isFuture()) {
+                return redirect()->route('student.quiz-will-start', ['token' => $quiz->link_token]);
+            }
+            if ($quiz && $quiz->link_token) {
+                return redirect()->route('student.rules.show.quiz', ['token' => $quiz->link_token])
+                    ->with('error', 'This quiz is not currently available.');
+            }
+            return redirect()->route('student.landing')->with('error', 'This quiz is not currently available.');
         }
         $ip = $request->ip();
         $studentIndex = strtoupper(trim((string) $indexNumber));
@@ -45,7 +57,8 @@ class ProctoringCaptureController extends Controller
                 ->exists();
 
             if ($ipUsedByOther) {
-                return redirect()->route('student.landing')->with('error', 'Error');
+                return redirect()->route('student.rules.show.quiz', ['token' => $quiz->link_token])
+                    ->with('error', 'This network has already been used for this quiz by another student.');
             }
         }
 
@@ -69,12 +82,14 @@ class ProctoringCaptureController extends Controller
                 $assignment = $this->assignmentService->assignQuestions($quiz);
             } catch (\Throwable $e) {
                 report($e);
-                return redirect()->route('student.landing')->with('error', 'Error');
+                return redirect()->route('student.rules.show.quiz', ['token' => $quiz->link_token])
+                    ->with('error', 'Quiz is not ready at the moment. Please try again shortly.');
             }
 
             $assignedIds = $assignment['question_ids'] ?? [];
             if (count($assignedIds) < $quiz->getQuestionsPerStudent()) {
-                return redirect()->route('student.landing')->with('error', 'Error');
+                return redirect()->route('student.rules.show.quiz', ['token' => $quiz->link_token])
+                    ->with('error', 'Not enough questions are ready for this quiz yet.');
             }
 
             $session = QuizSession::create([

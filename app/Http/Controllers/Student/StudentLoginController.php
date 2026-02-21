@@ -38,12 +38,24 @@ class StudentLoginController extends Controller
         
         $quizId = session('quiz_id_for_login');
         if (!$quizId) {
+            $quizToken = session('quiz_link_token');
+            if ($quizToken) {
+                return redirect()->route('student.rules.show.quiz', ['token' => $quizToken])
+                    ->with('error', 'Your quiz session expired. Please accept the rules again.');
+            }
             return redirect()->route('student.landing')
-                ->with('error', 'Error');
+                ->with('error', 'Your quiz session expired. Please open your quiz link again.');
         }
         $quiz = Quiz::find($quizId);
         if (!$quiz || !$quiz->isAvailableForStudent()) {
-            return redirect()->route('student.landing')->with('error', 'Error');
+            if ($quiz && $quiz->starts_at && $quiz->starts_at->isFuture()) {
+                return redirect()->route('student.quiz-will-start', ['token' => $quiz->link_token]);
+            }
+            if ($quiz && $quiz->link_token) {
+                return redirect()->route('student.rules.show.quiz', ['token' => $quiz->link_token])
+                    ->with('error', 'This quiz is not currently available.');
+            }
+            return redirect()->route('student.landing')->with('error', 'This quiz is not currently available.');
         }
         return view('student.login', ['quiz' => $quiz]);
     }

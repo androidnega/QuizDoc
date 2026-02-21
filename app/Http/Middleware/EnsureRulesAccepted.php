@@ -69,11 +69,24 @@ class EnsureRulesAccepted
             return (int) $quizFromQuery;
         }
 
+        $quizFromSession = session('quiz_id') ?? session('quiz_id_for_login');
+        if ($quizFromSession !== null && $quizFromSession !== '') {
+            return (int) $quizFromSession;
+        }
+
         $token = $request->route('token') ?? session('quiz_session_token');
         if ($token) {
             $session = QuizSession::where('session_token', $token)->first();
             if ($session) {
                 return (int) $session->quiz_id;
+            }
+        }
+
+        $quizToken = session('quiz_link_token');
+        if ($quizToken) {
+            $quiz = Quiz::where('link_token', $quizToken)->first();
+            if ($quiz) {
+                return (int) $quiz->id;
             }
         }
 
