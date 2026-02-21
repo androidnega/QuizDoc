@@ -138,7 +138,7 @@
                 @endif
                 @endif
                 @if($user->isExaminer() || ($user->role === \App\Models\User::DM_ROLE_COORDINATOR && auth()->user()->isSuperAdmin()))
-                @if(!$user->faculty_id || (isset($isProfileCompletion) && $isProfileCompletion) || $user->role === \App\Models\User::DM_ROLE_COORDINATOR)
+                {{-- Always show Faculty and Department when editing examiner or coordinator (Super Admin) so they can view/change scope --}}
                 <div id="faculty-field">
                     <label for="faculty_id" class="block text-xs font-medium text-gray-500 mb-0.5">Faculty @if((isset($isProfileCompletion) && $isProfileCompletion && !$user->faculty_id))<span class="text-red-500">*</span>@endif</label>
                     <select name="faculty_id" id="faculty_id" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none @error('faculty_id') border-red-500 @enderror" onchange="loadDepartments()" {{ (isset($isProfileCompletion) && $isProfileCompletion && !$user->faculty_id) ? 'required' : '' }}>
@@ -149,8 +149,6 @@
                     </select>
                     @error('faculty_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
-                @endif
-                @if(!$user->department_id || (isset($isProfileCompletion) && $isProfileCompletion))
                 <div id="department-field">
                     <label for="department_id" class="block text-xs font-medium text-gray-500 mb-0.5">Department @if((isset($isProfileCompletion) && $isProfileCompletion && !$user->department_id))<span class="text-red-500">*</span>@endif</label>
                     <select name="department_id" id="department_id" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none @error('department_id') border-red-500 @enderror" {{ (isset($isProfileCompletion) && $isProfileCompletion && !$user->department_id) ? 'required' : '' }}>
@@ -161,7 +159,6 @@
                     </select>
                     @error('department_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
-                @endif
                 @if(!isset($isProfileCompletion) || !$isProfileCompletion)
                 @if(auth()->user()->isSuperAdmin())
                 <div>
