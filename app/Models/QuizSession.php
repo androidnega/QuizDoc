@@ -58,4 +58,9 @@ class QuizSession extends Model
     {
         return $this->hasOne(Result::class, 'quiz_session_id');
     }
+
+    public function isResultWithheld(): bool
+    {
+        return trim((string) $this->submission_reason) === 'withheld_due_to_violations';
+    }
 }

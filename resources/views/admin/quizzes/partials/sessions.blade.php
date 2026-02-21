@@ -83,9 +83,17 @@
                                             $score = $session->result->score;
                                             $colorClass = $score >= 70 ? 'bg-emerald-100 text-emerald-800' : ($score >= 50 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
                                         @endphp
-                                        <span class="inline-flex items-center justify-center min-w-[3rem] px-1.5 py-0.5 rounded text-xs font-bold tabular-nums {{ $colorClass }}">
-                                            {{ $session->result->correct_count }}/{{ $session->result->total_questions }}
-                                        </span>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="inline-flex items-center justify-center min-w-[3rem] px-1.5 py-0.5 rounded text-xs font-bold tabular-nums {{ $colorClass }}">
+                                                {{ number_format((float) $session->result->score, 1) }}%
+                                            </span>
+                                            <span class="inline-flex items-center justify-center min-w-[3rem] px-1.5 py-0.5 rounded text-xs font-semibold tabular-nums bg-slate-100 text-slate-700">
+                                                {{ $session->result->correct_count }}/{{ $session->result->total_questions }}
+                                            </span>
+                                            @if($session->isResultWithheld())
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-700">Result on hold</span>
+                                            @endif
+                                        </div>
                                     @else
                                         <span class="text-xs text-gray-400">—</span>
                                     @endif

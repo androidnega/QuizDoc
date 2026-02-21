@@ -46,8 +46,12 @@
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
                         @if(isset($s->result) && $s->result)
+                        @if($s->isResultWithheld())
+                        <span class="inline-flex items-center rounded-lg bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">Withheld, contact lecturer.</span>
+                        @else
                         <span class="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">{{ number_format($s->result->score ?? 0, 1) }}%</span>
                         <span class="text-xs text-slate-500">{{ $s->result->correct_count ?? 0 }}/{{ $s->result->total_questions ?? 0 }} correct</span>
+                        @endif
                         <a href="{{ route('dashboard.my-quizzes.show', ['sessionId' => $s->id]) }}" class="text-xs font-medium text-slate-600 hover:underline">Review</a>
                         <a href="{{ route('dashboard.my-quizzes.download-pdf', ['sessionId' => $s->id]) }}" target="_blank" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50" title="Download PDF">
                             <i class="fas fa-file-pdf"></i> PDF

@@ -10,7 +10,8 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureCourseCreationAllowed
 {
     /**
-     * Allow course creation if user is Super Admin OR if examiner creation is enabled in settings.
+     * Allow course creation/management for Super Admin and Coordinator.
+     * Examiners can only view assigned courses from index.
      */
     public function handle(Request $request, Closure $next): Response
     {

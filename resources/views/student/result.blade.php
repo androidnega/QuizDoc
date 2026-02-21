@@ -6,14 +6,23 @@
 @section('content')
 <div class="min-h-[100dvh] px-4 py-8 sm:py-10 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1rem,env(safe-area-inset-bottom))] min-w-0 overflow-x-hidden">
     <div class="max-w-4xl mx-auto w-full min-w-0 space-y-8">
+        @php $isWithheld = $session->isResultWithheld(); @endphp
         {{-- Header --}}
         <div class="text-center mb-8">
             <h1 class="text-xl font-semibold text-gray-900">{{ $session->quiz->title }}</h1>
             <p class="text-sm text-gray-500 mt-0.5">Index: {{ $session->student_index }}</p>
         </div>
 
+        @if($session->result && $isWithheld)
+            <div class="mb-8 rounded-xl border-2 border-red-300 bg-red-50 p-6 sm:p-8 text-center">
+                <h2 class="text-lg font-bold text-red-800 mb-2">Result on hold</h2>
+                <p class="text-base font-semibold text-red-900">Withheld, contact lecturer.</p>
+                <p class="text-sm text-red-700 mt-2">Your exam was auto-submitted after repeated proctoring violations.</p>
+            </div>
+        @endif
+
         {{-- Student feedback: clear performance verdict based on score --}}
-        @if($session->result)
+        @if($session->result && !$isWithheld)
             @if($session->quiz->canShowScore())
             @php
                 $score = (float) $session->result->score;
@@ -53,7 +62,7 @@
             @endif
         @endif
 
-        @if($session->result)
+        @if($session->result && !$isWithheld)
             @if($session->quiz->canShowScore())
             @php $wasAutoSubmitted = ($session->post_face_skipped_reason ?? '') === 'auto_submit'; @endphp
             @if($wasAutoSubmitted)
@@ -241,17 +250,17 @@
                     <p class="text-sm text-gray-600">Answer review is not shown for this quiz.</p>
                 </div>
             @endif
-        @else
+        @elseif(!$isWithheld)
             <div class="bg-white border border-gray-200 rounded-xl p-8 text-center">
                 <p class="text-gray-600">Processing your result…</p>
             </div>
         @endif
 
         <div class="text-center mt-10 flex flex-wrap justify-center gap-4">
-            @if($session->result && $session->quiz->canShowFullReview() && $session->answers->isNotEmpty())
+            @if($session->result && !$isWithheld && $session->quiz->canShowFullReview() && $session->answers->isNotEmpty())
                 <a href="{{ ($resultUrl ?? route('student.result')) }}#answer-review" class="btn btn-action text-sm py-2.5 px-5">View results</a>
             @endif
-            <a href="{{ route('student.landing') }}" class="btn {{ ($session->result && $session->quiz->canShowFullReview() && $session->answers->isNotEmpty()) ? 'btn-secondary' : 'btn-action' }} text-sm py-2.5 px-5">Back to Home</a>
+            <a href="{{ route('student.landing') }}" class="btn {{ ($session->result && !$isWithheld && $session->quiz->canShowFullReview() && $session->answers->isNotEmpty()) ? 'btn-secondary' : 'btn-action' }} text-sm py-2.5 px-5">Back to Home</a>
         </div>
     </div>
 </div>

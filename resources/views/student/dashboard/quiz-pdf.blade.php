@@ -153,6 +153,7 @@
     @php
         $quiz = $session->quiz ?? null;
         $hasScore = isset($session->result) && $session->result && $quiz && $quiz->canShowScore();
+        $isWithheld = $session->isResultWithheld();
         $canShowFull = $quiz && $quiz->canShowFullReview();
         $reviewWindowOpen = isset($showFullReview) && $showFullReview;
         $hasAnswers = isset($session->answers) && $session->answers->isNotEmpty();
@@ -175,6 +176,12 @@
     @if($hasScore)
     <div class="result-section">
         <h2 style="margin-top: 0;">Your Result</h2>
+        @if($isWithheld)
+        <div class="result-box" style="min-width: 260px;">
+            <div class="score" style="font-size: 20px; color: #b91c1c;">Withheld, contact lecturer.</div>
+            <div class="label">Result on hold</div>
+        </div>
+        @else
         <div class="result-box">
             <div class="score">{{ $score }}%</div>
             <div class="label">{{ $label }}</div>
@@ -187,6 +194,7 @@
             <div class="score">{{ $totalQuestions }}</div>
             <div class="label">Total Questions</div>
         </div>
+        @endif
     </div>
     @endif
 

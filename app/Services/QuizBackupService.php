@@ -99,21 +99,33 @@ class QuizBackupService
      */
     private static function questionsForBackupPdf(Quiz $quiz): \Illuminate\Support\Collection
     {
-        $approved = $quiz->questions;
-        if ($approved->isNotEmpty()) {
-            return $approved->map(fn ($q) => (object) [
-                'text' => $q->text ?? '—',
-                'options' => $q->options ?? [],
-                'correct_answer' => $q->correct_answer,
-                'points' => $q->points ?? 1,
+        $approved = $quiz->questions->map(fn ($q) => (object) [
+            'text' => $q->text ?? '—',
+            'options' => $q->options ?? [],
+            'correct_answer' => $q->correct_answer,
+            'points' => $q->points ?? 1,
+        ]);
+
+        // When approved questions exist, also include still-pending pools so digest reflects all generated/sent questions.
+        $pendingPools = $quiz->questionPools
+            ->filter(fn ($p) => !$p->is_approved)
+            ->map(fn ($p) => (object) [
+                'text' => $p->question_text ?? '—',
+                'options' => $p->options ?? [],
+                'correct_answer' => $p->correct_answer,
+                'points' => 1,
             ]);
+
+        if ($approved->isNotEmpty()) {
+            return $approved->concat($pendingPools)->values();
         }
+
         return $quiz->questionPools->map(fn ($p) => (object) [
             'text' => $p->question_text ?? '—',
             'options' => $p->options ?? [],
             'correct_answer' => $p->correct_answer,
             'points' => 1,
-        ]);
+        ])->values();
     }
 
     /**

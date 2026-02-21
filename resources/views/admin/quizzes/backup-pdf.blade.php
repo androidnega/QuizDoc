@@ -35,8 +35,12 @@
                 <div class="q-text">{{ $q->text ?? '—' }}</div>
                 @if(!empty($q->options) && is_array($q->options))
                     <div class="q-options">
-                        @foreach($q->options as $opt)
-                            <div>{{ $opt }}</div>
+                        @foreach($q->options as $optKey => $opt)
+                            @if(is_array($opt))
+                                <div>{{ ($opt['key'] ?? '') !== '' ? ($opt['key'] . '. ') : '' }}{{ $opt['text'] ?? '' }}</div>
+                            @else
+                                <div>{{ (!is_int($optKey) && !ctype_digit((string) $optKey)) ? ((string) $optKey . '. ') : '' }}{{ $opt }}</div>
+                            @endif
                         @endforeach
                     </div>
                 @endif

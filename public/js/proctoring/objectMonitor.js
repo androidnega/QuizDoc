@@ -104,7 +104,7 @@
         }, 8000);
     }
 
-    function sendViolationCapture(violationType, imageBase64) {
+    function sendViolationCapture(violationType, imageBase64, metadata = {}) {
         if (!violationCaptureUrl || !sessionId || !imageBase64) return;
         fetch(violationCaptureUrl, {
             method: 'POST',
@@ -117,6 +117,7 @@
                 session_id: sessionId,
                 violation_type: violationType,
                 image_base64: imageBase64,
+                metadata: metadata,
             }),
         }).catch(function (err) {
             console.warn('ObjectMonitor capture upload failed:', err);
@@ -126,7 +127,12 @@
     function triggerViolation(type, severity, label, imageBase64) {
         detectionCount++;
         showObjectWarning(label, detectionCount);
-        if (imageBase64) sendViolationCapture(type, imageBase64);
+        const evidenceMeta = {
+            object: label,
+            detection_count: detectionCount,
+            detected_at: new Date().toISOString(),
+        };
+        if (imageBase64) sendViolationCapture(type, imageBase64, evidenceMeta);
 
         const onViolation = getOnViolationHandler();
         if (onViolation) {
@@ -134,7 +140,7 @@
                 type: type,
                 severity: severity,
                 image_base64: imageBase64,
-                metadata: JSON.stringify({ object: label, count: detectionCount }),
+                metadata: evidenceMeta,
             });
         }
     }

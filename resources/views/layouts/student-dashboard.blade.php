@@ -206,6 +206,27 @@
     }
 })();
 </script>
+<script>
+(function () {
+    if (!window || typeof window.addEventListener !== 'function') return;
+    var hasReloaded = false;
+
+    window.addEventListener('quizsnap-data-updated', function (event) {
+        if (hasReloaded) return;
+        var detail = (event && event.detail) ? event.detail : {};
+        var type = String(detail.type || '').toLowerCase();
+        if (type !== 'dashboard') return;
+
+        var path = String(window.location.pathname || '');
+        if (path.indexOf('/dashboard/my-quizzes') !== 0) return;
+
+        hasReloaded = true;
+        setTimeout(function () {
+            window.location.reload();
+        }, 250);
+    });
+})();
+</script>
 
 @if(($hasQuizAccess ?? false) && isset($student) && $student && !empty($vapidPublicKey ?? null))
 @push('scripts')

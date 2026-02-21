@@ -158,6 +158,14 @@ class StudentQuizController extends Controller
         $proctoringObjectDetect = Setting::getValue(Setting::KEY_PROCTORING_OBJECT_DETECT, '1') === '1';
         $proctoringBlockRightClick = Setting::getValue(Setting::KEY_PROCTORING_BLOCK_RIGHT_CLICK, '1') === '1';
         $proctoringBlockCopyPaste = Setting::getValue(Setting::KEY_PROCTORING_BLOCK_COPY_PASTE, '1') === '1';
+        $matchedStudent = Student::query()
+            ->whereRaw('UPPER(TRIM(index_number)) = ?', [strtoupper(trim((string) $session->student_index))])
+            ->first(['index_number', 'student_name']);
+        $matchedStudentName = $matchedStudent && trim((string) $matchedStudent->student_name) !== ''
+            ? trim((string) $matchedStudent->student_name)
+            : null;
+        $studentNameLinked = $matchedStudentName !== null
+            && strtoupper(trim((string) $matchedStudent->index_number)) === strtoupper(trim((string) $session->student_index));
 
         return response()
             ->view('student.quiz', [
@@ -176,6 +184,8 @@ class StudentQuizController extends Controller
                 'proctoringObjectDetect' => $proctoringObjectDetect,
                 'proctoringBlockRightClick' => $proctoringBlockRightClick,
                 'proctoringBlockCopyPaste' => $proctoringBlockCopyPaste,
+                'matchedStudentName' => $matchedStudentName,
+                'studentNameLinked' => $studentNameLinked,
             ])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache');
@@ -295,6 +305,7 @@ class StudentQuizController extends Controller
             'session_id' => 'required|exists:quiz_sessions,id',
             'violation_type' => 'required|string',
             'image_base64' => 'required|string',
+            'metadata' => 'nullable',
         ]);
 
         $session = QuizSession::where('session_token', $token)->where('id', $request->session_id)->first();
@@ -324,6 +335,7 @@ class StudentQuizController extends Controller
 
         $imageUrl = null;
         $data = $request->image_base64;
+        $capturedAt = now();
 
         if (!Str::startsWith($data, 'data:image')) {
             return response()->json([
@@ -351,15 +363,35 @@ class StudentQuizController extends Controller
 
         // Create or update violation record
         $severity = QuizViolation::severityForType($violationType);
+        $metadata = $this->normalizeViolationMetadata($request->input('metadata'));
+        $metadata['captured_at'] = $capturedAt->toIso8601String();
 
-        QuizViolation::create([
-            'quiz_session_id' => $session->id,
-            'type' => $violationType,
-            'severity' => $severity,
-            'metadata' => json_encode(['captured_at' => now()->toIso8601String()]),
-            'image_url' => $imageUrl,
-            'occurred_at' => now(),
-        ]);
+        $recentViolation = QuizViolation::query()
+            ->where('quiz_session_id', $session->id)
+            ->where('type', $violationType)
+            ->whereNull('image_url')
+            ->where('occurred_at', '>=', now()->subSeconds(15))
+            ->orderByDesc('occurred_at')
+            ->first();
+
+        if ($recentViolation) {
+            $existingMeta = $this->normalizeViolationMetadata($recentViolation->metadata);
+            $recentViolation->update([
+                'severity' => $severity,
+                'metadata' => json_encode(array_merge($existingMeta, $metadata)),
+                'image_url' => $imageUrl,
+            ]);
+            $savedViolation = $recentViolation;
+        } else {
+            $savedViolation = QuizViolation::create([
+                'quiz_session_id' => $session->id,
+                'type' => $violationType,
+                'severity' => $severity,
+                'metadata' => json_encode($metadata),
+                'image_url' => $imageUrl,
+                'occurred_at' => $capturedAt,
+            ]);
+        }
 
         // Check if session should be marked as risky
         $this->checkAndMarkRiskySession($session);
@@ -368,6 +400,7 @@ class StudentQuizController extends Controller
             'success' => true,
             'image_url' => $imageUrl,
             'captured' => true,
+            'violation_id' => $savedViolation?->id,
             'remaining_captures' => max(
                 0,
                 self::MAX_QUIZ_VIOLATION_CAPTURES - ($capturedCount + 1)
@@ -394,11 +427,13 @@ class StudentQuizController extends Controller
         }
         $type = $request->type;
         $severity = QuizViolation::severityForType($type);
+        $metadata = $this->normalizeViolationMetadata($request->input('metadata'));
+        $metadata['logged_at'] = now()->toIso8601String();
         QuizViolation::create([
             'quiz_session_id' => $session->id,
             'type' => $type,
             'severity' => $severity,
-            'metadata' => $request->input('metadata'),
+            'metadata' => json_encode($metadata),
             'occurred_at' => now(),
         ]);
         $autoSubmitted = false;
@@ -408,6 +443,8 @@ class StudentQuizController extends Controller
                 'post_face_skipped_at' => now(),
                 'post_face_skipped_reason' => 'auto_submit',
                 'auto_submit_after' => null,
+                'auto_submitted' => true,
+                'submission_reason' => 'critical_violation_auto_submit',
             ]);
             $this->finalizeQuiz($session);
             $autoSubmitted = true;
@@ -438,6 +475,12 @@ class StudentQuizController extends Controller
         if ($autoSubmitted) {
             $response['redirect'] = $this->quizCompleteUrl();
         }
+        $outOfFrameCount = $session->violations()->where('type', 'face_out_of_frame')->count();
+        $response['out_of_frame_count'] = $outOfFrameCount;
+        $response['escalation'] = $outOfFrameCount > 3;
+        $response['remaining_warnings'] = max(0, 5 - $outOfFrameCount);
+        $response['auto_submit_on_next'] = $outOfFrameCount === 4;
+
         return response()->json($response);
     }
 
@@ -484,14 +527,21 @@ class StudentQuizController extends Controller
 
         // Update session with violation counts and auto-submit status
         $violationSummary = $request->violation_summary ?? [];
-        $minorCount = $violationSummary['minor_count'] ?? 0;
-        $majorCount = $violationSummary['major_count'] ?? 0;
+        $minorCount = isset($violationSummary['minor_count']) ? (int) $violationSummary['minor_count'] : (int) ($session->minor_violations ?? 0);
+        $majorCount = isset($violationSummary['major_count']) ? (int) $violationSummary['major_count'] : (int) ($session->major_violations ?? 0);
+        $outOfFrameCount = $session->violations()->where('type', 'face_out_of_frame')->count();
+        $hasOutOfFrameEvidence = $outOfFrameCount > 0;
+        $withholdDueToViolations = $outOfFrameCount > 3 && $hasOutOfFrameEvidence;
+        $submissionReason = $withholdDueToViolations ? 'withheld_due_to_violations' : trim((string) $request->reason);
+        if ($submissionReason === '') {
+            $submissionReason = 'auto_submit';
+        }
 
         $session->update([
             'minor_violations' => $minorCount,
             'major_violations' => $majorCount,
             'auto_submitted' => true,
-            'submission_reason' => $request->reason,
+            'submission_reason' => $submissionReason,
             'post_face_skipped_at' => now(),
             'post_face_skipped_reason' => 'auto_submit',
         ]);
@@ -502,6 +552,8 @@ class StudentQuizController extends Controller
         return response()->json([
             'success' => true,
             'redirect' => $this->quizCompleteUrl(),
+            'withheld' => $withholdDueToViolations,
+            'out_of_frame_count' => $outOfFrameCount,
         ]);
     }
 
@@ -764,6 +816,25 @@ class StudentQuizController extends Controller
         Storage::disk('public')->put($path, $binary);
 
         return asset('storage/' . $path);
+    }
+
+    private function normalizeViolationMetadata(mixed $metadata): array
+    {
+        if (is_array($metadata)) {
+            return $metadata;
+        }
+        if (is_string($metadata)) {
+            $trimmed = trim($metadata);
+            if ($trimmed === '') {
+                return [];
+            }
+            $decoded = json_decode($trimmed, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+            return ['message' => $trimmed];
+        }
+        return [];
     }
 
     /**

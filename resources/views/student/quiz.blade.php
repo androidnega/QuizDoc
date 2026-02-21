@@ -276,7 +276,10 @@ window.QuizSnapQuiz = {
     proctoringTabSwitch: {{ ($proctoringTabSwitch ?? true) ? 'true' : 'false' }},
     proctoringObjectDetect: {{ ($proctoringObjectDetect ?? true) ? 'true' : 'false' }},
     proctoringBlockRightClick: {{ ($proctoringBlockRightClick ?? true) ? 'true' : 'false' }},
-    proctoringBlockCopyPaste: {{ ($proctoringBlockCopyPaste ?? true) ? 'true' : 'false' }}
+    proctoringBlockCopyPaste: {{ ($proctoringBlockCopyPaste ?? true) ? 'true' : 'false' }},
+    studentIndex: @json($session->student_index ?? null),
+    studentName: @json($matchedStudentName ?? null),
+    studentNameLinked: {{ ($studentNameLinked ?? false) ? 'true' : 'false' }}
 };
 
 // Configure intelligent face monitor for quiz monitoring
@@ -287,6 +290,9 @@ window.QuizSnapIntelligentFaceMonitor.config.violationCaptureUrl = "{{ route('st
 window.QuizSnapIntelligentFaceMonitor.config.autoSubmitUrl = "{{ route('student.quiz.auto-submit') }}";
 window.QuizSnapIntelligentFaceMonitor.config.csrfToken = "{{ csrf_token() }}";
 window.QuizSnapIntelligentFaceMonitor.config.sessionId = {{ $session->id ?? 0 }};
+window.QuizSnapIntelligentFaceMonitor.config.studentIndex = @json($session->student_index ?? null);
+window.QuizSnapIntelligentFaceMonitor.config.studentName = @json($matchedStudentName ?? null);
+window.QuizSnapIntelligentFaceMonitor.config.studentNameLinked = {{ ($studentNameLinked ?? false) ? 'true' : 'false' }};
 
 // Configure object monitor
 window.QuizSnapObjectMonitor = window.QuizSnapObjectMonitor || {};

@@ -302,6 +302,7 @@ Route::middleware('admin.auth')->group(function () {
         // so migrated/stale links do not hard-404 when quiz IDs changed.
         Route::get('/quizzes/{quizId}/sessions/{quizSession}', [QuizManagementController::class, 'showSession'])->name('quizzes.sessions.show');
         Route::post('/quizzes/{quizId}/sessions/{quizSession}/reset-ip', [QuizManagementController::class, 'resetSessionIp'])->name('quizzes.sessions.reset-ip');
+        Route::post('/quizzes/{quizId}/sessions/{quizSession}/clear-withheld', [QuizManagementController::class, 'clearWithheldResult'])->name('quizzes.sessions.clear-withheld');
         Route::delete('/quizzes/{quizId}/sessions/{quizSession}/kill', [QuizManagementController::class, 'killSession'])->name('quizzes.sessions.kill');
         Route::get('/quizzes/{quiz}/live-proctor', [QuizManagementController::class, 'liveProctor'])->name('quizzes.live-proctor');
         Route::get('/quizzes/{quiz}/live-sessions', [QuizManagementController::class, 'liveSessions'])->name('quizzes.live-sessions');

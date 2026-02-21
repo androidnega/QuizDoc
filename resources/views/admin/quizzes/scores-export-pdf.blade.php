@@ -61,7 +61,13 @@
             <tr>
                 <td class="num">{{ $idx + 1 }}</td>
                 <td>{{ $session->student_index }}</td>
-                <td class="num">{{ $session->result ? $session->result->correct_count . '/' . $session->result->total_questions : '—' }}</td>
+                <td class="num">
+                    @if($session->result)
+                        {{ number_format((float) $session->result->score, 1) }}% ({{ $session->result->correct_count }}/{{ $session->result->total_questions }}){{ $session->isResultWithheld() ? ' - Result on hold' : '' }}
+                    @else
+                        —
+                    @endif
+                </td>
                 <td>{{ $session->result && $session->result->submitted_at ? $session->result->submitted_at->format('M d, Y H:i') : '—' }}</td>
             </tr>
             @endforeach

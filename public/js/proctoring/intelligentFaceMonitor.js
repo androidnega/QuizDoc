@@ -45,6 +45,7 @@
     const QUIZ_FRAME_MARGIN = 0.05;
     const QUIZ_START_GRACE_MS = 12000; // Allow monitor/camera to stabilize before counting violations
     const MAX_FACE_LOSS_CAPTURES = 5;
+    const OUT_OF_FRAME_CONSECUTIVE_THRESHOLD = 4;
     // Require this many consecutive frames with 2+ faces before recording (reduces false positives)
     const MULTIPLE_FACES_CONSECUTIVE_THRESHOLD = 5; // 5 * 200ms = 1 second
     // Second face smaller than this ratio of primary face area is ignored (reflection/noise)
@@ -76,6 +77,7 @@
     let ctx = null;
     let lastHeadDirection = 'center'; // 'left', 'center', 'right'
     let multipleFacesConsecutiveCount = 0;
+    let outOfFrameConsecutiveCount = 0;
 
     /**
      * Get CSRF token
@@ -131,7 +133,7 @@
     /**
      * Send violation capture to backend
      */
-    function sendViolationCapture(imageBase64, violationType) {
+    function sendViolationCapture(imageBase64, violationType, metadata = {}) {
         if (!imageBase64 || !violationCaptureUrl) return;
 
         fetch(violationCaptureUrl, {
@@ -145,6 +147,7 @@
                 session_id: sessionId,
                 violation_type: violationType,
                 image_base64: imageBase64,
+                metadata: metadata,
             }),
         }).catch(function (err) {
             console.warn('Failed to send violation capture:', err);
@@ -157,7 +160,7 @@
     function recordViolation(type, severity = 'major', captureImage = true, metadata = {}) {
         const imageBase64 = captureImage ? captureFrame() : null;
         if (imageBase64 && captureImage) {
-            sendViolationCapture(imageBase64, type);
+            sendViolationCapture(imageBase64, type, metadata);
         }
 
         fetch(violationUrl, {
@@ -386,15 +389,17 @@
 
         // No face detection during quiz
         if (faceCount === 0) {
-            // Alert immediately if user moves out of frame
-            if (lastFacePresent && !outOfFrameAlertDebounce) {
-                outOfFrameAlertDebounce = setTimeout(function() {
-                    showProctoringModal('You are out of the camera frame', 'Please return your face to the center of the camera immediately.');
-                    outOfFrameAlertDebounce = null;
-                }, 1000); // Popup after 1 second of being out of frame
+            outOfFrameConsecutiveCount++;
+            if (outOfFrameConsecutiveCount >= OUT_OF_FRAME_CONSECUTIVE_THRESHOLD) {
+                if (!outOfFrameAlertDebounce) {
+                    outOfFrameAlertDebounce = setTimeout(function() {
+                        showProctoringModal('You are out of the camera frame', 'Please return your face to the center of the camera immediately.');
+                        outOfFrameAlertDebounce = null;
+                    }, 600);
+                }
+                handleFaceLossDuringQuiz('face_out_of_frame', { reason: 'no_face', face_count: 0 });
             }
             lastFacePresent = false;
-            handleFaceLossDuringQuiz('no_face');
             return;
         } else {
             // Face is present again
@@ -405,21 +410,26 @@
                 }
             }
             lastFacePresent = true;
+            outOfFrameConsecutiveCount = 0;
         }
 
         // Face present but out of frame
         if (isFaceOutOfFrame(boundingBoxes[0])) {
-            if (!outOfFrameAlertDebounce) {
-                outOfFrameAlertDebounce = setTimeout(function() {
-                    showProctoringModal('You are out of the camera frame', 'Please return your face to the center of the camera and stay centered in view.');
-                    outOfFrameAlertDebounce = null;
-                }, 800);
+            outOfFrameConsecutiveCount++;
+            if (outOfFrameConsecutiveCount >= OUT_OF_FRAME_CONSECUTIVE_THRESHOLD) {
+                if (!outOfFrameAlertDebounce) {
+                    outOfFrameAlertDebounce = setTimeout(function() {
+                        showProctoringModal('You are out of the camera frame', 'Please return your face to the center of the camera and stay centered in view.');
+                        outOfFrameAlertDebounce = null;
+                    }, 600);
+                }
+                handleFaceLossDuringQuiz('face_out_of_frame', { reason: 'out_of_frame', face_count: 1 });
             }
-            handleFaceLossDuringQuiz('face_out_of_frame');
             return;
         } else if (outOfFrameAlertDebounce) {
             clearTimeout(outOfFrameAlertDebounce);
             outOfFrameAlertDebounce = null;
+            outOfFrameConsecutiveCount = 0;
         }
 
         // Motion detection (photo attack)
@@ -539,7 +549,7 @@
     /**
      * Handle face loss during quiz with progressive warnings
      */
-    function handleFaceLossDuringQuiz(reasonType) {
+    function handleFaceLossDuringQuiz(reasonType, extraMetadata = {}) {
         const now = Date.now();
         
         // Debounce: only trigger if face lost for at least 2 seconds continuously
@@ -556,14 +566,20 @@
             lastFaceLossTime = now;
             faceLossWarningCount++;
             
-            const violationType = reasonType === 'face_out_of_frame'
-                ? 'face_out_of_frame'
-                : 'no_face_during_quiz';
+            const violationType = 'face_out_of_frame';
             const canCaptureNow = faceLossCaptureCount < MAX_FACE_LOSS_CAPTURES;
+            const remainingWarnings = Math.max(0, 5 - faceLossWarningCount);
+            const metadata = {
+                warning_count: faceLossWarningCount,
+                remaining_warnings: remainingWarnings,
+                auto_submit_on_next: faceLossWarningCount === 4,
+                reason: (extraMetadata && extraMetadata.reason) ? extraMetadata.reason : (reasonType || 'out_of_frame'),
+                face_count: (extraMetadata && typeof extraMetadata.face_count === 'number') ? extraMetadata.face_count : 0,
+                student_index: config.studentIndex || null,
+            };
 
             recordViolation(violationType, 'minor', canCaptureNow, {
-                warning_count: faceLossWarningCount,
-                reason: reasonType || 'no_face',
+                ...metadata,
                 auto_capture: canCaptureNow,
             });
             if (canCaptureNow) {
@@ -571,15 +587,15 @@
             }
             
             if (faceLossWarningCount === 1) {
-                showFaceLossWarning('first');
+                showFaceLossWarning('first', metadata);
             } else if (faceLossWarningCount === 2) {
-                showFaceLossWarning('second');
+                showFaceLossWarning('second', metadata);
             } else if (faceLossWarningCount === 3) {
-                showFaceLossWarning('third');
+                showFaceLossWarning('third', metadata);
             } else if (faceLossWarningCount === 4) {
-                showFaceLossWarning('fourth');
+                showFaceLossWarning('fourth', metadata);
             } else if (faceLossWarningCount >= 5) {
-                showFaceLossWarning('final');
+                showFaceLossWarning('final', metadata);
                 // Auto-submit on the 5th violation after showing warning briefly
                 setTimeout(function () {
                     triggerAutoSubmit('face_lost_repeatedly', 'no_face');
@@ -604,7 +620,7 @@
     /**
      * Show face loss warning modal
      */
-    function showFaceLossWarning(level) {
+    function showFaceLossWarning(level, metadata = {}) {
         const warningIds = {
             'first': 'face-loss-warning-first',
             'second': 'face-loss-warning-second',
@@ -615,6 +631,32 @@
         
         const warningEl = document.getElementById(warningIds[level]);
         if (warningEl) {
+            const remaining = typeof metadata.remaining_warnings === 'number'
+                ? metadata.remaining_warnings
+                : Math.max(0, 5 - faceLossWarningCount);
+            const bodyEl = warningEl.querySelector('p');
+            if (bodyEl) {
+                if (level === 'final') {
+                    bodyEl.innerHTML = 'This is your <strong>fifth face-out-of-frame violation</strong>. Your quiz will be <strong>automatically submitted now</strong>. 😜';
+                } else {
+                    bodyEl.innerHTML = 'Please keep your face fully inside frame. <strong>' + remaining + ' warning(s) remaining</strong>. ' + (remaining === 1 ? 'Your next violation will auto-submit your quiz.' : '');
+                }
+            }
+
+            if (level === 'fourth' && config.studentNameLinked && config.studentName) {
+                let nameBanner = warningEl.querySelector('[data-escalation-name]');
+                if (!nameBanner) {
+                    nameBanner = document.createElement('p');
+                    nameBanner.setAttribute('data-escalation-name', '1');
+                    nameBanner.className = 'text-2xl font-black text-red-700 mb-2';
+                    const heading = warningEl.querySelector('h4');
+                    if (heading && heading.parentNode) {
+                        heading.parentNode.insertBefore(nameBanner, heading.nextSibling);
+                    }
+                }
+                nameBanner.textContent = config.studentName;
+            }
+
             warningEl.classList.remove('hidden');
         }
     }
@@ -813,6 +855,7 @@
         faceLossWarningCount = 0;
         faceLossCaptureCount = 0;
         lastFacePresent = true;
+        outOfFrameConsecutiveCount = 0;
 
         // Start periodic monitoring
         monitoringInterval = setInterval(function () {

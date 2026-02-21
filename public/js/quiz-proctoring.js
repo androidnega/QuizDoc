@@ -317,7 +317,7 @@
             wrap.appendChild(msg);
             var emoji = document.createElement('p');
             emoji.style.cssText = 'font-size:1.5rem;margin-top:0.75rem;';
-            emoji.textContent = '\uD83E\uDD20\uD83D\uDCF8';
+            emoji.textContent = '\uD83D\uDE1C';
             wrap.appendChild(emoji);
             document.body.appendChild(wrap);
             if (typeof history.replaceState === 'function') {

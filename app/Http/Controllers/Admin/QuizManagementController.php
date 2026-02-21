@@ -709,6 +709,45 @@ class QuizManagementController extends Controller
     }
 
     /**
+     * Clear withheld status so student can view the already-computed score.
+     * Keeps result/violations intact for audit; only removes hold state.
+     */
+    public function clearWithheldResult(string $quizId, QuizSession $quizSession): RedirectResponse
+    {
+        $quiz = $quizSession->quiz;
+        if (! $quiz) {
+            abort(404);
+        }
+        $this->authorize('view', $quiz);
+
+        if ((string) $quizId !== (string) $quiz->getRouteKey()) {
+            return redirect()->route('dashboard.quizzes.sessions.clear-withheld', [
+                'quizId' => $quiz->getRouteKey(),
+                'quizSession' => $quizSession->getRouteKey(),
+            ]);
+        }
+
+        if (! $quizSession->result) {
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.sessions.show', [$quiz, $quizSession])
+                ->with('info', 'No result found for this session.');
+        }
+
+        if (! $quizSession->isResultWithheld()) {
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.sessions.show', [$quiz, $quizSession])
+                ->with('info', 'Result is already visible to the student.');
+        }
+
+        $quizSession->update([
+            'submission_reason' => 'withheld_cleared_by_examiner',
+        ]);
+
+        broadcast(new DataUpdated('dashboard'))->toOthers();
+
+        return redirect()->route($this->staffRoutePrefix() . '.quizzes.sessions.show', [$quiz, $quizSession])
+            ->with('success', 'Withheld status cleared. Student can now view the score.');
+    }
+
+    /**
      * Kill a session: delete the session and its result, allowing the student to retake the quiz.
      */
     public function killSession(string $quizId, QuizSession $quizSession): RedirectResponse

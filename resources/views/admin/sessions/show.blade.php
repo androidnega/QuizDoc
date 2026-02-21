@@ -17,10 +17,18 @@
     <section class="bg-white rounded-lg border border-gray-200 p-3">
         <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
             <h2 class="text-sm font-semibold text-gray-900">Summary</h2>
-            <form method="post" action="{{ route('dashboard.quizzes.sessions.reset-ip', [$quiz, $session]) }}" onsubmit="return confirm('Reset IP lock?');">
-                @csrf
-                <button type="submit" class="text-xs font-medium px-2.5 py-1.5 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">Reset IP Lock</button>
-            </form>
+            <div class="flex items-center gap-2">
+                @if($session->result && $session->isResultWithheld())
+                    <form method="post" action="{{ route('dashboard.quizzes.sessions.clear-withheld', [$quiz, $session]) }}" onsubmit="return confirm('Clear withheld status and allow student to see this score?');">
+                        @csrf
+                        <button type="submit" class="text-xs font-medium px-2.5 py-1.5 rounded border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Clear Withheld</button>
+                    </form>
+                @endif
+                <form method="post" action="{{ route('dashboard.quizzes.sessions.reset-ip', [$quiz, $session]) }}" onsubmit="return confirm('Reset IP lock?');">
+                    @csrf
+                    <button type="submit" class="text-xs font-medium px-2.5 py-1.5 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">Reset IP Lock</button>
+                </form>
+            </div>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
             <div><span class="text-gray-500 block">Index</span><span class="font-medium text-gray-900">{{ $session->student_index }}</span></div>
@@ -29,11 +37,17 @@
             <div><span class="text-gray-500 block">Ended</span><span class="text-gray-900">{{ $session->ended_at?->format('M d, H:i') ?? '-' }}</span></div>
             <div><span class="text-gray-500 block">Mark</span>
                 @if($session->result)
-                    <span class="inline-block px-1.5 py-0.5 text-xs font-semibold rounded tabular-nums
-                        @if($session->result->score >= 70) bg-green-100 text-green-800
-                        @elseif($session->result->score >= 50) bg-amber-100 text-amber-800
-                        @else bg-red-100 text-red-800
-                        @endif">{{ $session->result->correct_count }}/{{ $session->result->total_questions }}</span>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                        <span class="inline-block px-1.5 py-0.5 text-xs font-semibold rounded tabular-nums
+                            @if($session->result->score >= 70) bg-green-100 text-green-800
+                            @elseif($session->result->score >= 50) bg-amber-100 text-amber-800
+                            @else bg-red-100 text-red-800
+                            @endif">{{ number_format((float) $session->result->score, 1) }}%</span>
+                        <span class="inline-block px-1.5 py-0.5 text-xs font-semibold rounded tabular-nums bg-slate-100 text-slate-700">{{ $session->result->correct_count }}/{{ $session->result->total_questions }}</span>
+                        @if($session->isResultWithheld())
+                            <span class="inline-block px-1.5 py-0.5 text-xs font-semibold rounded bg-red-100 text-red-700">Result on hold</span>
+                        @endif
+                    </div>
                 @else<span class="text-gray-400">-</span>@endif
             </div>
             <div><span class="text-gray-500 block">Violations</span>
@@ -159,10 +173,32 @@
                                     if (is_array($meta)) {
                                         if (isset($meta['expected'], $meta['got'])) {
                                             $details = 'Expected IP: ' . e($meta['expected']) . ' — Got: ' . e($meta['got']);
-                                        } elseif (isset($meta['timestamp'])) {
-                                            $details = 'At ' . (is_numeric($meta['timestamp']) ? date('M d, H:i:s', (int)$meta['timestamp']) : e($meta['timestamp']));
                                         } else {
-                                            $details = implode('; ', array_map(fn ($k, $val) => $k . ': ' . (is_scalar($val) ? $val : json_encode($val)), array_keys($meta), $meta));
+                                            $parts = [];
+                                            if (isset($meta['face_count'])) {
+                                                $parts[] = 'Face count: ' . (int) $meta['face_count'];
+                                            }
+                                            if (isset($meta['object'])) {
+                                                $parts[] = 'Object: ' . (string) $meta['object'];
+                                            }
+                                            if (isset($meta['reason'])) {
+                                                $parts[] = 'Reason: ' . (string) $meta['reason'];
+                                            }
+                                            if (isset($meta['warning_count'])) {
+                                                $parts[] = 'Warning count: ' . (int) $meta['warning_count'];
+                                            }
+                                            if (isset($meta['remaining_warnings'])) {
+                                                $parts[] = 'Remaining warnings: ' . (int) $meta['remaining_warnings'];
+                                            }
+                                            $loggedAt = $meta['logged_at'] ?? $meta['captured_at'] ?? $meta['detected_at'] ?? $meta['timestamp'] ?? null;
+                                            if ($loggedAt !== null) {
+                                                $parts[] = 'At ' . (is_numeric($loggedAt) ? date('M d, H:i:s', (int) $loggedAt) : (string) $loggedAt);
+                                            }
+
+                                            if (empty($parts)) {
+                                                $parts[] = implode('; ', array_map(fn ($k, $val) => $k . ': ' . (is_scalar($val) ? $val : json_encode($val)), array_keys($meta), $meta));
+                                            }
+                                            $details = implode(' | ', array_filter($parts));
                                         }
                                     } elseif ((string)$meta !== '') {
                                         $details = (string) $meta;

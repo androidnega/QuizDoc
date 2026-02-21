@@ -10,6 +10,7 @@
 @php
     $quiz = $session->quiz ?? null;
     $hasScore = isset($session->result) && $session->result && $quiz && $quiz->canShowScore();
+    $isWithheld = $session->isResultWithheld();
     $canShowFull = $quiz && $quiz->canShowFullReview();
     $reviewWindowOpen = isset($showFullReview) && $showFullReview;
     $hasAnswers = isset($session->answers) && $session->answers->isNotEmpty();
@@ -36,6 +37,12 @@
 
 @if($hasScore)
 <section class="mb-8 min-w-0 max-w-full" aria-label="Result">
+        @if($isWithheld)
+        <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4 sm:p-5">
+            <h2 class="text-sm font-medium text-red-700 mb-2">Result on hold</h2>
+            <p class="text-sm font-semibold text-red-800">Withheld, contact lecturer.</p>
+        </div>
+        @else
         @php
             $score = round($session->result->score, 0);
             $correctCount = $session->result->correct_count;
@@ -71,10 +78,11 @@
                 <p class="text-sm text-slate-500 self-center">{{ $totalQuestions }} questions</p>
             </div>
     </div>
+        @endif
 </section>
 @endif
 
-@if($canShowFull && $reviewWindowOpen && $hasAnswers)
+@if(!$isWithheld && $canShowFull && $reviewWindowOpen && $hasAnswers)
 <section class="mb-8 min-w-0 max-w-full overflow-hidden" aria-label="Questions and answers">
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5 min-w-0 max-w-full">
             <h2 class="text-sm font-medium text-slate-700 mb-2">Questions & answers</h2>
@@ -155,7 +163,7 @@
 </section>
 @endif
 
-@if(isset($showFullReview) && !$showFullReview)
+@if(!$isWithheld && isset($showFullReview) && !$showFullReview)
 <section class="mb-8">
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5">
         <p class="text-sm text-slate-500">Detailed review (questions and answers) is no longer available. It is kept for 21 days. Your score above is kept forever.</p>
@@ -163,7 +171,7 @@
 </section>
 @endif
 
-@if($quiz && $quiz->canShowScore() && !$quiz->canShowFullReview())
+@if(!$isWithheld && $quiz && $quiz->canShowScore() && !$quiz->canShowFullReview())
 <section class="mb-8">
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5">
         <p class="text-sm text-slate-500">Answer review is not shown for this quiz.</p>
@@ -171,7 +179,7 @@
 </section>
 @endif
 
-@if($canShowFull && $reviewWindowOpen && isset($session->answers) && $session->answers->isEmpty())
+@if(!$isWithheld && $canShowFull && $reviewWindowOpen && isset($session->answers) && $session->answers->isEmpty())
 <section class="mb-8">
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5">
         <p class="text-sm text-slate-500">No answers recorded for this quiz session.</p>

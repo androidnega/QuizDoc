@@ -83,21 +83,7 @@
 
                         @if(session('admin_role') === 'super_admin')
                         <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-4">
-                            <h3 class="text-sm font-semibold text-gray-800">Examiner permissions</h3>
-                            <div class="space-y-3">
-                                <label class="flex items-start gap-3 cursor-pointer group">
-                                    <input type="checkbox" name="lock_examiner_create_group" value="1" {{ old('lock_examiner_create_group', $lock_examiner_create_group ?? false) ? 'checked' : '' }} class="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 shrink-0">
-                                    <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Lock examiners from creating new class groups</span>
-                                </label>
-                                <p class="text-xs text-gray-500 ml-7">When on, only Super Admin can create class groups. Examiners can still view and edit existing groups.</p>
-                            </div>
-                            <div class="space-y-3 pt-2 border-t border-gray-200">
-                                <label class="flex items-start gap-3 cursor-pointer group">
-                                    <input type="checkbox" name="allow_examiner_create_course" value="1" {{ old('allow_examiner_create_course', $allow_examiner_create_course ?? false) ? 'checked' : '' }} class="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 shrink-0">
-                                    <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Allow examiners to create courses</span>
-                                </label>
-                                <p class="text-xs text-gray-500 ml-7">When enabled, examiners can create and manage courses. By default, only Super Admin can create courses.</p>
-                            </div>
+                            <h3 class="text-sm font-semibold text-gray-800">Quiz access controls</h3>
                             <div class="space-y-3 pt-2 border-t border-gray-200">
                                 <label class="flex items-start gap-3 cursor-pointer group">
                                     <input type="checkbox" name="disable_ip_device_restrictions" value="1" {{ old('disable_ip_device_restrictions', $disable_ip_device_restrictions ?? false) ? 'checked' : '' }} class="w-4 h-4 mt-0.5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 shrink-0">
