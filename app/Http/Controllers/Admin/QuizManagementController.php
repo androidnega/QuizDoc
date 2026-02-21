@@ -59,7 +59,7 @@ class QuizManagementController extends Controller
         $user = $this->adminUser();
         $classGroupIds = $this->classGroupIds();
         $tab = $request->query('tab', 'active');
-        $query = Quiz::with(['course', 'classGroup', 'academicClass'])
+        $query = Quiz::with(['course', 'classGroup.level', 'academicClass'])
             ->withCount([
                 'questions',
                 'sessions as sessions_started_count' => fn ($q) => $q->whereNotNull('start_time'),

@@ -277,8 +277,9 @@ class StudentDashboardController extends Controller
                 });
         }
         
-        // Get completed quiz sessions
+        // Only show sessions that have a result (killed or abandoned sessions are hidden)
         $sessions = QuizSession::where('student_index', $student->index_number)
+            ->whereHas('result')
             ->with(['quiz', 'result'])
             ->orderByDesc('created_at')
             ->paginate(15);
@@ -440,6 +441,10 @@ class StudentDashboardController extends Controller
 
             if (!$quizSession->quiz) {
                 return redirect()->route('dashboard.my-quizzes')->with('error', 'Not found');
+            }
+
+            if (!$quizSession->result) {
+                return redirect()->route('dashboard.my-quizzes')->with('error', 'This attempt is no longer available.');
             }
 
             if (!$quizSession->quiz->canShowScore()) {

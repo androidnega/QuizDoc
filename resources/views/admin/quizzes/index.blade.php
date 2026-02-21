@@ -48,7 +48,14 @@
                                     <div class="text-xs text-gray-500 mt-0.5 break-words min-w-0">Topics: {{ Str::limit($q->topics, 40) }}</div>
                                 @endif
                             </td>
-                            <td class="px-3 py-2 sm:px-4 md:px-6 md:py-4 text-sm text-gray-600 break-words min-w-0 align-top">{{ $q->classGroup?->name ?? '-' }}</td>
+                            <td class="px-3 py-2 sm:px-4 md:px-6 md:py-4 text-sm text-gray-600 break-words min-w-0 align-top">
+                                <span class="font-medium text-gray-900">{{ $q->classGroup?->name ?? '-' }}</span>
+                                @if($q->classGroup && $q->classGroup->relationLoaded('level') && $q->classGroup->level)
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $q->classGroup->level_tag_classes ?? 'bg-gray-200 text-gray-800' }} ml-1.5">{{ $q->classGroup->level->label }}</span>
+                                @elseif($q->classGroup && $q->classGroup->level)
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-gray-200 text-gray-800 ml-1.5">{{ $q->classGroup->level->label }}</span>
+                                @endif
+                            </td>
                             <td class="px-3 py-2 sm:px-4 md:px-6 md:py-4 text-sm text-gray-600 break-words min-w-0 align-top">{{ $q->course->name ?? '-' }}</td>
                             <td class="px-2 py-2 sm:px-3 md:px-4 md:py-4 text-sm text-gray-600 align-top">{{ $q->getQuestionsPerStudent() }}</td>
                             <td class="px-2 py-2 sm:px-3 md:px-4 md:py-4 text-sm text-gray-600 align-top">{{ $q->duration_minutes }}m</td>

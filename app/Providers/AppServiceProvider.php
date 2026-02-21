@@ -44,7 +44,15 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('group', fn (string $value) => \App\Models\DocuMentor\ProjectGroup::findOrFail($value));
         Route::bind('chapter', fn (string $value) => \App\Models\DocuMentor\Chapter::findOrFail($value));
         Route::bind('submission', fn (string $value) => \App\Models\DocuMentor\Submission::findOrFail($value));
-        Route::bind('proposal', fn (string $value) => \App\Models\DocuMentor\ProjectProposal::findOrFail($value));
+        // Proposal must belong to project in URL (avoids 404 when proposal id is from another project)
+        Route::bind('proposal', function (string $value) {
+            $route = Route::current();
+            $project = $route ? $route->parameter('project') : null;
+            if ($project instanceof \App\Models\DocuMentor\Project) {
+                return \App\Models\DocuMentor\ProjectProposal::where('project_id', $project->id)->where('id', $value)->firstOrFail();
+            }
+            return \App\Models\DocuMentor\ProjectProposal::findOrFail($value);
+        });
 
         View::composer('*', function ($view): void {
             if (request()->routeIs('admin.*')) {
