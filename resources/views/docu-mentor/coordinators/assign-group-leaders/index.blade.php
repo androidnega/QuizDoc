@@ -9,33 +9,36 @@
     @if(session('error'))<div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{{ session('error') }}</div>@endif
 
     <div class="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 class="font-semibold text-gray-900 mb-2">Add single index</h2>
-        <p class="text-sm text-gray-600 mb-4">Add one student by index number and assign as group leader. If they have no account yet, one will be created.</p>
-        <form action="{{ route('dashboard.coordinators.assign-group-leaders.add') }}" method="post" class="flex flex-wrap items-end gap-4">
-            @csrf
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             <div>
-                <label for="add_index_number" class="block text-sm text-gray-600 mb-1">Index number</label>
-                <input type="text" name="index_number" id="add_index_number" maxlength="64" class="input w-48" placeholder="e.g. PS/IT/20/0001" required>
+                <h2 class="font-semibold text-gray-900 mb-2">Add single index</h2>
+                <p class="text-sm text-gray-600 mb-4">Add one student by index number and assign as group leader. If they have no account yet, one will be created.</p>
+                <form action="{{ route('dashboard.coordinators.assign-group-leaders.add') }}" method="post" class="flex flex-wrap items-end gap-4">
+                    @csrf
+                    <div>
+                        <label for="add_index_number" class="block text-sm text-gray-600 mb-1">Index number</label>
+                        <input type="text" name="index_number" id="add_index_number" maxlength="64" class="input w-48" placeholder="e.g. PS/IT/20/0001" required>
+                    </div>
+                    <button type="submit" class="inline-flex items-center justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">
+                        Add &amp; set as leader
+                    </button>
+                </form>
             </div>
-            <button type="submit" class="inline-flex items-center justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">
-                Add &amp; set as leader
-            </button>
-        </form>
-    </div>
-
-    <div class="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 class="font-semibold text-gray-900 mb-2">Bulk upload (Excel)</h2>
-        <p class="text-sm text-gray-600 mb-4">Upload a file with one column: <strong>Index Number</strong> or <strong>Phone</strong>. Matching students will be set as group leaders.</p>
-        <form action="{{ route('dashboard.coordinators.assign-group-leaders.upload') }}" method="post" enctype="multipart/form-data" class="flex flex-wrap items-end gap-4">
-            @csrf
             <div>
-                <label for="file" class="block text-sm text-gray-600 mb-1">File (.xlsx, .xls, .csv)</label>
-                <input type="file" name="file" id="file" accept=".xlsx,.xls,.csv" class="rounded border-gray-300 text-sm" required>
+                <h2 class="font-semibold text-gray-900 mb-2">Bulk upload (Excel)</h2>
+                <p class="text-sm text-gray-600 mb-4">Upload a file with one column: <strong>Index Number</strong> or <strong>Phone</strong>. Matching students will be set as group leaders.</p>
+                <form action="{{ route('dashboard.coordinators.assign-group-leaders.upload') }}" method="post" enctype="multipart/form-data" class="flex flex-wrap items-end gap-4">
+                    @csrf
+                    <div>
+                        <label for="file" class="block text-sm text-gray-600 mb-1">File (.xlsx, .xls, .csv)</label>
+                        <input type="file" name="file" id="file" accept=".xlsx,.xls,.csv" class="rounded border-gray-300 text-sm" required>
+                    </div>
+                    <button type="submit" class="inline-flex items-center justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">
+                        Upload
+                    </button>
+                </form>
             </div>
-            <button type="submit" class="inline-flex items-center justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">
-                Upload
-            </button>
-        </form>
+        </div>
     </div>
 
     <div class="rounded-lg border border-gray-200 bg-white overflow-hidden">
