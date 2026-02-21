@@ -43,13 +43,6 @@
         <span class="text">AI Invigilator Watching</span>
     </div>
 
-    {{-- Timer: simple square card, right side, sticky, minimal, no extra text --}}
-    @if($remainingSeconds > 0)
-    <div id="quiz-timer-card" class="fixed right-4 top-24 z-50 w-16 h-16 sm:w-20 sm:h-20 bg-white border border-gray-200 rounded-lg flex items-center justify-center shadow-sm pointer-events-none overflow-hidden min-w-0">
-        <p id="quiz-timer" class="text-base sm:text-lg font-bold tabular-nums quiz-timer quiz-timer-green whitespace-nowrap overflow-hidden min-w-0 px-0.5" aria-live="polite">--:--</p>
-    </div>
-    @endif
-
     {{-- Single major violation warning (max once per session): calm, non-accusatory --}}
     <div id="blur-warning" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90 px-4">
         <div class="bg-white border border-gray-200 rounded-lg p-4 max-w-md w-full text-center">
@@ -223,15 +216,22 @@
                 @endif
             </div>
 
-            {{-- Side: question nav (desktop); timer is in floating card on right --}}
-            <aside class="hidden lg:block w-[200px] flex-shrink-0" aria-label="Question navigation">
-                <div class="bg-white border border-gray-200 rounded-xl p-4 sticky top-24 min-w-0">
-                    <p class="text-xs text-gray-500 mb-2">Questions</p>
-                    <div id="quiz-side-nav" class="flex flex-wrap gap-1">
-                        @foreach($questions as $idx => $q)
-                            @php $qPage = (int) floor($idx / $perPage) + 1; @endphp
-                            <a href="#quiz-container" class="quiz-side-num w-8 h-8 rounded border border-gray-200 flex items-center justify-center text-sm font-medium text-gray-600 hover:border-primary-300 hover:bg-primary-50 shrink-0" data-question-id="{{ $q->id }}" data-page="{{ $qPage }}">{{ $idx + 1 }}</a>
-                        @endforeach
+            {{-- Side: one card with timer on top, then question nav (desktop); same card width as questions --}}
+            <aside class="hidden lg:block w-[200px] flex-shrink-0" aria-label="Quiz sidebar">
+                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden sticky top-24 min-w-0 shadow-sm">
+                    @if($remainingSeconds > 0)
+                    <div id="quiz-timer-card" class="p-4 border-b border-gray-200 flex items-center justify-center min-w-0">
+                        <p id="quiz-timer" class="text-lg font-bold tabular-nums quiz-timer quiz-timer-green" aria-live="polite">--:--</p>
+                    </div>
+                    @endif
+                    <div class="p-4 min-w-0">
+                        <p class="text-xs text-gray-500 mb-2">Questions</p>
+                        <div id="quiz-side-nav" class="flex flex-wrap gap-1">
+                            @foreach($questions as $idx => $q)
+                                @php $qPage = (int) floor($idx / $perPage) + 1; @endphp
+                                <a href="#quiz-container" class="quiz-side-num w-8 h-8 rounded border border-gray-200 flex items-center justify-center text-sm font-medium text-gray-600 hover:border-primary-300 hover:bg-primary-50 shrink-0" data-question-id="{{ $q->id }}" data-page="{{ $qPage }}">{{ $idx + 1 }}</a>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
             </aside>

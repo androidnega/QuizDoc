@@ -32,7 +32,7 @@
         <p class="text-sm text-slate-500 mt-1">Class group: {{ $classGroupLabel }}</p>
         @endif
     </div>
-    @if($hasScore)
+    @if($hasScore && !$isWithheld)
         <a href="{{ route('dashboard.my-quizzes.download-pdf', ['sessionId' => $session->id]) }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-slate-600 text-white hover:bg-slate-700 shrink-0" title="Download PDF">
             <i class="fas fa-file-pdf"></i> Download PDF
         </a>
@@ -43,8 +43,7 @@
 <section class="mb-8 min-w-0 max-w-full" aria-label="Result">
         @if($isWithheld)
         <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4 sm:p-5">
-            <h2 class="text-sm font-medium text-red-700 mb-2">Result on hold</h2>
-            <p class="text-sm font-semibold text-red-800">Withheld, contact lecturer.</p>
+            <p class="text-sm font-semibold text-red-800">Result on hold - contact lecturer</p>
         </div>
         @else
         @php

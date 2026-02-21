@@ -494,6 +494,10 @@ class StudentDashboardController extends Controller
                 return redirect()->route('dashboard.my-quizzes')->with('error', 'Not found');
             }
 
+            if ($quizSession->isResultWithheld()) {
+                return redirect()->route('dashboard.my-quizzes')->with('error', 'Result is on hold. Download is available after the lecturer releases it.');
+            }
+
             $reviewAvailableWithinDays = 21;
             $showFullReview = $quizSession->created_at && $quizSession->created_at->gte(now()->subDays($reviewAvailableWithinDays));
 

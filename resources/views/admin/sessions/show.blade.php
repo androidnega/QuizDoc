@@ -19,9 +19,9 @@
             <h2 class="text-sm font-semibold text-gray-900">Summary</h2>
             <div class="flex items-center gap-2">
                 @if($session->result && $session->isResultWithheld())
-                    <form method="post" action="{{ route('dashboard.quizzes.sessions.clear-withheld', [$quiz, $session]) }}" onsubmit="return confirm('Clear withheld status and allow student to see this score?');">
+                    <form method="post" action="{{ route('dashboard.quizzes.sessions.clear-withheld', [$quiz, $session]) }}" onsubmit="return confirm('Release result and allow student to see this score?');">
                         @csrf
-                        <button type="submit" class="text-xs font-medium px-2.5 py-1.5 rounded border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Clear Withheld</button>
+                        <button type="submit" class="text-xs font-medium px-2.5 py-1.5 rounded border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Release result</button>
                     </form>
                 @endif
                 <form method="post" action="{{ route('dashboard.quizzes.sessions.reset-ip', [$quiz, $session]) }}" onsubmit="return confirm('Reset IP lock?');">

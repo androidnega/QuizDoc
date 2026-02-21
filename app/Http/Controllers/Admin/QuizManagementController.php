@@ -709,7 +709,7 @@ class QuizManagementController extends Controller
     }
 
     /**
-     * Clear withheld status so student can view the already-computed score.
+     * Release withheld result so student can view the already-computed score.
      * Keeps result/violations intact for audit; only removes hold state.
      */
     public function clearWithheldResult(string $quizId, QuizSession $quizSession): RedirectResponse
@@ -744,7 +744,7 @@ class QuizManagementController extends Controller
         broadcast(new DataUpdated('dashboard'))->toOthers();
 
         return redirect()->route($this->staffRoutePrefix() . '.quizzes.sessions.show', [$quiz, $quizSession])
-            ->with('success', 'Withheld status cleared. Student can now view the score.');
+            ->with('success', 'Result released. Student can now view the score.');
     }
 
     /**
