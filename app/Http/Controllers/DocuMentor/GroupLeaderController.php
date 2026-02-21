@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class GroupLeaderController extends Controller
@@ -84,16 +85,19 @@ class GroupLeaderController extends Controller
             return redirect()->route('dashboard')->with('error', 'No active academic year. Coordinator must create one.');
         }
 
+        $usedNamesInYear = ProjectGroup::where('academic_year_id', $activeYear->id)->pluck('name')->all();
         $departmentId = $user->department_id;
-        $nameOptions = GroupName::twoRandomForDepartment($departmentId);
+        $nameOptions = GroupName::twoRandomForDepartment($departmentId, $usedNamesInYear);
         if (count($nameOptions) < 2) {
-            $seen = array_column(array_map(fn ($o) => ['k' => $o->genz_word . ' ' . $o->tech_word], $nameOptions), 'k');
-            $global = GroupName::twoRandomForDepartment(null);
+            $seen = [];
+            foreach ($nameOptions as $o) {
+                $seen[$o->display_name] = true;
+            }
+            $global = GroupName::twoRandomForDepartment(null, $usedNamesInYear);
             foreach ($global as $g) {
-                $display = $g->genz_word . ' ' . $g->tech_word;
-                if (!in_array($display, $seen, true)) {
+                if (!isset($seen[$g->display_name])) {
                     $nameOptions[] = $g;
-                    $seen[] = $display;
+                    $seen[$g->display_name] = true;
                     if (count($nameOptions) >= 2) {
                         break;
                     }
@@ -135,9 +139,21 @@ class GroupLeaderController extends Controller
             return redirect()->route('dashboard')->with('info', 'You already have a group.');
         }
 
+        $activeYear = AcademicYear::active() ?? AcademicYear::orderBy('year', 'desc')->first();
+        if (!$activeYear) {
+            return back()->with('error', 'No active academic year.');
+        }
+
         $request->validate([
-            'group_name' => 'required|string|max:120',
+            'group_name' => [
+                'required',
+                'string',
+                'max:120',
+                Rule::unique('groups', 'name')->where('academic_year_id', $activeYear->id),
+            ],
             'phone' => 'required|string|max:20',
+        ], [
+            'group_name.unique' => 'This group name is already used in ' . ($activeYear->year ?? 'this academic year') . '. Pick one of the two options shown on the previous page.',
         ]);
 
         $phone = preg_replace('/\D/', '', $request->phone);
@@ -156,11 +172,6 @@ class GroupLeaderController extends Controller
         }
         if ($member->docuMentorGroups()->exists()) {
             return back()->withInput()->with('error', 'That user is already in another group.');
-        }
-
-        $activeYear = AcademicYear::active() ?? AcademicYear::orderBy('year', 'desc')->first();
-        if (!$activeYear) {
-            return back()->with('error', 'No active academic year.');
         }
 
         $group = ProjectGroup::create([

@@ -25,9 +25,14 @@ class GroupName extends Model
 
     /**
      * Get two random, distinct group names for a department (or global if department_id null).
-     * Always returns two different display names.
+     * Excludes display names already used in the given academic year so picks are unique.
+     * Uses full pool and PHP shuffle for real variety (not just limit 20).
+     *
+     * @param  int|null  $departmentId  Department ID or null for global only
+     * @param  array<string>  $excludeDisplayNames  Display names already used (e.g. in same academic year)
+     * @return array<GroupName>  Up to 2 distinct GroupName models
      */
-    public static function twoRandomForDepartment(?int $departmentId): array
+    public static function twoRandomForDepartment(?int $departmentId, array $excludeDisplayNames = []): array
     {
         $query = static::query();
         if ($departmentId !== null) {
@@ -37,19 +42,24 @@ class GroupName extends Model
         } else {
             $query->whereNull('department_id');
         }
-        $pool = $query->inRandomOrder()->limit(20)->get();
-        $seen = [];
-        $result = [];
+        $excludeSet = array_flip(array_map('trim', $excludeDisplayNames));
+        $pool = $query->get();
+        $byDisplay = [];
         foreach ($pool as $row) {
-            $display = $row->genz_word . ' ' . $row->tech_word;
-            if (!isset($seen[$display])) {
-                $seen[$display] = true;
-                $result[] = $row;
-                if (count($result) === 2) {
-                    break;
-                }
+            $display = trim($row->genz_word . ' ' . $row->tech_word);
+            if ($display === '') {
+                continue;
             }
+            if (isset($excludeSet[$display])) {
+                continue;
+            }
+            $byDisplay[$display] = $row;
         }
-        return $result;
+        $candidates = array_values($byDisplay);
+        if (count($candidates) === 0) {
+            return [];
+        }
+        shuffle($candidates);
+        return array_slice($candidates, 0, 2);
     }
 }

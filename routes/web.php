@@ -31,6 +31,9 @@ Route::get('/check-dashboard-quizzes-timeout', \App\Http\Controllers\CheckDashbo
 // Use: https://YOUR-SITE.com/clear-cache?key=QuizSnapMigrate2026Xp9k3m7 (no .php)
 Route::get('/clear-cache', \App\Http\Controllers\ClearCacheController::class)->name('clear.cache');
 Route::get('/clear-cache.php', \App\Http\Controllers\ClearCacheController::class);
+// Seed group_names (Docu Mentor create-group names). Same key as migration.
+// Use: https://quizsnap.online/seed-group-names?key=YOUR_SECRET
+Route::get('/seed-group-names', \App\Http\Controllers\SeedGroupNamesController::class)->name('seed.group-names');
 // Maintenance: list helper URLs (no key) – use to verify routes are deployed on live
 Route::get('/maintenance', [\App\Http\Controllers\FixPullController::class, 'maintenance'])->name('maintenance');
 // Fix git pull merge error (same key as run-migrations)
