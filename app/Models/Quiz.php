@@ -204,6 +204,28 @@ class Quiz extends Model
     }
 
     /**
+     * Whether students can access this quiz from the public link flow.
+     * This allows either legacy is_active or published status, while still
+     * enforcing question readiness and schedule window checks.
+     */
+    public function isAvailableForStudent(bool $requireStarted = true): bool
+    {
+        if (!$this->is_published && !$this->is_active) {
+            return false;
+        }
+        if (!$this->hasEnoughApprovedQuestions()) {
+            return false;
+        }
+        if ($this->ends_at && $this->ends_at->isPast()) {
+            return false;
+        }
+        if ($requireStarted && $this->starts_at && $this->starts_at->isFuture()) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Whether the quiz has ended (ends_at is set and in the past).
      * When true, the student link is expired; examiner can still view questions and scores.
      */

@@ -41,8 +41,8 @@ class StudentLoginController extends Controller
             return redirect()->route('student.landing')
                 ->with('error', 'Error');
         }
-        $quiz = Quiz::where('id', $quizId)->where('is_active', true)->first();
-        if (!$quiz || !$quiz->isActive()) {
+        $quiz = Quiz::find($quizId);
+        if (!$quiz || !$quiz->isAvailableForStudent()) {
             return redirect()->route('student.landing')->with('error', 'Error');
         }
         return view('student.login', ['quiz' => $quiz]);
@@ -79,7 +79,7 @@ class StudentLoginController extends Controller
         }
 
         $quiz = Quiz::with('classGroup')->find($quizId);
-        if (!$quiz || !$quiz->isActive()) {
+        if (!$quiz || !$quiz->isAvailableForStudent()) {
             return response()->json([
                 'success' => false,
                 'message' => 'This quiz is no longer available.',

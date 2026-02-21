@@ -27,10 +27,7 @@ class QuizRulesController extends Controller
         $quiz = null;
         if ($token) {
             $quiz = Quiz::with('course')->where('link_token', $token)->first();
-            if (!$quiz || (!$quiz->is_published && !$quiz->is_active) || !$quiz->hasEnoughApprovedQuestions()) {
-                return view('student.link-expired');
-            }
-            if ($quiz->ends_at && $quiz->ends_at->isPast()) {
+            if (!$quiz || !$quiz->isAvailableForStudent(false)) {
                 return view('student.link-expired');
             }
             if ($quiz->starts_at && $quiz->starts_at->isFuture()) {
@@ -48,10 +45,7 @@ class QuizRulesController extends Controller
     {
         $token = $request->route('token');
         $quiz = Quiz::with('course')->where('link_token', $token)->first();
-        if (!$quiz || (!$quiz->is_published && !$quiz->is_active) || !$quiz->hasEnoughApprovedQuestions()) {
-            return view('student.link-expired');
-        }
-        if ($quiz->ends_at && $quiz->ends_at->isPast()) {
+        if (!$quiz || !$quiz->isAvailableForStudent(false)) {
             return view('student.link-expired');
         }
         if (!$quiz->starts_at || $quiz->starts_at->isPast()) {
@@ -74,7 +68,7 @@ class QuizRulesController extends Controller
             $request->validate(['quiz_id' => 'exists:quizzes,id']);
             $quiz = Quiz::with('classGroup')->find($quizId);
             
-            if ($quiz && $quiz->isActive()) {
+            if ($quiz && $quiz->isAvailableForStudent()) {
                 // Check if student is already logged in
                 $studentId = session('student_id');
                 $student = $studentId ? Student::find($studentId) : null;

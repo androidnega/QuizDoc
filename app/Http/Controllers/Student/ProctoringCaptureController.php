@@ -31,7 +31,7 @@ class ProctoringCaptureController extends Controller
             return redirect()->route('student.landing')->with('error', 'Error');
         }
         $quiz = Quiz::find($quizId);
-        if (!$quiz || !$quiz->isActive()) {
+        if (!$quiz || !$quiz->isAvailableForStudent()) {
             return redirect()->route('student.landing')->with('error', 'Error');
         }
         $ip = $request->ip();
@@ -113,8 +113,8 @@ class ProctoringCaptureController extends Controller
             'face_image' => 'required|string', // base64 data URL
         ]);
         $quiz = Quiz::with('questions')->findOrFail($request->quiz_id);
-        if (!$quiz->isActive()) {
-            return response()->json(['success' => false, 'message' => 'Quiz is not active. Please try again from the quiz link.'], 403);
+        if (!$quiz->isAvailableForStudent()) {
+            return response()->json(['success' => false, 'message' => 'Quiz is no longer available. Please try again from the quiz link.'], 403);
         }
         $ip = $request->ip();
         $studentIndex = strtoupper(trim((string) $request->index_number));
