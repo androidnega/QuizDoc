@@ -314,8 +314,6 @@ Route::middleware('admin.auth')->group(function () {
             Route::get('/students', fn () => redirect()->route('dashboard.class-groups.index', [], 301))->name('students.index');
             Route::get('/attendance', fn () => redirect()->route('dashboard.class-groups.index', [], 301))->name('attendance.index');
             Route::get('/quizzes', [QuizManagementController::class, 'index'])->name('quizzes.index');
-            Route::get('/quizzes/test-quiz', [QuizManagementController::class, 'testQuizPage'])->name('quizzes.test-quiz');
-            Route::post('/quizzes/create-test', [QuizManagementController::class, 'createTestQuiz'])->name('quizzes.create-test');
             Route::get('/quizzes/create', [QuizManagementController::class, 'create'])->name('quizzes.create');
             Route::post('/quizzes/validate-ai-json', [QuizManagementController::class, 'validateAiJson'])->name('quizzes.validate-ai-json');
             Route::post('/quizzes', [QuizManagementController::class, 'store'])->name('quizzes.store');
@@ -476,7 +474,3 @@ Route::middleware('admin.auth')->group(function () {
     });
 });
 
-// System test page - Check login status and access
-Route::get('/system-test', function () {
-    return view('system-test');
-})->name('system.test');

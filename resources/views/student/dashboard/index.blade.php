@@ -3,19 +3,6 @@
 @section('title', 'Dashboard')
 @php $dashboardTitle = 'Dashboard'; @endphp
 
-@push('styles')
-<style>
-@keyframes exam-calendar-breathe {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.85; transform: scale(1.02); }
-}
-.exam-calendar-card--breathing .exam-calendar-breathing-dot {
-    animation: exam-calendar-breathe 2s ease-in-out infinite;
-}
-.exam-calendar-card--breathing { border-color: #f59e0b; box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2); }
-</style>
-@endpush
-
 @section('dashboard_content')
 {{-- Page header --}}
 <header class="mb-5 sm:mb-6">
@@ -283,30 +270,6 @@
         @endif
     </div>
 </section>
-
-{{-- Calendar: single card linking to full exam calendar page; breathing effect when an exam is within ~1 hour --}}
-@if($hasQuizAccess ?? true)
-@php
-    $examWithinAnHour = isset($examCalendarEntries) && $examCalendarEntries->contains(function ($e) {
-        return $e->scheduled_at->isFuture() && $e->scheduled_at->diffInMinutes(now(), false) <= 60;
-    });
-@endphp
-<section class="mb-6 sm:mb-8" aria-label="Exam calendar">
-    <h2 class="text-xs sm:text-sm font-semibold text-slate-900 mb-2.5 sm:mb-3 uppercase tracking-wide">Calendar</h2>
-    <a href="{{ route('dashboard.calendar') }}" class="exam-calendar-card block bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 no-underline hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition-colors min-h-[72px] sm:min-h-[80px] {{ $examWithinAnHour ? 'exam-calendar-card--breathing' : '' }}">
-        <div class="flex items-center gap-3 min-w-0">
-            <span class="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0 exam-calendar-card-icon"><i class="fas fa-calendar-alt text-lg"></i></span>
-            <div class="min-w-0 flex-1">
-                <span class="text-sm font-semibold text-slate-900 block">Exam calendar</span>
-                <span class="text-xs text-slate-600 block truncate">Midsem & end-of-semester exams · View times & countdown</span>
-            </div>
-            @if($examWithinAnHour)
-            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-800 exam-calendar-breathing-dot" aria-hidden="true"><i class="fas fa-bell text-xs"></i></span>
-            @endif
-        </div>
-    </a>
-</section>
-@endif
 
 {{-- Scheduled quiz is surfaced via the second At a glance card (replacing generic course materials text) --}}
 
