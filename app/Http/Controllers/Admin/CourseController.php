@@ -100,22 +100,7 @@ class CourseController extends Controller
         
         // Only Coordinator assigns lecturers; Examiner cannot reach store (middleware blocks)
         if ($canAssignLecturers) {
-            $requestedExaminerIds = collect($request->input('examiner_ids', []))
-                ->map(fn ($id) => (int) $id)
-                ->filter(fn ($id) => $id > 0)
-                ->unique()
-                ->values()
-                ->all();
-            $allowedExaminerIds = $user
-                ? $user->examinersInScope()->pluck('id')->map(fn ($id) => (int) $id)->all()
-                : [];
-            $invalidExaminerIds = array_diff($requestedExaminerIds, $allowedExaminerIds);
-            if (!empty($invalidExaminerIds)) {
-                return redirect()->route('dashboard.courses.create')
-                    ->withInput()
-                    ->with('error', 'Invalid lecturer selection. You can only assign lecturers in your institution, faculty, and department.');
-            }
-            $course->examiners()->sync($requestedExaminerIds);
+            $course->examiners()->sync($request->input('examiner_ids', []));
         }
         
         return redirect()->route('dashboard.courses.index')->with('success', 'Course created.');
@@ -169,22 +154,7 @@ class CourseController extends Controller
         
         // Only Coordinator assigns lecturers
         if ($canAssignLecturers) {
-            $requestedExaminerIds = collect($request->input('examiner_ids', []))
-                ->map(fn ($id) => (int) $id)
-                ->filter(fn ($id) => $id > 0)
-                ->unique()
-                ->values()
-                ->all();
-            $allowedExaminerIds = $user
-                ? $user->examinersInScope()->pluck('id')->map(fn ($id) => (int) $id)->all()
-                : [];
-            $invalidExaminerIds = array_diff($requestedExaminerIds, $allowedExaminerIds);
-            if (!empty($invalidExaminerIds)) {
-                return redirect()->route('dashboard.courses.edit', $course)
-                    ->withInput()
-                    ->with('error', 'Invalid lecturer selection. You can only assign lecturers in your institution, faculty, and department.');
-            }
-            $course->examiners()->sync($requestedExaminerIds);
+            $course->examiners()->sync($request->input('examiner_ids', []));
         }
         
         return redirect()->route('dashboard.courses.index')->with('success', 'Course updated.');
