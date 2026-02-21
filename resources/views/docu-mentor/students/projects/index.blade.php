@@ -29,6 +29,12 @@
         @if($leaderWithoutGroup ?? false)
         <p class="text-sm text-slate-500 mt-1 max-w-sm mx-auto">Create your group and add members, then create a project.</p>
         <a href="{{ route('dashboard.group.create') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-slate-600 text-white hover:bg-slate-700 mt-4 min-h-[44px] sm:min-h-0">Create your group</a>
+        @elseif($isGroupLeader ?? false)
+        <p class="text-sm text-slate-500 mt-1 max-w-sm mx-auto">You are a group leader. Start your project to submit proposals and chapters.</p>
+        <a href="{{ route('dashboard.projects.create') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-slate-600 text-white hover:bg-slate-700 mt-4 min-h-[44px] sm:min-h-0">
+            <i class="fas fa-plus text-xs"></i>
+            Create project
+        </a>
         @else
         <p class="text-sm text-slate-500 mt-1 max-w-sm mx-auto">Your group leader will add you when a group is created.</p>
         @endif

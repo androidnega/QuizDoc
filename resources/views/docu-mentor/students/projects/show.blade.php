@@ -30,6 +30,12 @@
             @endif
         </div>
         <div class="flex items-center gap-2 flex-wrap">
+            @if($user->canLeadDocuMentorProjects())
+                <a href="{{ route('dashboard.projects.create') }}" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-600 text-white hover:bg-slate-700">
+                    <i class="fas fa-plus mr-1 text-xs"></i>
+                    Create project
+                </a>
+            @endif
             @if($project->group && $project->group->leader_id === $user->id)
                 <a href="{{ route('dashboard.group.show', $project->group) }}" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50">Manage group</a>
             @endif

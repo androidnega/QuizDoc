@@ -49,7 +49,6 @@
                 @endif
                 @if($hasQuizAccess ?? true)
                 <a href="{{ route('dashboard.my-quizzes') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('dashboard.my-quizzes*') ? 'bg-blue-600 text-white' : 'text-slate-800 hover:bg-amber-500/20' }}"><i class="fas fa-clipboard-list mr-1.5 text-slate-700 text-xs"></i>Quizzes</a>
-                <a href="{{ route('dashboard.calendar') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('dashboard.calendar') ? 'bg-blue-600 text-white' : 'text-slate-800 hover:bg-amber-500/20' }}"><i class="fas fa-calendar-alt mr-1.5 text-slate-700 text-xs"></i>Calendar</a>
                 <a href="{{ route('dashboard.course-materials') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('dashboard.course-materials') ? 'bg-blue-600 text-white' : 'text-slate-800 hover:bg-amber-500/20' }}"><i class="fas fa-book mr-1.5 text-slate-700 text-xs"></i>Materials</a>
                 @endif
             </nav>
