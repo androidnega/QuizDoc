@@ -93,10 +93,11 @@
                 @if($user->isExaminer() || $user->role === \App\Models\User::DM_ROLE_COORDINATOR)
                 <div id="institution-field">
                     <label for="institution_id" class="block text-xs font-medium text-gray-500 mb-0.5">Institution</label>
+                    <p class="mt-0.5 text-xs text-gray-500">Set institution, faculty and department so this user appears in the correct coordinator scope.</p>
                     <select name="institution_id" id="institution_id" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none @error('institution_id') border-red-500 @enderror" onchange="loadFaculties()">
                         <option value="">— Select institution —</option>
                         @foreach($institutions ?? [] as $inst)
-                            <option value="{{ $inst->id }}" {{ old('institution_id', $user->institution_id) == $inst->id ? 'selected' : '' }}>{{ $inst->display_name }}</option>
+                            <option value="{{ $inst->id }}" {{ old('institution_id', $displayInstitutionId ?? $user->institution_id) == $inst->id ? 'selected' : '' }}>{{ $inst->display_name }}</option>
                         @endforeach
                     </select>
                     @error('institution_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
@@ -118,7 +119,18 @@
                     <select name="institution_id" id="institution_id" required class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none @error('institution_id') border-red-500 @enderror" onchange="loadFaculties()">
                         <option value="">— Select institution —</option>
                         @foreach($institutions ?? [] as $inst)
-                            <option value="{{ $inst->id }}" {{ old('institution_id', $user->institution_id) == $inst->id ? 'selected' : '' }}>{{ $inst->display_name }}</option>
+                            <option value="{{ $inst->id }}" {{ old('institution_id', $user->institution_id ?? $displayInstitutionId ?? null) == $inst->id ? 'selected' : '' }}>{{ $inst->display_name }}</option>
+                        @endforeach
+                    </select>
+                    @error('institution_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                @else
+                <div id="institution-field">
+                    <label for="institution_id" class="block text-xs font-medium text-gray-500 mb-0.5">Institution</label>
+                    <select name="institution_id" id="institution_id" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none @error('institution_id') border-red-500 @enderror" onchange="loadFaculties()">
+                        <option value="">— Select institution —</option>
+                        @foreach($institutions ?? [] as $inst)
+                            <option value="{{ $inst->id }}" {{ old('institution_id', $displayInstitutionId ?? $user->institution_id) == $inst->id ? 'selected' : '' }}>{{ $inst->display_name }}</option>
                         @endforeach
                     </select>
                     @error('institution_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
@@ -188,9 +200,9 @@
 <script>
 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 const baseUrl = "{{ url('/') }}";
-const currentInstitutionId = {{ $user->institution_id ?? 'null' }};
-const currentFacultyId = {{ $user->faculty_id ?? 'null' }};
-const currentDepartmentId = {{ $user->department_id ?? 'null' }};
+const currentInstitutionId = {{ json_encode($displayInstitutionId ?? $user->institution_id ?? null) }};
+const currentFacultyId = {{ json_encode($user->faculty_id ?? null) }};
+const currentDepartmentId = {{ json_encode($user->department_id ?? null) }};
 
 function loadFaculties() {
     const institutionSelect = document.getElementById('institution_id');
@@ -296,8 +308,8 @@ function loadDepartments() {
         .catch(error => console.error('Error loading departments:', error));
 }
 
-// Load faculties on page load if institution is selected and institution select exists
-@if($user->institution_id)
+// Load faculties on page load if institution is selected (or derivable from faculty) and institution select exists
+@if($displayInstitutionId ?? $user->institution_id)
     if (document.getElementById('institution_id')) {
         loadFaculties();
     }

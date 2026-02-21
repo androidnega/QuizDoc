@@ -289,8 +289,11 @@ class UserManagementController extends Controller
                                $currentUser && 
                                $currentUser->id === $user->id &&
                                (!$user->faculty_id || !$user->department_id);
+
+        // Prefill institution when editing examiner/coordinator who has faculty but no institution_id
+        $displayInstitutionId = $user->institution_id ?? $user->faculty?->institution_id;
         
-        return view('admin.users.edit', compact('user', 'courses', 'institutions', 'faculties', 'departments', 'isSuperAdmin', 'isProfileCompletion'));
+        return view('admin.users.edit', compact('user', 'courses', 'institutions', 'faculties', 'departments', 'isSuperAdmin', 'isProfileCompletion', 'displayInstitutionId'));
     }
 
     public function update(Request $request, User $user): RedirectResponse
