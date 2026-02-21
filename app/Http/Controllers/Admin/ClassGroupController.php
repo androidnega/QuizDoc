@@ -187,6 +187,9 @@ class ClassGroupController extends Controller
 
         $canAssign = $user->isSuperAdmin() || $user->isDocuMentorCoordinator();
         $courseIds = $user->assignedCourseIds();
+        $allowedExaminerIds = $user->isDocuMentorCoordinator()
+            ? $user->examinersInScope()->pluck('id')->map(fn ($id) => (int) $id)->all()
+            : [];
 
         $assignments = array_values(array_filter($request->input('course_assignments', []), fn ($a) => !empty($a['course_id']) && !empty($a['examiner_id'])));
         $firstExaminerId = !empty($assignments[0]['examiner_id']) ? (int) $assignments[0]['examiner_id'] : 0;
@@ -218,6 +221,10 @@ class ClassGroupController extends Controller
             if (!$exam || $exam->role !== User::ROLE_EXAMINER) {
                 return redirect()->route($this->staffRoutePrefix() . '.class-groups.create')
                     ->withInput()->with('error', 'Invalid lecturer selection.');
+            }
+            if ($user->isDocuMentorCoordinator() && !in_array((int) $exam->id, $allowedExaminerIds, true)) {
+                return redirect()->route($this->staffRoutePrefix() . '.class-groups.create')
+                    ->withInput()->with('error', 'Invalid lecturer selection. You can only assign lecturers in your institution, faculty, and department.');
             }
         }
 
@@ -309,6 +316,9 @@ class ClassGroupController extends Controller
         $user = $this->adminUser();
         $canAssign = $user?->isSuperAdmin() || $user?->isDocuMentorCoordinator();
         $courseIds = $user ? $user->assignedCourseIds() : [];
+        $allowedExaminerIds = ($user && $user->isDocuMentorCoordinator())
+            ? $user->examinersInScope()->pluck('id')->map(fn ($id) => (int) $id)->all()
+            : [];
 
         $assignments = array_values(array_filter($request->input('course_assignments', []), fn ($a) => !empty($a['course_id']) && !empty($a['examiner_id'])));
         $firstExaminerId = !empty($assignments[0]['examiner_id']) ? (int) $assignments[0]['examiner_id'] : $classGroup->examiner_id;
@@ -340,6 +350,10 @@ class ClassGroupController extends Controller
             if (!$exam || $exam->role !== User::ROLE_EXAMINER) {
                 return redirect()->route($this->staffRoutePrefix() . '.class-groups.edit', $classGroup)
                     ->withInput()->with('error', 'Invalid lecturer selection.');
+            }
+            if ($user?->isDocuMentorCoordinator() && !in_array((int) $exam->id, $allowedExaminerIds, true)) {
+                return redirect()->route($this->staffRoutePrefix() . '.class-groups.edit', $classGroup)
+                    ->withInput()->with('error', 'Invalid lecturer selection. You can only assign lecturers in your institution, faculty, and department.');
             }
         }
 

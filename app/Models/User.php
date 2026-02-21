@@ -266,9 +266,16 @@ class User extends Authenticatable
         }
         if ($this->isDocuMentorCoordinator()) {
             $q = ClassGroup::query();
-            if ($this->department_id) {
-                $q->whereHas('examiner', fn ($e) => $e->where('department_id', $this->department_id));
+            // Strict data isolation: coordinator only sees class groups whose examiner
+            // belongs to the same institution + faculty + department.
+            if (!$this->institution_id || !$this->faculty_id || !$this->department_id) {
+                return [];
             }
+            $q->whereHas('examiner', function ($e) {
+                $e->where('institution_id', $this->institution_id)
+                    ->where('faculty_id', $this->faculty_id)
+                    ->where('department_id', $this->department_id);
+            });
             return $q->pluck('id')->all();
         }
         // Data isolation: examiners see only groups where they are assigned to teach at least one course
@@ -292,17 +299,24 @@ class User extends Authenticatable
         return $q;
     }
 
-    /** Examiners visible to this coordinator (same department). Super Admin or coordinator without department sees all examiners. */
+    /** Examiners visible to this coordinator with strict institution/faculty/department isolation. */
     public function examinersInScope(): \Illuminate\Database\Eloquent\Builder
     {
-        $q = User::where('role', self::ROLE_EXAMINER)->orderBy('name');
+        $q = User::where('role', self::ROLE_EXAMINER)
+            ->whereNotNull('institution_id')
+            ->whereNotNull('faculty_id')
+            ->whereNotNull('department_id')
+            ->orderBy('name');
         if ($this->isSuperAdmin()) {
             return $q;
         }
-        if (!$this->department_id) {
-            return $q;
+        if (!$this->institution_id || !$this->faculty_id || !$this->department_id) {
+            return $q->whereRaw('1 = 0');
         }
-        return $q->where('department_id', $this->department_id);
+        return $q
+            ->where('institution_id', $this->institution_id)
+            ->where('faculty_id', $this->faculty_id)
+            ->where('department_id', $this->department_id);
     }
 
     /** Full URL for avatar (Cloudinary URL or local storage path). */
