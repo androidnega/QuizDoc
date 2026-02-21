@@ -153,7 +153,7 @@
     </div>
 
     {{-- Main: full width on desktop so questions show on full screen --}}
-    <main class="w-full max-w-full px-4 sm:px-6 py-6 min-w-0 overflow-hidden">
+    <main class="w-full max-w-full px-4 sm:px-6 py-6 min-w-0 overflow-x-hidden">
         <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start w-full max-w-full mx-auto">
             {{-- Questions + pagination --}}
             <div id="quiz-container" class="min-w-0 flex-1 w-full lg:max-w-[calc(100%-220px)] max-w-full">
@@ -217,8 +217,8 @@
             </div>
 
             {{-- Side: one card with timer on top, then question nav (desktop); same card width as questions --}}
-            <aside class="hidden lg:block w-[200px] flex-shrink-0" aria-label="Quiz sidebar">
-                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden sticky top-24 min-w-0 shadow-sm">
+            <aside class="hidden lg:block w-[200px] flex-shrink-0 lg:self-start" aria-label="Quiz sidebar">
+                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto min-w-0 shadow-sm">
                     @if($remainingSeconds > 0)
                     <div id="quiz-timer-card" class="p-4 border-b border-gray-200 flex items-center justify-center min-w-0">
                         <p id="quiz-timer" class="text-lg font-bold tabular-nums quiz-timer quiz-timer-green" aria-live="polite">--:--</p>
