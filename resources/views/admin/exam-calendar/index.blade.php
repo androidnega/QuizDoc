@@ -60,7 +60,7 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & time</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start / End</th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class group</th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
@@ -74,7 +74,7 @@
                     <tbody class="bg-white divide-y divide-gray-200">
                         @foreach($entries as $e)
                         <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{{ $e->scheduled_at->format('D, M j, Y \a\t g:i A') }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{{ $e->scheduled_at->format('D, M j, Y \a\t g:i A') }}{{ $e->ends_at ? ' – ' . $e->ends_at->format('g:i A') : '' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $e->classGroup->name ?? '—' }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $e->course_display }}</td>
                             <td class="px-4 py-3">

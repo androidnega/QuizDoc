@@ -21,6 +21,7 @@ class ExamCalendar extends Model
         'course_name',
         'exam_type',
         'scheduled_at',
+        'ends_at',
         'lecturer',
         'mode',
         'venue',
@@ -30,6 +31,7 @@ class ExamCalendar extends Model
     {
         return [
             'scheduled_at' => 'datetime',
+            'ends_at' => 'datetime',
         ];
     }
 

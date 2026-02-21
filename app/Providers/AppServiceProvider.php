@@ -123,7 +123,10 @@ class AppServiceProvider extends ServiceProvider
                     $leaderHasProject = $user->ledDocuMentorGroups()->whereHas('project')->exists();
                 }
             }
-            $view->with(compact('student', 'greeting', 'isClassRep', 'hasProjectAccess', 'hasQuizAccess', 'isGroupLeader', 'leaderWithoutGroup', 'leaderHasProject'));
+            $view->with(array_merge(
+                compact('student', 'greeting', 'isClassRep', 'hasProjectAccess', 'hasQuizAccess', 'isGroupLeader', 'leaderWithoutGroup', 'leaderHasProject'),
+                ['vapidPublicKey' => config('services.webpush.vapid_public')]
+            ));
         });
     }
 

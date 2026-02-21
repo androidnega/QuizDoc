@@ -73,6 +73,7 @@ class ExamCalendarController extends Controller
             'course_id' => 'required|exists:courses,id',
             'exam_type' => 'required|in:' . implode(',', array_keys(ExamCalendar::examTypeOptions())),
             'scheduled_at' => 'required|date',
+            'ends_at' => 'nullable|date|after_or_equal:scheduled_at',
             'mode' => 'required|in:' . implode(',', array_keys(ExamCalendar::modeOptions())),
             'venue' => 'nullable|string|max:255',
         ]);
@@ -89,6 +90,7 @@ class ExamCalendarController extends Controller
             'course_name' => null,
             'exam_type' => $request->exam_type,
             'scheduled_at' => $request->scheduled_at,
+            'ends_at' => $request->filled('ends_at') ? $request->ends_at : null,
             'lecturer' => $lecturer,
             'mode' => $request->mode,
             'venue' => $request->filled('venue') ? trim($request->venue) : null,
@@ -129,6 +131,7 @@ class ExamCalendarController extends Controller
             'course_id' => 'required|exists:courses,id',
             'exam_type' => 'required|in:' . implode(',', array_keys(ExamCalendar::examTypeOptions())),
             'scheduled_at' => 'required|date',
+            'ends_at' => 'nullable|date|after_or_equal:scheduled_at',
             'mode' => 'required|in:' . implode(',', array_keys(ExamCalendar::modeOptions())),
             'venue' => 'nullable|string|max:255',
         ]);
@@ -145,6 +148,7 @@ class ExamCalendarController extends Controller
             'course_name' => null,
             'exam_type' => $request->exam_type,
             'scheduled_at' => $request->scheduled_at,
+            'ends_at' => $request->filled('ends_at') ? $request->ends_at : null,
             'lecturer' => $lecturer,
             'mode' => $request->mode,
             'venue' => $request->filled('venue') ? trim($request->venue) : null,

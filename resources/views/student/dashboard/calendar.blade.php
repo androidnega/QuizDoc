@@ -45,7 +45,7 @@
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $e->mode === \App\Models\ExamCalendar::MODE_ONLINE ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800' }}">{{ $e->mode_label }}</span>
                                 </div>
                                 <p class="text-sm text-slate-600">
-                                    <i class="fas fa-clock text-slate-400 mr-1.5 w-4 text-center"></i>{{ $e->scheduled_at->format('g:i A') }}
+                                    <i class="fas fa-clock text-slate-400 mr-1.5 w-4 text-center"></i>Start {{ $e->scheduled_at->format('g:i A') }}{{ $e->ends_at ? ' · End ' . $e->ends_at->format('g:i A') : '' }}
                                 </p>
                                 @if($e->lecturer)
                                     <p class="text-sm text-slate-600 mt-0.5"><i class="fas fa-user-tie text-slate-400 mr-1.5 w-4 text-center"></i>{{ $e->lecturer }}</p>

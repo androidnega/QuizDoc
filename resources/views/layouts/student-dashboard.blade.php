@@ -206,4 +206,64 @@
     }
 })();
 </script>
+
+@if(($hasQuizAccess ?? false) && isset($student) && $student && !empty($vapidPublicKey ?? null))
+@push('scripts')
+<script>
+(function() {
+    var vapidPublicKey = @json($vapidPublicKey);
+    var subscribeUrl = @json(route('dashboard.push-subscribe'));
+    var csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    function urlBase64ToUint8Array(base64String) {
+        var padLen = (4 - base64String.length % 4) % 4;
+        var padding = '';
+        for (var p = 0; p < padLen; p++) padding += '=';
+        var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        var rawData = atob(base64);
+        var outputArray = new Uint8Array(rawData.length);
+        for (var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+        return outputArray;
+    }
+
+    function subscribePush(registration) {
+        if (!registration.pushManager || !vapidPublicKey) return Promise.resolve();
+        return registration.pushManager.getSubscription().then(function(existing) {
+            if (existing) return existing;
+            return registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+            });
+        }).then(function(subscription) {
+            var payload = subscription.toJSON();
+            if (!payload.endpoint || !payload.keys) return;
+            var body = JSON.stringify({
+                endpoint: payload.endpoint,
+                keys: payload.keys
+            });
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', subscribeUrl, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken || '');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.send(body);
+        }).catch(function(err) { console.warn('Push subscribe:', err); });
+    }
+
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+        navigator.serviceWorker.register('{{ asset('sw.js') }}', { scope: '/' }).then(function(registration) {
+            if (Notification.permission === 'granted') {
+                subscribePush(registration);
+            } else if (Notification.permission === 'default') {
+                Notification.requestPermission().then(function(perm) {
+                    if (perm === 'granted') subscribePush(registration);
+                });
+            }
+        }).catch(function(err) { console.warn('SW register:', err); });
+    }
+})();
+</script>
+@endpush
+@endif
 @endsection

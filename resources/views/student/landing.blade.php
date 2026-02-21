@@ -151,8 +151,8 @@
         <div class="site-container">
             <div class="home-container max-w-xl mx-auto">
                 <div class="home-hero">
-                    <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mb-1 tracking-tight">Welcome to QuizSnap</h1>
-                    <p class="text-sm text-slate-500 mb-4">A modern platform for secure and efficient online assessments</p>
+                    <h1 class="text-xl sm:text-2xl md:text-4xl font-bold text-slate-900 mb-1 tracking-tight">Welcome to QuizSnap</h1>
+                    <p class="text-sm md:text-lg text-slate-500 mb-4">A modern platform for secure and efficient online assessments</p>
                     @if($landingShowQuizToken ?? false)
                     <form action="{{ route('student.start-quiz') }}" method="post" id="start-quiz-form" class="mb-4 home-quiz-form-mobile-hide">
                         @csrf

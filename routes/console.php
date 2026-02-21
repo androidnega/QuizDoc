@@ -20,3 +20,6 @@ Schedule::command('quiz-sessions:auto-submit-tab-switch')->everyTenSeconds();
 // Student Level Promotion: Automatically promote students every September 1st
 // Creates new academic year, promotes all students to next level, resets semester to 1
 Schedule::command('students:promote-levels')->yearlyOn(9, 1, '00:00');
+
+// Exam reminder: send browser push notifications ~1 hour before scheduled exams
+Schedule::command('exam:send-reminder-push')->everyTenMinutes();

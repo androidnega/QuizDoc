@@ -15,4 +15,8 @@ return [
     'arkesel' => [
         'api_key' => env('ARKESEL_API_KEY', env('OTP_ARKESEL_API_KEY')),
     ],
+    'webpush' => [
+        'vapid_public' => env('VAPID_PUBLIC_KEY'),
+        'vapid_private' => env('VAPID_PRIVATE_KEY'),
+    ],
 ];

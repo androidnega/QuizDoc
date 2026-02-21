@@ -70,8 +70,12 @@
                     </select>
                 </div>
                 <div>
-                    <label for="scheduled_at" class="block text-sm font-medium text-gray-700 mb-1.5">Date & time *</label>
+                    <label for="scheduled_at" class="block text-sm font-medium text-gray-700 mb-1.5">Start date & time *</label>
                     <input type="datetime-local" name="scheduled_at" id="scheduled_at" value="{{ old('scheduled_at', $entry->scheduled_at?->format('Y-m-d\TH:i')) }}" required class="form-input" step="60">
+                </div>
+                <div>
+                    <label for="ends_at" class="block text-sm font-medium text-gray-700 mb-1.5">End date & time (optional)</label>
+                    <input type="datetime-local" name="ends_at" id="ends_at" value="{{ old('ends_at', $entry->ends_at?->format('Y-m-d\TH:i')) }}" class="form-input" step="60">
                 </div>
             </div>
 

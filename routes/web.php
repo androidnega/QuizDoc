@@ -215,6 +215,7 @@ Route::middleware(['dashboard.auth', 'student.auth', 'student.has-level'])->pref
     Route::put('/my-profile', [\App\Http\Controllers\Student\StudentDashboardController::class, 'updateProfile'])->name('my-profile.update');
     Route::get('/course-materials', [\App\Http\Controllers\Student\StudentDashboardController::class, 'courseMaterials'])->name('course-materials');
     Route::get('/calendar', [\App\Http\Controllers\Student\StudentDashboardController::class, 'calendar'])->name('calendar');
+    Route::post('/push-subscribe', [\App\Http\Controllers\Student\PushSubscribeController::class, 'store'])->name('push-subscribe');
 });
 
 // Project (student) routes under /dashboard — same controllers as docu-mentor, unified URLs

@@ -250,18 +250,41 @@ class StudentAccountController extends Controller
         ]);
     }
 
-    /** Get an examiner with SMS balance for the given index (via class group membership). */
+    /** Get an examiner with SMS balance for the given index (via class group membership).
+     * Tries class group owner (examiner_id) first, then lecturers from class_group_course. */
     private function examinerWithSmsBalanceForIndex(string $indexNumber): ?\App\Models\User
     {
         $cgStudents = ClassGroupStudent::whereRaw('UPPER(TRIM(index_number)) = ?', [strtoupper(trim($indexNumber))])
             ->with('classGroup.examiner')
             ->get();
+        $classGroupIds = $cgStudents->pluck('class_group_id')->unique()->filter()->values()->all();
+
+        // 1) Class group owner (examiner_id on class_groups)
         foreach ($cgStudents as $cg) {
             $examiner = $cg->classGroup?->examiner;
             if ($examiner && $examiner->isExaminer() && $examiner->sms_remaining > 0) {
                 return $examiner;
             }
         }
+
+        // 2) Lecturers assigned to this class group via class_group_course (per-course examiner_id)
+        if (empty($classGroupIds)) {
+            return null;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('class_group_course', 'examiner_id')) {
+            $examinerIds = \Illuminate\Support\Facades\DB::table('class_group_course')
+                ->whereIn('class_group_id', $classGroupIds)
+                ->whereNotNull('examiner_id')
+                ->distinct()
+                ->pluck('examiner_id');
+            foreach ($examinerIds as $eid) {
+                $examiner = \App\Models\User::find($eid);
+                if ($examiner && $examiner->isExaminer() && $examiner->sms_remaining > 0) {
+                    return $examiner;
+                }
+            }
+        }
+
         return null;
     }
 

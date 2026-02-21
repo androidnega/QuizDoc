@@ -3,6 +3,19 @@
 @section('title', 'Dashboard')
 @php $dashboardTitle = 'Dashboard'; @endphp
 
+@push('styles')
+<style>
+@keyframes exam-calendar-breathe {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(1.02); }
+}
+.exam-calendar-card--breathing .exam-calendar-breathing-dot {
+    animation: exam-calendar-breathe 2s ease-in-out infinite;
+}
+.exam-calendar-card--breathing { border-color: #f59e0b; box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2); }
+</style>
+@endpush
+
 @section('dashboard_content')
 {{-- Page header --}}
 <header class="mb-5 sm:mb-6">
@@ -96,8 +109,8 @@
             $scheduledUpcoming = $hasScheduled && $scheduledQuiz->starts_at && $scheduledQuiz->starts_at->isFuture();
             $scheduledActive = $hasScheduled && !$hasScheduledResult && !$scheduledUpcoming;
         @endphp
-        <a
-            href="@if($hasScheduled && $hasScheduledResult)
+        <div class="rounded-2xl shadow-sm p-4 sm:p-5 flex flex-col min-h-[84px] sm:min-h-[100px] relative overflow-hidden" style="background-color: #d1fae5; border: none;">
+            <a href="@if($hasScheduled && $hasScheduledResult)
                       {{ route('dashboard.my-quizzes.show', ['sessionId' => $scheduledQuizSession->id]) }}
                   @elseif($scheduledUpcoming)
                       {{ route('student.quiz-will-start', ['token' => $scheduledQuiz->link_token]) }}
@@ -106,32 +119,32 @@
                   @else
                       {{ route('dashboard.course-materials') }}
                   @endif"
-            @if($scheduledUpcoming)
-            data-rules-url="{{ route('student.rules.show.quiz', ['token' => $scheduledQuiz->link_token]) }}"
+               @if($scheduledUpcoming) data-rules-url="{{ route('student.rules.show.quiz', ['token' => $scheduledQuiz->link_token]) }}" @endif
+               class="flex flex-col flex-1 no-underline text-inherit hover:opacity-90 transition-opacity min-w-0">
+                <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-sm sm:text-base shrink-0" style="background-color: #a7f3d0; color: #047857;"><i class="fas fa-book"></i></span>
+                <span class="text-sm font-bold mt-1.5 sm:mt-2 truncate text-slate-900">
+                    @if(isset($scheduledQuiz) && $scheduledQuiz)
+                        {{ $scheduledQuiz->title }}
+                    @else
+                        View
+                    @endif
+                </span>
+                <span class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide mt-0.5 truncate text-slate-700">
+                    @if(isset($scheduledQuizSession) && $scheduledQuizSession?->result)
+                        Score: {{ number_format($scheduledQuizSession->result->score, 1) }}%
+                    @elseif($scheduledUpcoming)
+                        <span id="quiz-countdown-{{ $scheduledQuiz->id }}" aria-live="polite">—</span>
+                    @elseif($scheduledActive)
+                        Ready to take
+                    @else
+                        Course materials
+                    @endif
+                </span>
+            </a>
+            @if($scheduledActive && $scheduledQuiz)
+            <a href="{{ route('student.rules.show.quiz', ['token' => $scheduledQuiz->link_token]) }}" class="mt-2 self-start inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide text-emerald-800 bg-emerald-200/90 hover:bg-emerald-300 border border-emerald-400/50 shadow-sm transition-colors">Start</a>
             @endif
-            class="rounded-2xl shadow-sm p-4 sm:p-5 flex flex-col no-underline hover:bg-emerald-50/80 transition-colors min-h-[84px] sm:min-h-[100px]"
-            style="background-color: #d1fae5; border: none;"
-        >
-            <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-sm sm:text-base shrink-0" style="background-color: #a7f3d0; color: #047857;"><i class="fas fa-book"></i></span>
-            <span class="text-sm font-bold mt-1.5 sm:mt-2 truncate text-slate-900">
-                @if(isset($scheduledQuiz) && $scheduledQuiz)
-                    {{ $scheduledQuiz->title }}
-                @else
-                    View
-                @endif
-            </span>
-            <span class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide mt-0.5 truncate text-slate-700">
-                @if(isset($scheduledQuizSession) && $scheduledQuizSession?->result)
-                    Score: {{ number_format($scheduledQuizSession->result->score, 1) }}%
-                @elseif($scheduledUpcoming)
-                    <span id="quiz-countdown-{{ $scheduledQuiz->id }}" aria-live="polite">—</span>
-                @elseif($scheduledActive)
-                    Start
-                @else
-                    Course materials
-                @endif
-            </span>
-        </a>
+        </div>
         @endif
         <a href="{{ route('dashboard.my-profile') }}" class="rounded-2xl shadow-sm p-4 sm:p-5 flex flex-col no-underline hover:bg-amber-50/80 transition-colors min-h-[84px] sm:min-h-[100px]" style="background-color: #fef3c7; border: none;">
             <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-sm sm:text-base shrink-0" style="background-color: #fde68a; color: #b45309;"><i class="fas fa-user"></i></span>
@@ -178,16 +191,6 @@
                 <div class="min-w-0">
                     <span class="text-sm font-semibold text-slate-900 block truncate">Course materials</span>
                     <span class="text-xs text-slate-600 block truncate">Course files</span>
-                </div>
-            </div>
-            <i class="fas fa-chevron-right text-slate-400 text-xs shrink-0 hidden sm:inline-block"></i>
-        </a>
-        <a href="{{ route('dashboard.calendar') }}" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3.5 sm:p-4 flex items-center justify-between no-underline hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition-colors min-h-[56px] sm:min-h-[72px] overflow-hidden">
-            <div class="flex items-center gap-3 min-w-0">
-                <span class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0"><i class="fas fa-calendar-alt text-sm"></i></span>
-                <div class="min-w-0">
-                    <span class="text-sm font-semibold text-slate-900 block truncate">Exam calendar</span>
-                    <span class="text-xs text-slate-600 block truncate">Midsem & end-of-semester</span>
                 </div>
             </div>
             <i class="fas fa-chevron-right text-slate-400 text-xs shrink-0 hidden sm:inline-block"></i>
@@ -281,19 +284,26 @@
     </div>
 </section>
 
-{{-- Calendar: single card linking to full exam calendar page --}}
+{{-- Calendar: single card linking to full exam calendar page; breathing effect when an exam is within ~1 hour --}}
 @if($hasQuizAccess ?? true)
+@php
+    $examWithinAnHour = isset($examCalendarEntries) && $examCalendarEntries->contains(function ($e) {
+        return $e->scheduled_at->isFuture() && $e->scheduled_at->diffInMinutes(now(), false) <= 60;
+    });
+@endphp
 <section class="mb-6 sm:mb-8" aria-label="Exam calendar">
     <h2 class="text-xs sm:text-sm font-semibold text-slate-900 mb-2.5 sm:mb-3 uppercase tracking-wide">Calendar</h2>
-    <a href="{{ route('dashboard.calendar') }}" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 flex items-center justify-between no-underline hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition-colors min-h-[72px] sm:min-h-[80px]">
+    <a href="{{ route('dashboard.calendar') }}" class="exam-calendar-card block bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 no-underline hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition-colors min-h-[72px] sm:min-h-[80px] {{ $examWithinAnHour ? 'exam-calendar-card--breathing' : '' }}">
         <div class="flex items-center gap-3 min-w-0">
-            <span class="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0"><i class="fas fa-calendar-alt text-lg"></i></span>
-            <div class="min-w-0">
+            <span class="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0 exam-calendar-card-icon"><i class="fas fa-calendar-alt text-lg"></i></span>
+            <div class="min-w-0 flex-1">
                 <span class="text-sm font-semibold text-slate-900 block">Exam calendar</span>
                 <span class="text-xs text-slate-600 block truncate">Midsem & end-of-semester exams · View times & countdown</span>
             </div>
+            @if($examWithinAnHour)
+            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-800 exam-calendar-breathing-dot" aria-hidden="true"><i class="fas fa-bell text-xs"></i></span>
+            @endif
         </div>
-        <i class="fas fa-chevron-right text-slate-400 text-sm shrink-0"></i>
     </a>
 </section>
 @endif

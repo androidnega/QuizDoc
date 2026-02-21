@@ -9,6 +9,9 @@ use App\Models\QuizSession;
 use App\Models\Setting;
 use App\Models\Otp;
 use App\Models\Student;
+use App\Models\User;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use App\Services\ArkeselService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -146,10 +149,10 @@ class StudentLoginController extends Controller
             ]);
         }
 
-        // Examiner (from class group or QuizSnap quiz) must have SMS balance
+        // Examiner (from class group, quiz, or class_group_course lecturers) must have SMS balance
         $quiz->load(['classGroup.examiner', 'examiner']);
-        $examiner = $quiz->classGroup?->examiner ?? $quiz->examiner;
-        if (!$examiner || !$examiner->isExaminer() || $examiner->sms_remaining <= 0) {
+        $examiner = $this->examinerWithSmsBalanceForQuiz($quiz);
+        if (!$examiner) {
             return response()->json([
                 'success' => false,
                 'message' => 'We\'re unable to send your login code right now. Please contact your lecturer or course administrator for assistance.',
@@ -201,6 +204,40 @@ class StudentLoginController extends Controller
             'can_resend' => false,
             'days_remaining' => Otp::STUDENT_LOGIN_VALID_DAYS,
         ]);
+    }
+
+    /**
+     * Get an examiner with SMS balance for this quiz: class group owner, then quiz examiner, then lecturers from class_group_course.
+     */
+    private function examinerWithSmsBalanceForQuiz(Quiz $quiz): ?User
+    {
+        $candidates = [];
+        if ($quiz->classGroup?->examiner) {
+            $candidates[] = $quiz->classGroup->examiner;
+        }
+        if ($quiz->examiner && !$quiz->classGroup?->examiner?->is($quiz->examiner)) {
+            $candidates[] = $quiz->examiner;
+        }
+        foreach ($candidates as $examiner) {
+            if ($examiner && $examiner->isExaminer() && $examiner->sms_remaining > 0) {
+                return $examiner;
+            }
+        }
+        $classGroupId = $quiz->class_group_id;
+        if ($classGroupId && Schema::hasColumn('class_group_course', 'examiner_id')) {
+            $examinerIds = DB::table('class_group_course')
+                ->where('class_group_id', $classGroupId)
+                ->whereNotNull('examiner_id')
+                ->distinct()
+                ->pluck('examiner_id');
+            foreach ($examinerIds as $eid) {
+                $examiner = User::find($eid);
+                if ($examiner && $examiner->isExaminer() && $examiner->sms_remaining > 0) {
+                    return $examiner;
+                }
+            }
+        }
+        return null;
     }
 
     private function isIpDeviceRestrictionEnabled(): bool
