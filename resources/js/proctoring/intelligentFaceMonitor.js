@@ -437,7 +437,7 @@
             if (motionCheckStartTime && (Date.now() - motionCheckStartTime) > 3000) {
                 const motionRate = motionScore / ((Date.now() - motionCheckStartTime) / 1000);
                 if (motionRate < MOTION_THRESHOLD) {
-                    recordViolation('static_face_detected', 'major', true, { motion_rate: motionRate });
+                    recordViolation('static_face_detected', 'minor', true, { motion_rate: motionRate });
                     motionScore = 0;
                     motionCheckStartTime = Date.now();
                 }

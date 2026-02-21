@@ -449,8 +449,9 @@ class StudentQuizController extends Controller
             $this->finalizeQuiz($session);
             $autoSubmitted = true;
         }
-        // Major violations (blur, tab_switch, window_resize, camera_disconnected, no_face, multiple_faces, static_face, challenge_failed): max 1 warning per session, then auto-submit
-        $majorTypes = ['blur', 'tab_switch', 'window_resize', 'camera_disconnected', 'no_face', 'multiple_faces', 'multiple_faces_during_quiz', 'static_face_detected', 'challenge_failed'];
+        // Major violations (blur, tab_switch, window_resize, camera_disconnected, no_face, multiple_faces, challenge_failed): max 1 warning per session, then auto-submit
+        // static_face_detected is intentionally excluded from auto-submit thresholds.
+        $majorTypes = ['blur', 'tab_switch', 'window_resize', 'camera_disconnected', 'no_face', 'multiple_faces', 'multiple_faces_during_quiz', 'challenge_failed'];
         if (!$autoSubmitted && in_array($type, $majorTypes, true)) {
             $majorCount = $session->violations()->whereIn('type', $majorTypes)->count();
             if ($majorCount >= 2) {
