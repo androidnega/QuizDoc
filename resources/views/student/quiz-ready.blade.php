@@ -31,7 +31,7 @@
 
             <form method="POST" action="{{ route('student.quiz.session.start') }}">
                 @csrf
-                <button type="submit" class="btn btn-action w-full py-2.5 text-sm font-semibold">
+                <button type="submit" class="btn btn-action w-full py-2.5 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white border-0">
                     Start Quiz
                 </button>
             </form>
