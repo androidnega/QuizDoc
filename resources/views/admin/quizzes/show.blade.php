@@ -73,13 +73,6 @@
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                     <span>Question analytics</span>
                 </a>
-                @if($liveProctorEnabled ?? true)
-                <a href="{{ route('dashboard.quizzes.live-proctor', $quiz) }}" target="_blank" rel="noopener"
-                   class="py-3 px-4 text-sm font-semibold whitespace-nowrap border-b-3 border-transparent text-gray-600 hover:text-gray-900 hover:bg-white/70 flex items-center gap-2">
-                    <i class="fas fa-video"></i>
-                    <span>Live proctor</span>
-                </a>
-                @endif
             </nav>
         </div>
     </div>

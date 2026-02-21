@@ -59,8 +59,12 @@
     var csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content;
     var placeholderDataUri = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
+    var frameRefreshIntervalMs = 6000;
+    var batchSize = 4;
+    var batchDelayMs = 180;
+
     function frameUrl(quizId, sessionId) {
-        return frameUrlTemplate.replace('__QID__', String(quizId)).replace('__SID__', String(sessionId)) + '?t=' + (Date.now() / 4000 | 0);
+        return frameUrlTemplate.replace('__QID__', String(quizId)).replace('__SID__', String(sessionId)) + '?t=' + (Date.now() / (frameRefreshIntervalMs / 1000) | 0);
     }
 
     function onProctorImgError(img) {
@@ -176,19 +180,31 @@
             .catch(function() { renderSessions([]); });
     }
 
-    fetchSessions();
-    setInterval(fetchSessions, 5000);
-    setInterval(function() {
+    function refreshGridImagesStaggered() {
         if (!grid) return;
-        grid.querySelectorAll('.proctor-frame-img').forEach(function(img) {
-            var qid = img.getAttribute('data-quiz-id');
-            var sid = img.getAttribute('data-session-id');
-            if (qid && sid) img.src = frameUrl(qid, sid);
+        var imgs = Array.prototype.slice.call(grid.querySelectorAll('.proctor-frame-img'));
+        imgs.forEach(function(img, i) {
+            window.setTimeout(function() {
+                var qid = img.getAttribute('data-quiz-id');
+                var sid = img.getAttribute('data-session-id');
+                if (qid && sid) img.src = frameUrl(qid, sid);
+            }, (i % batchSize) * batchDelayMs);
         });
-        if (modal && !modal.classList.contains('hidden') && modalImg && modalImg.src && endQuizBtn && endQuizBtn.dataset.quizId && endQuizBtn.dataset.sessionId) {
+    }
+
+    function refreshModalImage() {
+        if (modal && !modal.classList.contains('hidden') && modalImg && endQuizBtn && endQuizBtn.dataset.quizId && endQuizBtn.dataset.sessionId) {
             modalImg.src = frameUrl(endQuizBtn.dataset.quizId, endQuizBtn.dataset.sessionId);
         }
-    }, 4000);
+    }
+
+    fetchSessions();
+    setInterval(fetchSessions, 8000);
+    setInterval(function() {
+        if (document.hidden) return;
+        refreshGridImagesStaggered();
+        refreshModalImage();
+    }, frameRefreshIntervalMs);
 })();
 </script>
 @endpush
