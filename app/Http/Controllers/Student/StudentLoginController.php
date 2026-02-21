@@ -129,7 +129,11 @@ class StudentLoginController extends Controller
 
         if ($this->isIpDeviceRestrictionEnabled()) {
             $ip = $request->ip();
-            if (QuizSession::where('quiz_id', $quiz->id)->where('ip_address', $ip)->exists()) {
+            // Only treat as "in use" if a session has this IP and it was not reset (reset-* = released)
+            if (QuizSession::where('quiz_id', $quiz->id)
+                ->where('ip_address', $ip)
+                ->whereRaw("ip_address NOT LIKE 'reset-%'")
+                ->exists()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'This IP address has already been used for this quiz. Access denied.',

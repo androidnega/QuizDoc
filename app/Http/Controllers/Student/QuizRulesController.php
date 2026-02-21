@@ -123,10 +123,11 @@ class QuizRulesController extends Controller
                     ->exists();
                 
                 if ($existingSession && $this->isIpDeviceRestrictionEnabled()) {
-                    // Check IP hasn't been used for this quiz by a different student
+                    // Check IP hasn't been used for this quiz by a different student (ignore reset sessions)
                     $ip = $request->ip();
                     $ipUsedByOther = QuizSession::where('quiz_id', $quiz->id)
                         ->where('ip_address', $ip)
+                        ->whereRaw("ip_address NOT LIKE 'reset-%'")
                         ->whereRaw('UPPER(TRIM(student_index)) != ?', [strtoupper($student->index_number)])
                         ->exists();
                     

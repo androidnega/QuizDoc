@@ -50,9 +50,10 @@ class ProctoringCaptureController extends Controller
         $studentIndex = strtoupper(trim((string) $indexNumber));
         
         if ($this->isIpDeviceRestrictionEnabled()) {
-            // Check if IP was used by a different student for this quiz
+            // Check if IP was used by a different student for this quiz (ignore reset sessions)
             $ipUsedByOther = QuizSession::where('quiz_id', $quiz->id)
                 ->where('ip_address', $ip)
+                ->whereRaw("ip_address NOT LIKE 'reset-%'")
                 ->whereRaw('UPPER(TRIM(student_index)) != ?', [$studentIndex])
                 ->exists();
 
@@ -137,6 +138,7 @@ class ProctoringCaptureController extends Controller
         if ($this->isIpDeviceRestrictionEnabled()) {
             $ipUsedByOther = QuizSession::where('quiz_id', $quiz->id)
                 ->where('ip_address', $ip)
+                ->whereRaw("ip_address NOT LIKE 'reset-%'")
                 ->whereRaw('UPPER(TRIM(student_index)) != ?', [$studentIndex])
                 ->exists();
 
