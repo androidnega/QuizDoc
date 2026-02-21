@@ -153,6 +153,61 @@ class User extends Authenticatable
         return (bool) ($this->attributes['group_leader'] ?? false);
     }
 
+    /**
+     * Resolve this user's student level value (e.g. 100, 200, 300, 400).
+     */
+    public function studentLevelValue(): int
+    {
+        $index = trim((string) ($this->index_number ?? ''));
+        if ($index === '') {
+            return 0;
+        }
+
+        $student = \App\Models\Student::where('index_number_hash', \App\Models\Student::hashIndexNumber($index))->first();
+        $levelValue = $student ? (int) ($student->level ?? 0) : 0;
+        if ($levelValue <= 0 && $student?->level_id) {
+            $lv = \App\Models\StudentLevel::find($student->level_id);
+            $levelValue = $lv ? (int) $lv->value : 0;
+        }
+
+        if ($levelValue > 0) {
+            return $levelValue;
+        }
+
+        // Fallback: infer from class group level when student level columns are missing.
+        $classGroup = \App\Models\ClassGroupStudent::whereRaw('UPPER(TRIM(index_number)) = ?', [strtoupper($index)])
+            ->with('classGroup.level')
+            ->first()?->classGroup;
+        if ($classGroup && $classGroup->level) {
+            return (int) ($classGroup->level->value ?? 0);
+        }
+
+        return 0;
+    }
+
+    /**
+     * Only level 300/400 leaders can create/start Docu Mentor projects.
+     */
+    public function canLeadDocuMentorProjects(): bool
+    {
+        $level = $this->studentLevelValue();
+        return $this->isGroupLeader() && in_array($level, [300, 400], true);
+    }
+
+    /**
+     * Student can open project area when level is 300/400 and they are leader or already in a group.
+     */
+    public function canAccessDocuMentorProjects(): bool
+    {
+        $level = $this->studentLevelValue();
+        if (!in_array($level, [300, 400], true)) {
+            return false;
+        }
+        return $this->canLeadDocuMentorProjects()
+            || $this->docuMentorGroups()->exists()
+            || $this->ledDocuMentorGroups()->exists();
+    }
+
     /** Group leader below level 400: class rep - can download class quiz results, cannot create Docu Mentor projects. Level 400+ uses allows_docu_mentor on StudentLevel. */
     public function isClassRep(): bool
     {

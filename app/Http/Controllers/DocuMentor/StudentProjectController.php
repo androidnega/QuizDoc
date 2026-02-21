@@ -22,9 +22,9 @@ class StudentProjectController extends Controller
             ->with(['group', 'category', 'academicYear'])
             ->orderByDesc('created_at')
             ->get();
-        $leaderWithoutGroup = $user->isGroupLeader() && !$user->ledDocuMentorGroups()->exists();
+        $leaderWithoutGroup = $user->canLeadDocuMentorProjects() && !$user->ledDocuMentorGroups()->exists();
         $isClassRep = $user->isClassRep();
-        $isGroupLeader = $user->isGroupLeader();
+        $isGroupLeader = $user->canLeadDocuMentorProjects();
 
         return view('docu-mentor.students.projects.index', compact('user', 'projects', 'leaderWithoutGroup', 'isClassRep', 'isGroupLeader'));
     }
@@ -32,9 +32,9 @@ class StudentProjectController extends Controller
     public function create(): View|RedirectResponse
     {
         $user = request()->attributes->get('dm_user');
-        if ($user->isClassRep()) {
-            return redirect()->route('dashboard.class-results.index')
-                ->with('info', 'As a class rep (group leader below level 400), you can download class quiz results instead of creating projects.');
+        if (! $user->canLeadDocuMentorProjects()) {
+            return redirect()->route('dashboard.projects.index')
+                ->with('error', 'Only level 300/400 students assigned as group leaders can create a project.');
         }
         $ledGroups = $user->ledDocuMentorGroups()->with('academicYear', 'project')->get();
         $groupsWithoutProject = $ledGroups->filter(fn ($g) => !$g->project);
@@ -68,9 +68,9 @@ class StudentProjectController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = request()->attributes->get('dm_user');
-        if ($user->isClassRep()) {
-            return redirect()->route('dashboard.class-results.index')
-                ->with('info', 'As a class rep, you cannot create projects. Use Class Results to download quiz result PDFs.');
+        if (! $user->canLeadDocuMentorProjects()) {
+            return redirect()->route('dashboard.projects.index')
+                ->with('error', 'Only level 300/400 students assigned as group leaders can create a project.');
         }
         $request->validate([
             'group_id' => 'required|exists:groups,id',

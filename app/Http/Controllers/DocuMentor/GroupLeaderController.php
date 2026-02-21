@@ -21,8 +21,8 @@ class GroupLeaderController extends Controller
     public function addMember(Request $request): RedirectResponse
     {
         $user = request()->attributes->get('dm_user');
-        if (!$user->isGroupLeader()) {
-            return back()->with('error', 'Only group leaders can add members. Ask the coordinator to assign you as group leader.');
+        if (! $user->canLeadDocuMentorProjects()) {
+            return back()->with('error', 'Only level 300/400 students assigned as group leaders can manage project groups.');
         }
 
         $request->validate(['phone' => 'required|string|max:20']);
@@ -72,8 +72,8 @@ class GroupLeaderController extends Controller
     public function createGroup(Request $request): View|RedirectResponse
     {
         $user = request()->attributes->get('dm_user');
-        if (!$user->isGroupLeader()) {
-            return redirect()->route('dashboard')->with('error', 'You are not a group leader. Only group leaders can create a group.');
+        if (! $user->canLeadDocuMentorProjects()) {
+            return redirect()->route('dashboard')->with('error', 'Only level 300/400 students assigned as group leaders can create a group.');
         }
         if ($user->ledDocuMentorGroups()->exists()) {
             return redirect()->route('dashboard')->with('info', 'You already have a group.');
@@ -128,8 +128,8 @@ class GroupLeaderController extends Controller
     public function storeGroup(Request $request): RedirectResponse
     {
         $user = request()->attributes->get('dm_user');
-        if (!$user->isGroupLeader()) {
-            return back()->with('error', 'You are not a group leader. Only group leaders can create a group.');
+        if (! $user->canLeadDocuMentorProjects()) {
+            return back()->with('error', 'Only level 300/400 students assigned as group leaders can create a group.');
         }
         if ($user->ledDocuMentorGroups()->exists()) {
             return redirect()->route('dashboard')->with('info', 'You already have a group.');

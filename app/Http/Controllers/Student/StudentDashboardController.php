@@ -40,8 +40,12 @@ class StudentDashboardController extends Controller
             $greeting = ($hour >= 5 && $hour < 12) ? 'Good morning' : (($hour >= 12 && $hour < 17) ? 'Good afternoon' : 'Good evening');
             $firstName = trim(explode(' ', $user->name ?? $user->username ?? 'User')[0] ?? 'User');
             $isClassRep = $user->isClassRep();
-            $isGroupLeader = $user->isGroupLeader();
-            $leaderWithoutGroup = $isGroupLeader && !$user->ledDocuMentorGroups()->exists();
+            $isGroupLeader = $user->canLeadDocuMentorProjects();
+            $leaderGroup = $user->ledDocuMentorGroups()->with('project')->first();
+            $memberGroup = $user->docuMentorGroups()->with('project')->first();
+            $docuMentorGroup = $leaderGroup ?: $memberGroup;
+            $leaderHasProject = $leaderGroup ? (bool) $leaderGroup->project : false;
+            $leaderWithoutGroup = $isGroupLeader && !$leaderGroup;
 
             return view('student.dashboard.index', [
                 'student' => null,
@@ -54,12 +58,14 @@ class StudentDashboardController extends Controller
                 'scheduledQuizSession' => null,
                 'lastQuiz' => null,
                 'greeting' => $greeting,
-                'hasProjectAccess' => true,
+                'hasProjectAccess' => $user->canAccessDocuMentorProjects(),
                 'hasQuizAccess' => false,
                 'displayName' => $firstName,
                 'isClassRep' => $isClassRep,
                 'isGroupLeader' => $isGroupLeader,
                 'leaderWithoutGroup' => $leaderWithoutGroup,
+                'docuMentorGroup' => $docuMentorGroup,
+                'leaderHasProject' => $leaderHasProject,
             ]);
         }
 
@@ -132,15 +138,21 @@ class StudentDashboardController extends Controller
         $isClassRep = false;
         $isGroupLeader = false;
         $leaderWithoutGroup = false;
+        $leaderHasProject = false;
+        $docuMentorGroup = null;
 
         // Prefer an active Docu Mentor session when present (staff/DM-only login)
         if (session('admin_user_id')) {
             $dmUser = \App\Models\User::find(session('admin_user_id'));
             if ($dmUser) {
-                $hasProjectAccess = $dmUser->isDocuMentorStudent();
+                $hasProjectAccess = $dmUser->canAccessDocuMentorProjects();
                 $isClassRep = $dmUser->isClassRep();
-                $isGroupLeader = $dmUser->isGroupLeader();
-                $leaderWithoutGroup = $isGroupLeader && $dmUser->ledDocuMentorGroups()->doesntExist();
+                $isGroupLeader = $dmUser->canLeadDocuMentorProjects();
+                $leaderGroup = $dmUser->ledDocuMentorGroups()->with('project')->first();
+                $memberGroup = $dmUser->docuMentorGroups()->with('project')->first();
+                $docuMentorGroup = $leaderGroup ?: $memberGroup;
+                $leaderHasProject = $leaderGroup ? (bool) $leaderGroup->project : false;
+                $leaderWithoutGroup = $isGroupLeader && !$leaderGroup;
             }
         } else {
             // Student is logged in via index number; try to resolve matching Docu Mentor user by index
@@ -149,12 +161,15 @@ class StudentDashboardController extends Controller
                 ->whereRaw('UPPER(TRIM(index_number)) = ?', [$indexUpper])
                 ->first();
 
-            // Only grant project access when level allows Docu Mentor (typically level 400+)
-            if ($dmUser && $student->canAccessDocuMentor()) {
-                $hasProjectAccess = $dmUser->isDocuMentorStudent();
+            if ($dmUser) {
+                $hasProjectAccess = $dmUser->canAccessDocuMentorProjects();
                 $isClassRep = $dmUser->isClassRep();
-                $isGroupLeader = $dmUser->isGroupLeader();
-                $leaderWithoutGroup = $isGroupLeader && $dmUser->ledDocuMentorGroups()->doesntExist();
+                $isGroupLeader = $dmUser->canLeadDocuMentorProjects();
+                $leaderGroup = $dmUser->ledDocuMentorGroups()->with('project')->first();
+                $memberGroup = $dmUser->docuMentorGroups()->with('project')->first();
+                $docuMentorGroup = $leaderGroup ?: $memberGroup;
+                $leaderHasProject = $leaderGroup ? (bool) $leaderGroup->project : false;
+                $leaderWithoutGroup = $isGroupLeader && !$leaderGroup;
             }
         }
 
@@ -175,6 +190,8 @@ class StudentDashboardController extends Controller
             'isClassRep' => $isClassRep,
             'isGroupLeader' => $isGroupLeader,
             'leaderWithoutGroup' => $leaderWithoutGroup,
+            'docuMentorGroup' => $docuMentorGroup,
+            'leaderHasProject' => $leaderHasProject,
         ]);
     }
 

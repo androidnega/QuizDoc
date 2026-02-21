@@ -24,7 +24,7 @@ class StudentEnterDocuMentorController extends Controller
         }
 
         $student = Student::find($studentId);
-        if (!$student || !$student->canAccessDocuMentor()) {
+        if (!$student) {
             return redirect()->route('dashboard')
                 ->with('error', 'Project access requires an eligible level. Contact your administrator.');
         }
@@ -33,6 +33,11 @@ class StudentEnterDocuMentorController extends Controller
         if (!$user) {
             return redirect()->route('dashboard')
                 ->with('error', 'Could not set up project access. Please add your phone number in your profile first.');
+        }
+
+        if (! $user->canAccessDocuMentorProjects()) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Docu Mentor access is for level 300/400 project leaders and level 300/400 students already in a group.');
         }
 
         // Ensure Docu Mentor session is active for this student
@@ -45,6 +50,10 @@ class StudentEnterDocuMentorController extends Controller
         // Optional redirect route (e.g. dashboard.projects.index / dashboard.group.create)
         $redirect = $request->query('redirect');
         if ($redirect && is_string($redirect) && Str::startsWith($redirect, 'dashboard.')) {
+            if ($redirect === 'dashboard.group.show' && $request->filled('group')) {
+                return redirect()->route($redirect, ['group' => (int) $request->query('group')])
+                    ->with('success', 'Welcome. You can now manage your projects.');
+            }
             return redirect()->route($redirect)
                 ->with('success', 'Welcome. You can now manage your projects.');
         }
