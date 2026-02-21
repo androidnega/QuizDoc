@@ -861,6 +861,11 @@ class QuizManagementController extends Controller
             ]);
             $pool->update(['is_approved' => true]);
         }
+        try {
+            QuizBackupService::sendIfConfigured($quiz);
+        } catch (\Throwable $e) {
+            // Do not fail the request if digest send fails
+        }
         return $this->redirectQuizOverview($quiz, 'success', 'Saved');
     }
 
@@ -875,6 +880,11 @@ class QuizManagementController extends Controller
         }
         $quiz->update(['is_published' => true, 'status' => Quiz::STATUS_PUBLISHED]);
         broadcast(new DataUpdated('quizzes'))->toOthers();
+        try {
+            QuizBackupService::sendIfConfigured($quiz);
+        } catch (\Throwable $e) {
+            // Do not fail the request if digest send fails
+        }
         return redirect()->route($this->staffRoutePrefix() . '.quizzes.show', $quiz)->with('success', 'Published');
     }
 

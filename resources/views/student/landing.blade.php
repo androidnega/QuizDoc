@@ -28,15 +28,15 @@
     .home-feature-card .feature-icon { width: 32px; height: 32px; margin: 0 auto 0.5rem; display: block; }
     .home-feature-card .feature-title { font-size: 0.875rem; font-weight: 700; color: #1e293b; margin-bottom: 0.25rem; }
     .home-feature-card .feature-desc { font-size: 0.75rem; color: #64748b; line-height: 1.35; margin: 0; }
-    /* Desktop: bigger hero + feature cards */
+    /* Desktop: bigger hero; feature cards with reduced height + space below welcome */
     @media (min-width: 769px) {
         .home-hero h1 { font-size: 2.75rem; line-height: 1.2; }
         .home-hero p { font-size: 1.375rem; line-height: 1.5; }
-        .home-features-row { gap: 1.75rem; max-width: 880px; }
-        .home-feature-card { padding: 1.5rem 1.75rem; border-radius: 1rem; }
-        .home-feature-card .feature-icon { width: 56px; height: 56px; margin: 0 auto 0.875rem; }
-        .home-feature-card .feature-title { font-size: 1.375rem; margin-bottom: 0.5rem; }
-        .home-feature-card .feature-desc { font-size: 1.125rem; color: #475569; line-height: 1.5; }
+        .home-features-row { gap: 1rem; max-width: 880px; margin-top: 2rem; }
+        .home-feature-card { padding: 0.5rem 0.75rem; border-radius: 0.75rem; }
+        .home-feature-card .feature-icon { width: 28px; height: 28px; margin: 0 auto 0.35rem; }
+        .home-feature-card .feature-title { font-size: 0.9375rem; margin-bottom: 0.25rem; }
+        .home-feature-card .feature-desc { font-size: 0.8125rem; color: #475569; line-height: 1.35; }
     }
     /* Desktop: deeper card colors */
     .home-feature-card.card-secure { background: #93c5fd; }
