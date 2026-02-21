@@ -13,6 +13,46 @@
 #ai-invigilator-badge .text{animation:ai-invigilator-glow 2s ease-in-out infinite}
 @keyframes ai-invigilator-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.2)}}
 @keyframes ai-invigilator-glow{0%,100%{opacity:1;text-shadow:0 0 8px rgba(34,197,94,0.4)}50%{opacity:0.9;text-shadow:0 0 14px rgba(34,197,94,0.6)}}
+
+/* Fixed left panel - camera, timer, questions (hide vertical scrollbar) */
+.quiz-left-panel {
+    position: fixed;
+    top: 4rem;
+    left: 1rem;
+    width: 300px;
+    max-height: calc(100vh - 5rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 40;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.quiz-left-panel::-webkit-scrollbar { display: none; }
+
+/* Main content area - full width when panel hidden; offset when panel visible (lg) */
+.quiz-main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 1rem 1rem 2rem 1rem;
+}
+@media (min-width: 1024px) {
+    .quiz-main-content { margin-left: 320px; width: calc(100% - 340px); padding: 1rem 1.5rem 2rem 0; }
+}
+
+/* Live camera frame border states (synced with intelligentFaceMonitor) */
+#live-camera-frame.border-emerald-500 { border-color: #22c55e; }
+#live-camera-frame.border-amber-400 { border-color: #eab308; animation: quiz-frame-pulse-warn 1s infinite; }
+#live-camera-frame.border-red-500 { border-color: #ef4444; animation: quiz-frame-pulse-critical 1s infinite; }
+@keyframes quiz-frame-pulse-warn { 0%,100%{border-color:#eab308} 50%{border-color:#fbbf24} }
+@keyframes quiz-frame-pulse-critical { 0%,100%{border-color:#ef4444} 50%{border-color:#dc2626} }
+
+/* Violation counter in left panel */
+.quiz-violation-counter { background: #1f2937; border-radius: 9999px; padding: 0.5rem 1rem; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.75rem; }
+.quiz-violation-num { background: #374151; padding: 0.25rem 0.75rem; border-radius: 9999px; color: white; }
+.quiz-violation-num.warn-1 { background: #eab308; color: black; }
+.quiz-violation-num.warn-2 { background: #f97316; color: white; }
+.quiz-violation-num.warn-3 { background: #ef4444; color: white; }
+.quiz-violation-num.warn-4 { background: #dc2626; color: white; }
 </style>
 @endpush
 
@@ -30,18 +70,18 @@
     </div>
 
     <div class="quiz-writing-content hidden md:block min-h-screen min-w-0 w-full">
-    {{-- Sticky header --}}
-    <header class="sticky top-0 z-40 bg-white border-b border-gray-200 shrink-0">
-        <div class="w-full px-4 sm:px-6 py-3 flex items-center min-w-0">
-            <h1 class="text-base font-semibold text-gray-800 truncate min-w-0">{{ $session->quiz->title }}</h1>
-        </div>
-    </header>
+        {{-- Fixed header --}}
+        <header class="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 h-16 flex items-center">
+            <div class="w-full px-4 sm:px-6">
+                <h1 class="text-base font-semibold text-gray-800 truncate">{{ $session->quiz->title }}</h1>
+            </div>
+        </header>
 
-    {{-- Pulsing "AI INVIGILATOR WATCHING" when camera is active --}}
-    <div id="ai-invigilator-badge" class="fixed left-4 bottom-4 z-40 pointer-events-none" aria-hidden="true">
-        <span class="pulse-dot" aria-hidden="true"></span>
-        <span class="text">AI Invigilator Watching</span>
-    </div>
+        {{-- Pulsing "AI INVIGILATOR WATCHING" when camera is active --}}
+        <div id="ai-invigilator-badge" class="fixed left-4 bottom-4 z-50 pointer-events-none" aria-hidden="true">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            <span class="text">AI Invigilator Watching</span>
+        </div>
 
     {{-- Single major violation warning (max once per session): calm, non-accusatory --}}
     <div id="blur-warning" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90 px-4">
@@ -152,11 +192,48 @@
         </div>
     </div>
 
-    {{-- Main: full width on desktop so questions show on full screen --}}
-    <main class="w-full max-w-full px-4 sm:px-6 py-6 min-w-0 overflow-x-hidden">
-        <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start w-full max-w-full mx-auto">
-            {{-- Questions + pagination --}}
-            <div id="quiz-container" class="min-w-0 flex-1 w-full lg:max-w-[calc(100%-220px)] max-w-full">
+        {{-- Fixed left panel: camera, timer, questions (scrollbar hidden) --}}
+        <aside class="quiz-left-panel hidden lg:block space-y-4" aria-label="Quiz sidebar">
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="p-4">
+                    <h2 class="text-sm font-semibold text-gray-700 mb-2">LIVE CAMERA FEED</h2>
+                    <div id="live-camera-frame" class="bg-gray-900 border-2 border-emerald-500 rounded-xl overflow-hidden min-w-0 flex flex-col transition-all duration-200">
+                        <div id="live-camera-video-slot" class="aspect-video bg-gray-900 flex items-center justify-center min-h-[120px]">
+                            <span class="text-gray-500 text-sm">Camera feed</span>
+                        </div>
+                        <div class="p-3 border-t border-gray-200 bg-white">
+                            <p id="live-camera-status-text" class="text-sm font-medium text-emerald-700">Monitoring camera feed.</p>
+                            <p id="live-camera-status-subtext" class="text-xs text-gray-500 mt-0.5"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3">
+                        <div class="quiz-violation-counter">
+                            <span>Violations</span>
+                            <span id="quiz-violation-number" class="quiz-violation-num">{{ (int) ($outOfFrameCount ?? 0) }}/5</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @if($remainingSeconds > 0)
+            <div id="quiz-timer-card" class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <p class="text-xs text-gray-500 mb-1 text-center font-semibold tracking-wider">TIME REMAINING</p>
+                <p id="quiz-timer" class="text-2xl font-bold tabular-nums quiz-timer quiz-timer-green text-center" aria-live="polite">--:--</p>
+            </div>
+            @endif
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                <p class="text-xs text-gray-500 mb-2 font-semibold tracking-wider">QUESTIONS</p>
+                <div id="quiz-side-nav" class="flex flex-wrap gap-1">
+                    @foreach($questions as $idx => $q)
+                        @php $qPage = (int) floor($idx / $perPage) + 1; @endphp
+                        <a href="#quiz-container" class="quiz-side-num w-8 h-8 rounded border border-gray-200 flex items-center justify-center text-sm font-medium text-gray-600 hover:border-primary-300 hover:bg-primary-50 shrink-0" data-question-id="{{ $q->id }}" data-page="{{ $qPage }}">{{ $idx + 1 }}</a>
+                    @endforeach
+                </div>
+            </div>
+        </aside>
+
+        {{-- Main content area: questions + pagination + submit --}}
+        <div class="quiz-main-content">
+            <div id="quiz-container" class="bg-white rounded-xl shadow-lg border border-gray-200 min-w-0 p-6">
 
                 <form id="quiz-form" class="space-y-6">
                     @foreach($questions as $idx => $question)
@@ -197,7 +274,7 @@
                         <p class="text-sm text-gray-600 mb-4">When you finish, you will go to a final photo screen to complete your submission.</p>
                         <button
                             type="button"
-                            class="btn btn-action w-full sm:w-auto py-2.5 px-5 text-sm font-semibold"
+                            class="btn btn-action w-full sm:w-auto py-2.5 px-5 text-sm font-semibold bg-red-600 text-white hover:bg-red-700 border-0"
                             id="post-face-btn"
                             data-final-url="{{ route('student.final-photo.capture') }}"
                             onclick="window.location.href=this.dataset.finalUrl"
@@ -215,28 +292,7 @@
                 </div>
                 @endif
             </div>
-
-            {{-- Side: one card with timer on top, then question nav (desktop); same card width as questions --}}
-            <aside class="hidden lg:block w-[200px] flex-shrink-0 lg:self-start" aria-label="Quiz sidebar">
-                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto min-w-0 shadow-sm">
-                    @if($remainingSeconds > 0)
-                    <div id="quiz-timer-card" class="p-4 border-b border-gray-200 flex items-center justify-center min-w-0">
-                        <p id="quiz-timer" class="text-lg font-bold tabular-nums quiz-timer quiz-timer-green" aria-live="polite">--:--</p>
-                    </div>
-                    @endif
-                    <div class="p-4 min-w-0">
-                        <p class="text-xs text-gray-500 mb-2">Questions</p>
-                        <div id="quiz-side-nav" class="flex flex-wrap gap-1">
-                            @foreach($questions as $idx => $q)
-                                @php $qPage = (int) floor($idx / $perPage) + 1; @endphp
-                                <a href="#quiz-container" class="quiz-side-num w-8 h-8 rounded border border-gray-200 flex items-center justify-center text-sm font-medium text-gray-600 hover:border-primary-300 hover:bg-primary-50 shrink-0" data-question-id="{{ $q->id }}" data-page="{{ $qPage }}">{{ $idx + 1 }}</a>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
-            </aside>
         </div>
-    </main>
     </div>
 </div>
 
@@ -292,6 +348,7 @@ window.QuizSnapIntelligentFaceMonitor.config.violationCaptureUrl = "{{ route('st
 window.QuizSnapIntelligentFaceMonitor.config.autoSubmitUrl = "{{ route('student.quiz.auto-submit') }}";
 window.QuizSnapIntelligentFaceMonitor.config.csrfToken = "{{ csrf_token() }}";
 window.QuizSnapIntelligentFaceMonitor.config.sessionId = {{ $session->id ?? 0 }};
+window.QuizSnapIntelligentFaceMonitor.config.initialOutOfFrameCount = {{ (int) ($outOfFrameCount ?? 0) }};
 window.QuizSnapIntelligentFaceMonitor.config.studentIndex = @json($session->student_index ?? null);
 window.QuizSnapIntelligentFaceMonitor.config.studentName = @json($matchedStudentName ?? null);
 window.QuizSnapIntelligentFaceMonitor.config.studentNameLinked = {{ ($studentNameLinked ?? false) ? 'true' : 'false' }};
@@ -389,10 +446,10 @@ document.addEventListener('DOMContentLoaded', function() {
         var questions = document.querySelectorAll('.quiz-page-question');
         questions.forEach(function(el) {
             var p = parseInt(el.getAttribute('data-page'), 10);
-            el.style.display = p === currentPage ? '' : 'none';
+            el.style.display = p === currentPage ? 'block' : 'none';
         });
         var submitBlock = document.getElementById('quiz-submit-block');
-        if (submitBlock) submitBlock.style.display = currentPage === totalPages ? '' : 'none';
+        if (submitBlock) submitBlock.style.display = currentPage === totalPages ? 'block' : 'none';
 
         if (currentPage === totalPages) updateAnsweredSummary();
 
@@ -417,8 +474,8 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('change', updateAnsweredSummary);
         form.addEventListener('input', updateAnsweredSummary);
     }
+    showPage(currentPage);
     if (totalPages > 1) {
-        showPage(currentPage);
         var prevBtn = document.getElementById('quiz-prev-bottom');
         var nextBtn = document.getElementById('quiz-next-bottom');
         if (prevBtn) prevBtn.addEventListener('click', function() { showPage(currentPage - 1); });
@@ -429,11 +486,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (p) { e.preventDefault(); showPage(p); }
             });
         });
-    } else {
-        var submitBlock = document.getElementById('quiz-submit-block');
-        if (submitBlock) submitBlock.style.display = '';
     }
     updateAnsweredSummary();
+
+    // Sync violation counter (out-of-frame events 0/5) from intelligent face monitor
+    function updateViolationCounter() {
+        var el = document.getElementById('quiz-violation-number');
+        if (!el) return;
+        var mon = window.QuizSnapIntelligentFaceMonitor;
+        var count = (mon && typeof mon.getValidOutOfFrameEvents === 'function') ? mon.getValidOutOfFrameEvents() : 0;
+        el.textContent = count + '/5';
+        el.className = 'quiz-violation-num';
+        if (count >= 4) el.classList.add('warn-4');
+        else if (count >= 3) el.classList.add('warn-3');
+        else if (count >= 2) el.classList.add('warn-2');
+        else if (count >= 1) el.classList.add('warn-1');
+    }
+    setInterval(updateViolationCounter, 500);
 });
 </script>
 @endpush

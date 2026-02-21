@@ -98,10 +98,10 @@
                                         <span class="text-xs text-gray-400">—</span>
                                     @endif
                                 </td>
-                                <td class="px-3 py-1.5 whitespace-nowrap text-right">
+                                <td class="px-3 py-1.5 whitespace-nowrap text-right {{ $session->violations->count() > 0 ? 'bg-red-50' : '' }}">
                                     <div class="flex items-center justify-end gap-2">
-                                        <a href="{{ route('dashboard.quizzes.sessions.show', [$quiz, $session]) }}" class="inline-flex items-center gap-0.5 text-xs font-medium text-primary-600 hover:text-primary-800">
-                                            View
+                                        <a href="{{ route('dashboard.quizzes.sessions.show', [$quiz, $session]) }}" class="inline-flex items-center gap-0.5 text-xs font-medium {{ $session->violations->count() > 0 ? 'text-red-700 hover:text-red-900 font-semibold' : 'text-primary-600 hover:text-primary-800' }}">
+                                            {{ $session->violations->count() > 0 ? 'View (violations)' : 'View' }}
                                             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                                             </svg>

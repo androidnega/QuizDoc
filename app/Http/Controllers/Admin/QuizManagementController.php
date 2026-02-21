@@ -407,9 +407,9 @@ class QuizManagementController extends Controller
         $approvedQuestionsTotal = $approvedQuestionsQuery->count();
         $approvedQuestions = $approvedQuestionsQuery->get();
 
-        // Completed sessions for Sessions tab: load all for live search
+        // Completed sessions for Sessions tab: load all for live search (with violations for action-column highlight)
         $sessionsQuery = $quiz->sessions()
-            ->with('result')
+            ->with(['result', 'violations'])
             ->whereNotNull('ended_at')
             ->orderByDesc('ended_at');
         $sessionsPaginator = $sessionsQuery->get();

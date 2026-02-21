@@ -43,11 +43,12 @@
     const MONITORING_INTERVAL_MS = 15000; // Check every 15 seconds during quiz
     const DETECTION_INTERVAL_MS = 200; // Run detection every 200ms (~5 FPS)
     const QUIZ_FRAME_MARGIN = 0.05;
+    const FACE_TOO_FAR_RATIO = 0.04;
+    const OUT_OF_FRAME_EVENT_MIN_MS = 45000;
+    const OUT_OF_FRAME_EVENT_LIMIT = 5;
     const QUIZ_START_GRACE_MS = 12000; // Allow monitor/camera to stabilize before counting violations
-    const MAX_FACE_LOSS_CAPTURES = 5;
-    const OUT_OF_FRAME_CONSECUTIVE_THRESHOLD = 4;
     // Require this many consecutive frames with 2+ faces before recording (reduces false positives)
-    const MULTIPLE_FACES_CONSECUTIVE_THRESHOLD = 5; // 5 * 200ms = 1 second
+    const MULTIPLE_FACES_CONSECUTIVE_THRESHOLD = 10; // 10 consecutive frames (~2s) before recording multiple faces
     // Second face smaller than this ratio of primary face area is ignored (reflection/noise)
     const MULTIPLE_FACES_MIN_SECOND_RATIO = 0.12;
 
@@ -67,17 +68,13 @@
     let detectionInterval = null;
     let quizMonitoringStartedAt = null;
     let violationCount = 0;
-    let faceLossWarningCount = 0;
-    let lastFaceLossTime = 0;
-    let faceLossDebounce = null;
-    let lastFacePresent = true;
-    let outOfFrameAlertDebounce = null;
-    let faceLossCaptureCount = 0;
     let canvas = null;
     let ctx = null;
     let lastHeadDirection = 'center'; // 'left', 'center', 'right'
     let multipleFacesConsecutiveCount = 0;
-    let outOfFrameConsecutiveCount = 0;
+    let validOutOfFrameEvents = 0;
+    let noFaceStartedAt = null;
+    let outOfFrameEventCapturedForCurrentAbsence = false;
 
     /**
      * Get CSRF token
@@ -207,6 +204,93 @@
                 }
             })
             .catch(function () {});
+    }
+
+    function setLiveFrameState(state, headline, detail) {
+        const frameEl = document.getElementById('live-camera-frame');
+        const textEl = document.getElementById('live-camera-status-text');
+        const subTextEl = document.getElementById('live-camera-status-subtext');
+        if (frameEl) {
+            frameEl.classList.remove('border-emerald-500', 'border-amber-400', 'border-red-500');
+            if (state === 'red') {
+                frameEl.classList.add('border-red-500');
+            } else if (state === 'yellow') {
+                frameEl.classList.add('border-amber-400');
+            } else {
+                frameEl.classList.add('border-emerald-500');
+            }
+        }
+        if (textEl) {
+            textEl.textContent = headline || 'Monitoring camera feed.';
+            textEl.classList.remove('text-emerald-700', 'text-amber-700', 'text-red-700');
+            if (state === 'red') {
+                textEl.classList.add('text-red-700');
+            } else if (state === 'yellow') {
+                textEl.classList.add('text-amber-700');
+            } else {
+                textEl.classList.add('text-emerald-700');
+            }
+        }
+        if (subTextEl) {
+            subTextEl.textContent = detail || '';
+            subTextEl.classList.remove('text-gray-500', 'text-amber-600', 'text-red-600');
+            if (state === 'red') {
+                subTextEl.classList.add('text-red-600');
+            } else if (state === 'yellow') {
+                subTextEl.classList.add('text-amber-600');
+            } else {
+                subTextEl.classList.add('text-gray-500');
+            }
+        }
+    }
+
+    function getFaceAreaRatio(box) {
+        const videoEl = config.videoElement || videoElement;
+        if (!videoEl || !box) return 0;
+        const videoWidth = videoEl.videoWidth || 640;
+        const videoHeight = videoEl.videoHeight || 480;
+        if (videoWidth <= 0 || videoHeight <= 0) return 0;
+        const width = Math.abs((box.bottomRight[0] || 0) - (box.topLeft[0] || 0));
+        const height = Math.abs((box.bottomRight[1] || 0) - (box.topLeft[1] || 0));
+        if (width <= 0 || height <= 0) return 0;
+        const normalized = width <= 1.5 && height <= 1.5;
+        const pixelWidth = normalized ? width * videoWidth : width;
+        const pixelHeight = normalized ? height * videoHeight : height;
+        return (pixelWidth * pixelHeight) / (videoWidth * videoHeight);
+    }
+
+    function remainingOutOfFrameWarnings() {
+        return Math.max(0, OUT_OF_FRAME_EVENT_LIMIT - validOutOfFrameEvents);
+    }
+
+    function registerValidatedOutOfFrameEvent(now, durationMs) {
+        const evidenceTimestamp = new Date(now).toISOString();
+        const eventDurationMs = Math.max(OUT_OF_FRAME_EVENT_MIN_MS, Math.floor(durationMs));
+        validOutOfFrameEvents++;
+        const remainingWarnings = remainingOutOfFrameWarnings();
+        const metadata = {
+            reason: 'no_face',
+            warning_count: validOutOfFrameEvents,
+            remaining_warnings: remainingWarnings,
+            auto_submit_on_next: validOutOfFrameEvents === OUT_OF_FRAME_EVENT_LIMIT - 1,
+            face_count: 0,
+            face_count_at_capture: 0,
+            out_of_frame_duration: eventDurationMs,
+            out_of_frame_duration_ms: eventDurationMs,
+            evidence_timestamp: evidenceTimestamp,
+            capture_synced: true,
+            student_index: config.studentIndex || null,
+        };
+
+        recordViolation('face_out_of_frame', 'minor', false, metadata);
+        const imageBase64 = captureFrame();
+        if (imageBase64) {
+            sendViolationCapture(imageBase64, 'face_out_of_frame', metadata);
+        }
+
+        if (validOutOfFrameEvents >= OUT_OF_FRAME_EVENT_LIMIT) {
+            triggerAutoSubmit('face_lost_repeatedly', 'no_face');
+        }
     }
 
     /**
@@ -359,10 +443,12 @@
     function handleQuizMonitoring(faceCount, boundingBoxes) {
         const now = Date.now();
         const inGraceWindow = quizMonitoringStartedAt && (now - quizMonitoringStartedAt) < QUIZ_START_GRACE_MS;
+        const primaryBox = (boundingBoxes && boundingBoxes[0]) ? boundingBoxes[0] : null;
+        const outOfFrameWarningsLeft = remainingOutOfFrameWarnings();
 
         // Avoid false positives right after quiz starts while stream/model settles.
         if (inGraceWindow) {
-            lastFacePresent = faceCount > 0;
+            setLiveFrameState('green', 'Camera stabilizing...', 'Monitoring starts in a few seconds.');
             return;
         }
 
@@ -376,7 +462,6 @@
                     'Only one person should be in the camera frame.'
                 );
                 recordViolation('multiple_faces_during_quiz', 'major', true, { face_count: effectiveMultiple });
-                violationCount++;
                 if (violationCount >= 2) {
                     triggerAutoSubmit('multiple_faces_repeated', 'multiple_faces');
                 }
@@ -387,54 +472,54 @@
             multipleFacesConsecutiveCount = 0;
         }
 
-        // No face detection during quiz
+        // Out-of-frame is strictly "face count is zero" and must be continuous for 45s.
         if (faceCount === 0) {
-            outOfFrameConsecutiveCount++;
-            if (outOfFrameConsecutiveCount >= OUT_OF_FRAME_CONSECUTIVE_THRESHOLD) {
-                if (!outOfFrameAlertDebounce) {
-                    outOfFrameAlertDebounce = setTimeout(function() {
-                        showProctoringModal('You are out of the camera frame', 'Please return your face to the center of the camera immediately.');
-                        outOfFrameAlertDebounce = null;
-                    }, 600);
-                }
-                handleFaceLossDuringQuiz('face_out_of_frame', { reason: 'no_face', face_count: 0 });
+            if (noFaceStartedAt === null) {
+                noFaceStartedAt = now;
+                outOfFrameEventCapturedForCurrentAbsence = false;
             }
-            lastFacePresent = false;
+            const noFaceDurationMs = now - noFaceStartedAt;
+            if (noFaceDurationMs >= OUT_OF_FRAME_EVENT_MIN_MS) {
+                setLiveFrameState(
+                    'red',
+                    'Face missing for 45s+',
+                    outOfFrameWarningsLeft > 0
+                        ? (outOfFrameWarningsLeft + ' warning(s) remaining before auto-submission.')
+                        : 'Auto-submission in progress.'
+                );
+                if (!outOfFrameEventCapturedForCurrentAbsence) {
+                    outOfFrameEventCapturedForCurrentAbsence = true;
+                    registerValidatedOutOfFrameEvent(now, noFaceDurationMs);
+                }
+            } else {
+                const secondsLeft = Math.ceil((OUT_OF_FRAME_EVENT_MIN_MS - noFaceDurationMs) / 1000);
+                setLiveFrameState(
+                    'yellow',
+                    'Face not detected',
+                    'Return to frame within ' + secondsLeft + 's to avoid a warning.'
+                );
+            }
             return;
-        } else {
-            // Face is present again
-            if (!lastFacePresent) {
-                if (outOfFrameAlertDebounce) {
-                    clearTimeout(outOfFrameAlertDebounce);
-                    outOfFrameAlertDebounce = null;
-                }
-            }
-            lastFacePresent = true;
-            outOfFrameConsecutiveCount = 0;
         }
 
-        // Face present but out of frame
-        if (isFaceOutOfFrame(boundingBoxes[0])) {
-            outOfFrameConsecutiveCount++;
-            if (outOfFrameConsecutiveCount >= OUT_OF_FRAME_CONSECUTIVE_THRESHOLD) {
-                if (!outOfFrameAlertDebounce) {
-                    outOfFrameAlertDebounce = setTimeout(function() {
-                        showProctoringModal('You are out of the camera frame', 'Please return your face to the center of the camera and stay centered in view.');
-                        outOfFrameAlertDebounce = null;
-                    }, 600);
-                }
-                handleFaceLossDuringQuiz('face_out_of_frame', { reason: 'out_of_frame', face_count: 1 });
-            }
-            return;
-        } else if (outOfFrameAlertDebounce) {
-            clearTimeout(outOfFrameAlertDebounce);
-            outOfFrameAlertDebounce = null;
-            outOfFrameConsecutiveCount = 0;
+        // Face returned: reset no-face timer immediately.
+        if (noFaceStartedAt !== null) {
+            noFaceStartedAt = null;
+            outOfFrameEventCapturedForCurrentAbsence = false;
+        }
+
+        // Guidance only: face exists but partially outside frame.
+        if (primaryBox && isFaceOutOfFrame(primaryBox)) {
+            setLiveFrameState('yellow', 'Keep your full face in frame', 'Face detected, but part of your face is near the edge.');
+        } else if (primaryBox && getFaceAreaRatio(primaryBox) > 0 && getFaceAreaRatio(primaryBox) < FACE_TOO_FAR_RATIO) {
+            setLiveFrameState('yellow', 'Move closer to the camera', 'Your face appears too far for reliable monitoring.');
+        } else {
+            setLiveFrameState('green', 'Face in frame', 'Keep your face centered and visible.');
         }
 
         // Motion detection (photo attack)
-        if (boundingBoxes[0]) {
-            const box = boundingBoxes[0];
+        if (primaryBox) {
+            const box = primaryBox;
             const centerX = (box.topLeft[0] + box.bottomRight[0]) / 2;
             const centerY = (box.topLeft[1] + box.bottomRight[1]) / 2;
             const width = Math.abs(box.bottomRight[0] - box.topLeft[0]);
@@ -465,8 +550,8 @@
         }
 
         // Head turn detection
-        if (boundingBoxes[0] && currentChallenge) {
-            detectHeadTurn(boundingBoxes[0]);
+        if (primaryBox && currentChallenge) {
+            detectHeadTurn(primaryBox);
         }
     }
 
@@ -547,64 +632,6 @@
     }
 
     /**
-     * Handle face loss during quiz with progressive warnings
-     */
-    function handleFaceLossDuringQuiz(reasonType, extraMetadata = {}) {
-        const now = Date.now();
-        
-        // Debounce: only trigger if face lost for at least 2 seconds continuously
-        if (faceLossDebounce) {
-            clearTimeout(faceLossDebounce);
-        }
-        
-        faceLossDebounce = setTimeout(function() {
-            // Only count if enough time passed since last warning (prevent spam)
-            if (now - lastFaceLossTime < 5000) {
-                return;
-            }
-            
-            lastFaceLossTime = now;
-            faceLossWarningCount++;
-            
-            const violationType = 'face_out_of_frame';
-            const canCaptureNow = faceLossCaptureCount < MAX_FACE_LOSS_CAPTURES;
-            const remainingWarnings = Math.max(0, 5 - faceLossWarningCount);
-            const metadata = {
-                warning_count: faceLossWarningCount,
-                remaining_warnings: remainingWarnings,
-                auto_submit_on_next: faceLossWarningCount === 4,
-                reason: (extraMetadata && extraMetadata.reason) ? extraMetadata.reason : (reasonType || 'out_of_frame'),
-                face_count: (extraMetadata && typeof extraMetadata.face_count === 'number') ? extraMetadata.face_count : 0,
-                student_index: config.studentIndex || null,
-            };
-
-            recordViolation(violationType, 'minor', canCaptureNow, {
-                ...metadata,
-                auto_capture: canCaptureNow,
-            });
-            if (canCaptureNow) {
-                faceLossCaptureCount++;
-            }
-            
-            if (faceLossWarningCount === 1) {
-                showFaceLossWarning('first', metadata);
-            } else if (faceLossWarningCount === 2) {
-                showFaceLossWarning('second', metadata);
-            } else if (faceLossWarningCount === 3) {
-                showFaceLossWarning('third', metadata);
-            } else if (faceLossWarningCount === 4) {
-                showFaceLossWarning('fourth', metadata);
-            } else if (faceLossWarningCount >= 5) {
-                showFaceLossWarning('final', metadata);
-                // Auto-submit on the 5th violation after showing warning briefly
-                setTimeout(function () {
-                    triggerAutoSubmit('face_lost_repeatedly', 'no_face');
-                }, 2500);
-            }
-        }, 2000); // 2 second debounce
-    }
-    
-    /**
      * Show reusable proctoring message modal (quiz page only). Used for out-of-frame and two-faces warnings.
      */
     function showProctoringModal(title, body) {
@@ -615,50 +642,6 @@
         if (titleEl) titleEl.textContent = title || 'Warning';
         if (bodyEl) bodyEl.textContent = body || '';
         el.classList.remove('hidden');
-    }
-
-    /**
-     * Show face loss warning modal
-     */
-    function showFaceLossWarning(level, metadata = {}) {
-        const warningIds = {
-            'first': 'face-loss-warning-first',
-            'second': 'face-loss-warning-second',
-            'third': 'face-loss-warning-third',
-            'fourth': 'face-loss-warning-fourth',
-            'final': 'face-loss-warning-final'
-        };
-        
-        const warningEl = document.getElementById(warningIds[level]);
-        if (warningEl) {
-            const remaining = typeof metadata.remaining_warnings === 'number'
-                ? metadata.remaining_warnings
-                : Math.max(0, 5 - faceLossWarningCount);
-            const bodyEl = warningEl.querySelector('p');
-            if (bodyEl) {
-                if (level === 'final') {
-                    bodyEl.innerHTML = 'This is your <strong>fifth face-out-of-frame violation</strong>. Your quiz will be <strong>automatically submitted now</strong>. 😜';
-                } else {
-                    bodyEl.innerHTML = 'Please keep your face fully inside frame. <strong>' + remaining + ' warning(s) remaining</strong>. ' + (remaining === 1 ? 'Your next violation will auto-submit your quiz.' : '');
-                }
-            }
-
-            if (level === 'fourth' && config.studentNameLinked && config.studentName) {
-                let nameBanner = warningEl.querySelector('[data-escalation-name]');
-                if (!nameBanner) {
-                    nameBanner = document.createElement('p');
-                    nameBanner.setAttribute('data-escalation-name', '1');
-                    nameBanner.className = 'text-2xl font-black text-red-700 mb-2';
-                    const heading = warningEl.querySelector('h4');
-                    if (heading && heading.parentNode) {
-                        heading.parentNode.insertBefore(nameBanner, heading.nextSibling);
-                    }
-                }
-                nameBanner.textContent = config.studentName;
-            }
-
-            warningEl.classList.remove('hidden');
-        }
     }
 
     /**
@@ -846,16 +829,17 @@
     function startQuizMonitoring() {
         isQuizStarted = true;
         quizMonitoringStartedAt = Date.now();
-        
+        updateConfig();
+        if (typeof config.initialOutOfFrameCount === 'number' && config.initialOutOfFrameCount >= 0) {
+            validOutOfFrameEvents = config.initialOutOfFrameCount;
+        }
         // Reset state
         facePresenceValid = false;
         facePresenceStartTime = null;
         motionScore = 0;
         motionCheckStartTime = Date.now();
-        faceLossWarningCount = 0;
-        faceLossCaptureCount = 0;
-        lastFacePresent = true;
-        outOfFrameConsecutiveCount = 0;
+        noFaceStartedAt = null;
+        outOfFrameEventCapturedForCurrentAbsence = false;
 
         // Start periodic monitoring
         monitoringInterval = setInterval(function () {
@@ -885,16 +869,6 @@
         if (challengeTimer) {
             clearTimeout(challengeTimer);
             challengeTimer = null;
-        }
-
-        if (faceLossDebounce) {
-            clearTimeout(faceLossDebounce);
-            faceLossDebounce = null;
-        }
-
-        if (outOfFrameAlertDebounce) {
-            clearTimeout(outOfFrameAlertDebounce);
-            outOfFrameAlertDebounce = null;
         }
 
         model = null;
@@ -981,4 +955,5 @@
     window.QuizSnapIntelligentFaceMonitor.startQuizMonitoring = startQuizMonitoring;
     window.QuizSnapIntelligentFaceMonitor.captureFrame = captureFrame;
     window.QuizSnapIntelligentFaceMonitor.isRunning = function() { return isRunning; };
+    window.QuizSnapIntelligentFaceMonitor.getValidOutOfFrameEvents = function() { return validOutOfFrameEvents; };
 })();

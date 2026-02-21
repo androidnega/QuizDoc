@@ -171,7 +171,7 @@
                 </div>
 
                 @if(isset($quizCategories) && isset($levels) && isset($semesters) && isset($academicYears))
-                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 mb-5">
+                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 mb-5 hidden" id="quizsnap-academic-context-section" aria-hidden="true">
                     <p class="text-base font-semibold text-gray-900 mb-3">Or use QuizSnap academic context</p>
                     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div>

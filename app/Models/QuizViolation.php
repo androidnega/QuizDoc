@@ -10,11 +10,14 @@ class QuizViolation extends Model
     public const SEVERITY_WARNING = 'warning';
     public const SEVERITY_CRITICAL = 'critical';
 
-    protected $fillable = ['quiz_session_id', 'type', 'severity', 'metadata', 'image_url', 'occurred_at'];
+    protected $fillable = ['quiz_session_id', 'type', 'severity', 'metadata', 'image_url', 'occurred_at', 'out_of_frame_duration', 'evidence_timestamp'];
 
     protected function casts(): array
     {
-        return ['occurred_at' => 'datetime'];
+        return [
+            'occurred_at' => 'datetime',
+            'evidence_timestamp' => 'datetime',
+        ];
     }
 
     public function quizSession(): BelongsTo

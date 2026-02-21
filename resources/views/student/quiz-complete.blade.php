@@ -14,27 +14,27 @@
             @if(!empty($resultUrl))
             <p class="text-gray-600 text-sm mb-6">Your answers have been recorded. You can view your result now.</p>
             <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                <a href="{{ $resultUrl }}" class="btn btn-action py-2.5 px-5 text-sm font-semibold inline-flex items-center justify-center gap-2 bg-slate-700 text-white hover:bg-slate-800">
-                    See your result
+                <a href="{{ $resultUrl }}" class="btn py-2.5 px-5 text-sm font-semibold inline-flex items-center justify-center gap-2 bg-slate-700 text-white hover:bg-slate-800 border-0">
+                    View results
                 </a>
-                <a href="{{ route('student.landing') }}" class="btn py-2.5 px-5 text-sm font-medium inline-flex items-center justify-center bg-slate-600 text-white hover:bg-slate-700 border-0">
+                <a href="{{ route('dashboard') }}" class="btn py-2.5 px-5 text-sm font-medium inline-flex items-center justify-center bg-slate-600 text-white hover:bg-slate-700 border-0">
                     Back to home
                 </a>
             </div>
             @elseif(!empty($isLoggedIn))
             <p class="text-gray-600 text-sm mb-6">Your answers have been recorded. See your result in My Quizzes.</p>
             <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                <a href="{{ route('dashboard.my-quizzes') }}" class="btn btn-action py-2.5 px-5 text-sm font-semibold inline-flex items-center justify-center gap-2 bg-slate-700 text-white hover:bg-slate-800">
-                    See your result
+                <a href="{{ route('dashboard.my-quizzes') }}" class="btn py-2.5 px-5 text-sm font-semibold inline-flex items-center justify-center gap-2 bg-slate-700 text-white hover:bg-slate-800 border-0">
+                    View results
                 </a>
-                <a href="{{ route('student.landing') }}" class="btn py-2.5 px-5 text-sm font-medium inline-flex items-center justify-center bg-slate-600 text-white hover:bg-slate-700 border-0">
+                <a href="{{ route('dashboard') }}" class="btn py-2.5 px-5 text-sm font-medium inline-flex items-center justify-center bg-slate-600 text-white hover:bg-slate-700 border-0">
                     Back to home
                 </a>
             </div>
             @else
             <p class="text-gray-600 text-sm mb-6">Your answers have been recorded. Log in with your index number and phone to see your marks, review your answers, and what you got right or wrong.</p>
             <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                <a href="{{ route('student.account.login.form') }}" class="btn btn-action py-2.5 px-5 text-sm font-semibold inline-flex items-center justify-center gap-2 bg-slate-700 text-white hover:bg-slate-800">
+                <a href="{{ route('student.account.login.form') }}" class="btn py-2.5 px-5 text-sm font-semibold inline-flex items-center justify-center gap-2 bg-slate-700 text-white hover:bg-slate-800 border-0">
                     Log in to see results
                 </a>
                 <a href="{{ route('student.landing') }}" class="btn py-2.5 px-5 text-sm font-medium inline-flex items-center justify-center bg-slate-600 text-white hover:bg-slate-700 border-0">

@@ -773,11 +773,19 @@
                 monitorVideo.autoplay = true;
                 monitorVideo.playsinline = true;
                 monitorVideo.muted = true;
-                monitorVideo.style.display = 'none';
                 monitorVideo.width = 640;
                 monitorVideo.height = 480;
-                document.body.appendChild(monitorVideo);
+                var frameSlot = document.getElementById('live-camera-video-slot');
+                if (frameSlot) {
+                    frameSlot.innerHTML = '';
+                    frameSlot.appendChild(monitorVideo);
+                } else {
+                    document.body.appendChild(monitorVideo);
+                }
             }
+            monitorVideo.classList.add('w-full', 'h-full', 'object-cover');
+            monitorVideo.style.display = 'block';
+            monitorVideo.setAttribute('playsinline', '');
             monitorVideo.srcObject = stream;
 
             function startTfMonitoring() {

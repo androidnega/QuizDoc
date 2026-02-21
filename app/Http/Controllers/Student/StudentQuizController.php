@@ -173,6 +173,7 @@ class StudentQuizController extends Controller
             : null;
         $studentNameLinked = $matchedStudentName !== null
             && strtoupper(trim((string) $matchedStudent->index_number)) === strtoupper(trim((string) $session->student_index));
+        $outOfFrameCount = $session->violations()->where('type', 'face_out_of_frame')->count();
 
         return response()
             ->view('student.quiz', [
@@ -194,6 +195,7 @@ class StudentQuizController extends Controller
                 'liveProctorEnabled' => $liveProctorEnabled,
                 'matchedStudentName' => $matchedStudentName,
                 'studentNameLinked' => $studentNameLinked,
+                'outOfFrameCount' => $outOfFrameCount,
             ])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache');
@@ -335,6 +337,19 @@ class StudentQuizController extends Controller
         }
         $faceLossTypes = ['no_face_during_quiz', 'face_out_of_frame'];
         $isFaceLossCapture = in_array($violationType, $faceLossTypes, true);
+        $metadata = $this->normalizeViolationMetadata($request->input('metadata'));
+        if ($violationType === 'face_out_of_frame') {
+            $faceCount = isset($metadata['face_count']) ? (int) $metadata['face_count'] : 0;
+            $faceCountAtCapture = isset($metadata['face_count_at_capture']) ? (int) $metadata['face_count_at_capture'] : 0;
+            if ($faceCount > 0 || $faceCountAtCapture > 0) {
+                return response()->json([
+                    'success' => true,
+                    'captured' => false,
+                    'rejected' => true,
+                    'message' => 'Out-of-frame evidence requires face count zero.',
+                ]);
+            }
+        }
         $capturedCount = $isFaceLossCapture
             ? $session->violations()->whereNotNull('image_url')->whereIn('type', $faceLossTypes)->count()
             : $session->violations()->whereNotNull('image_url')->count();
@@ -378,8 +393,18 @@ class StudentQuizController extends Controller
 
         // Create or update violation record
         $severity = QuizViolation::severityForType($violationType);
-        $metadata = $this->normalizeViolationMetadata($request->input('metadata'));
         $metadata['captured_at'] = $capturedAt->toIso8601String();
+        $outOfFrameDuration = isset($metadata['out_of_frame_duration']) || isset($metadata['out_of_frame_duration_ms'])
+            ? (int) ($metadata['out_of_frame_duration'] ?? $metadata['out_of_frame_duration_ms'] ?? 0)
+            : null;
+        $evidenceTimestamp = null;
+        if (! empty($metadata['evidence_timestamp'])) {
+            try {
+                $evidenceTimestamp = \Carbon\Carbon::parse($metadata['evidence_timestamp']);
+            } catch (\Throwable $e) {
+                $evidenceTimestamp = null;
+            }
+        }
 
         $recentViolation = QuizViolation::query()
             ->where('quiz_session_id', $session->id)
@@ -391,21 +416,35 @@ class StudentQuizController extends Controller
 
         if ($recentViolation) {
             $existingMeta = $this->normalizeViolationMetadata($recentViolation->metadata);
-            $recentViolation->update([
+            $updatePayload = [
                 'severity' => $severity,
                 'metadata' => json_encode(array_merge($existingMeta, $metadata)),
                 'image_url' => $imageUrl,
-            ]);
+            ];
+            if ($outOfFrameDuration !== null) {
+                $updatePayload['out_of_frame_duration'] = $outOfFrameDuration;
+            }
+            if ($evidenceTimestamp !== null) {
+                $updatePayload['evidence_timestamp'] = $evidenceTimestamp;
+            }
+            $recentViolation->update($updatePayload);
             $savedViolation = $recentViolation;
         } else {
-            $savedViolation = QuizViolation::create([
+            $createPayload = [
                 'quiz_session_id' => $session->id,
                 'type' => $violationType,
                 'severity' => $severity,
                 'metadata' => json_encode($metadata),
                 'image_url' => $imageUrl,
                 'occurred_at' => $capturedAt,
-            ]);
+            ];
+            if ($outOfFrameDuration !== null) {
+                $createPayload['out_of_frame_duration'] = $outOfFrameDuration;
+            }
+            if ($evidenceTimestamp !== null) {
+                $createPayload['evidence_timestamp'] = $evidenceTimestamp;
+            }
+            $savedViolation = QuizViolation::create($createPayload);
         }
 
         // Check if session should be marked as risky
@@ -451,13 +490,26 @@ class StudentQuizController extends Controller
         $severity = QuizViolation::severityForType($type);
         $metadata = $this->normalizeViolationMetadata($request->input('metadata'));
         $metadata['logged_at'] = now()->toIso8601String();
-        QuizViolation::create([
+        $createPayload = [
             'quiz_session_id' => $session->id,
             'type' => $type,
             'severity' => $severity,
             'metadata' => json_encode($metadata),
             'occurred_at' => now(),
-        ]);
+        ];
+        if ($type === 'face_out_of_frame') {
+            if (isset($metadata['out_of_frame_duration']) || isset($metadata['out_of_frame_duration_ms'])) {
+                $createPayload['out_of_frame_duration'] = (int) ($metadata['out_of_frame_duration'] ?? $metadata['out_of_frame_duration_ms'] ?? 0);
+            }
+            if (! empty($metadata['evidence_timestamp'])) {
+                try {
+                    $createPayload['evidence_timestamp'] = \Carbon\Carbon::parse($metadata['evidence_timestamp']);
+                } catch (\Throwable $e) {
+                    // leave unset
+                }
+            }
+        }
+        QuizViolation::create($createPayload);
         $autoSubmitted = false;
         // Zero-tolerance (copy_paste, screenshot_attempt, multiple_ip): auto-submit on first, no warning
         if ($severity === QuizViolation::SEVERITY_CRITICAL) {
@@ -481,6 +533,21 @@ class StudentQuizController extends Controller
                     'post_face_skipped_at' => now(),
                     'post_face_skipped_reason' => 'auto_submit',
                     'auto_submit_after' => null,
+                ]);
+                $this->finalizeQuiz($session);
+                $autoSubmitted = true;
+            }
+        }
+        // Out-of-frame: auto-submit only after 5 valid face_out_of_frame events (each ≥45s continuous no-face).
+        if (!$autoSubmitted && $type === 'face_out_of_frame') {
+            $outOfFrameCount = $session->violations()->where('type', 'face_out_of_frame')->count();
+            if ($outOfFrameCount >= 5) {
+                $session->update([
+                    'post_face_skipped_at' => now(),
+                    'post_face_skipped_reason' => 'auto_submit',
+                    'auto_submit_after' => null,
+                    'auto_submitted' => true,
+                    'submission_reason' => 'withheld_due_to_violations',
                 ]);
                 $this->finalizeQuiz($session);
                 $autoSubmitted = true;
