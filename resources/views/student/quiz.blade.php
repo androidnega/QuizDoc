@@ -159,11 +159,11 @@
         </div>
     </div>
 
-    {{-- Main: full width --}}
-    <main class="w-full px-4 sm:px-6 py-6 min-w-0 overflow-hidden">
-        <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start w-full max-w-[1600px] mx-auto">
+    {{-- Main: full width on desktop so questions show on full screen --}}
+    <main class="w-full max-w-full px-4 sm:px-6 py-6 min-w-0 overflow-hidden">
+        <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start w-full max-w-full mx-auto">
             {{-- Questions + pagination --}}
-            <div id="quiz-container" class="min-w-0 flex-1 w-full lg:max-w-[calc(100%-220px)]">
+            <div id="quiz-container" class="min-w-0 flex-1 w-full lg:max-w-[calc(100%-220px)] max-w-full">
 
                 <form id="quiz-form" class="space-y-6">
                     @foreach($questions as $idx => $question)

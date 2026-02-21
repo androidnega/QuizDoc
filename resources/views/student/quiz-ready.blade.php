@@ -4,8 +4,8 @@
 @section('body_class', 'bg-offwhite')
 
 @section('content')
-<div class="min-h-[100dvh] min-h-screen flex items-center justify-center px-4 py-6">
-    <div class="max-w-md w-full">
+<div class="min-h-[100dvh] min-h-screen flex items-center justify-center px-4 py-6 w-full max-w-full">
+    <div class="max-w-md w-full max-w-full">
         <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
             <h1 class="text-xl font-bold text-gray-800 mb-1">Quiz Summary</h1>
             <p class="text-gray-600 text-sm mb-4">Your identity photo is verified. Review details and start when ready.</p>

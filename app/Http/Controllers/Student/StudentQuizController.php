@@ -44,8 +44,8 @@ class StudentQuizController extends Controller
             : 0;
         return view('student.quiz-ready', [
             'session' => $session,
-            'courseName' => $session->quiz->course->name ?? $session->quiz->title,
-            'durationMinutes' => $session->quiz->duration_minutes,
+            'courseName' => $session->quiz->course?->name ?? $session->quiz->title ?? 'Quiz',
+            'durationMinutes' => (int) ($session->quiz->duration_minutes ?? 0),
             'questionCount' => $questionCount,
         ]);
     }
