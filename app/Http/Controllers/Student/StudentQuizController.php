@@ -23,6 +23,8 @@ use Illuminate\Support\Facades\Storage;
 class StudentQuizController extends Controller
 {
     private const MAX_QUIZ_VIOLATION_CAPTURES = 5;
+    private const NORMAL_VIOLATION_LIMIT = 10;
+    private const HEAD_DIRECTION_LIMIT = 12;
     /**
      * System readiness screen after pre-quiz face capture.
      */
@@ -174,6 +176,8 @@ class StudentQuizController extends Controller
         $studentNameLinked = $matchedStudentName !== null
             && strtoupper(trim((string) $matchedStudent->index_number)) === strtoupper(trim((string) $session->student_index));
         $outOfFrameCount = $session->violations()->where('type', 'face_out_of_frame')->count();
+        $headTurnCount = $session->violations()->where('type', 'head_turn')->count();
+        $normalViolationCount = $this->countNormalViolations($session);
 
         return response()
             ->view('student.quiz', [
@@ -196,6 +200,8 @@ class StudentQuizController extends Controller
                 'matchedStudentName' => $matchedStudentName,
                 'studentNameLinked' => $studentNameLinked,
                 'outOfFrameCount' => $outOfFrameCount,
+                'headTurnCount' => $headTurnCount,
+                'normalViolationCount' => $normalViolationCount,
             ])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache');
@@ -489,6 +495,16 @@ class StudentQuizController extends Controller
         }
         $severity = QuizViolation::severityForType($type);
         $metadata = $this->normalizeViolationMetadata($request->input('metadata'));
+        if ($type === 'tab_switch') {
+            $keywords = $this->detectAiKeywordsInMetadata($metadata);
+            if (!empty($keywords)) {
+                $metadata['ai_related_keywords_detected'] = $keywords;
+            }
+            if (!isset($metadata['external_url_capture_supported'])) {
+                // Browsers do not expose the exact URL/text from other tabs/apps.
+                $metadata['external_url_capture_supported'] = false;
+            }
+        }
         $metadata['logged_at'] = now()->toIso8601String();
         $createPayload = [
             'quiz_session_id' => $session->id,
@@ -538,10 +554,42 @@ class StudentQuizController extends Controller
                 $autoSubmitted = true;
             }
         }
-        // Out-of-frame: auto-submit only after 5 valid face_out_of_frame events (each ≥45s continuous no-face).
+        // Out-of-frame: auto-submit only after 10 valid face_out_of_frame events.
         if (!$autoSubmitted && $type === 'face_out_of_frame') {
             $outOfFrameCount = $session->violations()->where('type', 'face_out_of_frame')->count();
-            if ($outOfFrameCount >= 5) {
+            if ($outOfFrameCount >= self::NORMAL_VIOLATION_LIMIT) {
+                $session->update([
+                    'post_face_skipped_at' => now(),
+                    'post_face_skipped_reason' => 'auto_submit',
+                    'auto_submit_after' => null,
+                    'auto_submitted' => true,
+                    'submission_reason' => 'withheld_due_to_violations',
+                ]);
+                $this->finalizeQuiz($session);
+                $autoSubmitted = true;
+            }
+        }
+
+        // Combined head-direction violations (left/right/up/down) are logged as head_turn.
+        if (!$autoSubmitted && $type === 'head_turn') {
+            $headTurnCount = $session->violations()->where('type', 'head_turn')->count();
+            if ($headTurnCount >= self::HEAD_DIRECTION_LIMIT) {
+                $session->update([
+                    'post_face_skipped_at' => now(),
+                    'post_face_skipped_reason' => 'auto_submit',
+                    'auto_submit_after' => null,
+                    'auto_submitted' => true,
+                    'submission_reason' => 'withheld_due_to_violations',
+                ]);
+                $this->finalizeQuiz($session);
+                $autoSubmitted = true;
+            }
+        }
+
+        // Normal violation threshold across configured warning-level proctoring events.
+        if (!$autoSubmitted) {
+            $normalViolationCount = $this->countNormalViolations($session);
+            if ($normalViolationCount >= self::NORMAL_VIOLATION_LIMIT) {
                 $session->update([
                     'post_face_skipped_at' => now(),
                     'post_face_skipped_reason' => 'auto_submit',
@@ -568,8 +616,12 @@ class StudentQuizController extends Controller
         $outOfFrameCount = $session->violations()->where('type', 'face_out_of_frame')->count();
         $response['out_of_frame_count'] = $outOfFrameCount;
         $response['escalation'] = $outOfFrameCount > 3;
-        $response['remaining_warnings'] = max(0, 5 - $outOfFrameCount);
-        $response['auto_submit_on_next'] = $outOfFrameCount === 4;
+        $response['remaining_warnings'] = max(0, self::NORMAL_VIOLATION_LIMIT - $outOfFrameCount);
+        $response['auto_submit_on_next'] = $outOfFrameCount === (self::NORMAL_VIOLATION_LIMIT - 1);
+        $response['normal_violation_count'] = $this->countNormalViolations($session);
+        $response['normal_violation_limit'] = self::NORMAL_VIOLATION_LIMIT;
+        $response['head_turn_count'] = $session->violations()->where('type', 'head_turn')->count();
+        $response['head_turn_limit'] = self::HEAD_DIRECTION_LIMIT;
 
         return response()->json($response);
     }
@@ -1006,6 +1058,29 @@ class StudentQuizController extends Controller
             return ['message' => $trimmed];
         }
         return [];
+    }
+
+    private function countNormalViolations(QuizSession $session): int
+    {
+        return $session->violations()
+            ->whereIn('type', ['face_out_of_frame', 'head_turn', 'brief_face_loss', 'static_face_detected', 'no_blink'])
+            ->count();
+    }
+
+    private function detectAiKeywordsInMetadata(array $metadata): array
+    {
+        $haystack = Str::lower(json_encode($metadata) ?: '');
+        if ($haystack === '') {
+            return [];
+        }
+        $keywords = ['chatgpt', 'openai', 'deepseek', 'gemini', 'google', 'ngrok', 'claude', 'copilot', 'perplexity'];
+        $matched = [];
+        foreach ($keywords as $keyword) {
+            if (str_contains($haystack, $keyword)) {
+                $matched[] = $keyword;
+            }
+        }
+        return array_values(array_unique($matched));
     }
 
     /**

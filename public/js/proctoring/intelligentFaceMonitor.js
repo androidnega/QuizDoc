@@ -36,7 +36,10 @@
     };
 
     // Detection thresholds
-    const HEAD_TURN_THRESHOLD = 0.25; // Bounding box center offset threshold for head turn
+    const HEAD_TURN_THRESHOLD = 0.25; // Bounding box center offset threshold for challenge
+    const HEAD_DIRECTION_THRESHOLD = 0.15; // 15% deviation from center for directional violation
+    const HEAD_DIRECTION_LIMIT = 12;
+    const HEAD_DIRECTION_COOLDOWN_MS = 2000;
     const MOTION_THRESHOLD = 0.01; // Minimum motion per frame to detect live face
     const FACE_PRESENCE_DURATION_MS = 3000; // 3 seconds of continuous face presence
     const CHALLENGE_TIMEOUT_MS = 5000; // 5 seconds to complete challenge
@@ -44,8 +47,9 @@
     const DETECTION_INTERVAL_MS = 200; // Run detection every 200ms (~5 FPS)
     const QUIZ_FRAME_MARGIN = 0.05;
     const FACE_TOO_FAR_RATIO = 0.04;
-    const OUT_OF_FRAME_EVENT_MIN_MS = 45000;
-    const OUT_OF_FRAME_EVENT_LIMIT = 5;
+    const OUT_OF_FRAME_EVENT_MIN_MS = 10000;
+    const OUT_OF_FRAME_EVENT_LIMIT = 10;
+    const NORMAL_VIOLATION_LIMIT = 10;
     const QUIZ_START_GRACE_MS = 12000; // Allow monitor/camera to stabilize before counting violations
     // Require this many consecutive frames with 2+ faces before recording (reduces false positives)
     const MULTIPLE_FACES_CONSECUTIVE_THRESHOLD = 10; // 10 consecutive frames (~2s) before recording multiple faces
@@ -70,9 +74,12 @@
     let violationCount = 0;
     let canvas = null;
     let ctx = null;
-    let lastHeadDirection = 'center'; // 'left', 'center', 'right'
+    let lastHeadDirection = 'center'; // 'left', 'center', 'right', 'up', 'down'
+    let lastHeadDirectionViolationAt = 0;
+    let headDirectionViolationCount = 0;
     let multipleFacesConsecutiveCount = 0;
     let validOutOfFrameEvents = 0;
+    let normalViolationCount = 0;
     let noFaceStartedAt = null;
     let outOfFrameEventCapturedForCurrentAbsence = false;
 
@@ -263,10 +270,18 @@
         return Math.max(0, OUT_OF_FRAME_EVENT_LIMIT - validOutOfFrameEvents);
     }
 
+    function incrementNormalViolationCount() {
+        normalViolationCount++;
+        if (normalViolationCount >= NORMAL_VIOLATION_LIMIT) {
+            triggerAutoSubmit('normal_violations_limit_reached', 'normal_violation_limit');
+        }
+    }
+
     function registerValidatedOutOfFrameEvent(now, durationMs) {
         const evidenceTimestamp = new Date(now).toISOString();
         const eventDurationMs = Math.max(OUT_OF_FRAME_EVENT_MIN_MS, Math.floor(durationMs));
         validOutOfFrameEvents++;
+        incrementNormalViolationCount();
         const remainingWarnings = remainingOutOfFrameWarnings();
         const metadata = {
             reason: 'no_face',
@@ -472,7 +487,7 @@
             multipleFacesConsecutiveCount = 0;
         }
 
-        // Out-of-frame is strictly "face count is zero" and must be continuous for 45s.
+        // Out-of-frame is strictly "face count is zero" and must be continuous for 10s.
         if (faceCount === 0) {
             if (noFaceStartedAt === null) {
                 noFaceStartedAt = now;
@@ -482,7 +497,7 @@
             if (noFaceDurationMs >= OUT_OF_FRAME_EVENT_MIN_MS) {
                 setLiveFrameState(
                     'red',
-                    'Face missing for 45s+',
+                    'Face missing for 10s+',
                     outOfFrameWarningsLeft > 0
                         ? (outOfFrameWarningsLeft + ' warning(s) remaining before auto-submission.')
                         : 'Auto-submission in progress.'
@@ -496,7 +511,7 @@
                 setLiveFrameState(
                     'yellow',
                     'Face not detected',
-                    'Return to frame within ' + secondsLeft + 's to avoid a warning.'
+                    'Return to frame within ' + Math.max(0, secondsLeft) + 's to avoid a warning.'
                 );
             }
             return;
@@ -549,7 +564,12 @@
             }
         }
 
-        // Head turn detection
+        // Head direction monitoring (left/right/up/down) during quiz.
+        if (primaryBox) {
+            detectHeadDirectionViolation(primaryBox);
+        }
+
+        // Head turn challenge detection
         if (primaryBox && currentChallenge) {
             detectHeadTurn(primaryBox);
         }
@@ -597,6 +617,63 @@
             return 1; // Second detection too small, likely noise
         }
         return boundingBoxes.length;
+    }
+
+    function detectHeadDirectionViolation(box) {
+        const videoEl = config.videoElement || videoElement;
+        if (!videoEl) return;
+        const videoWidth = videoEl.videoWidth || 640;
+        const videoHeight = videoEl.videoHeight || 480;
+        const rawCenterX = (box.topLeft[0] + box.bottomRight[0]) / 2;
+        const rawCenterY = (box.topLeft[1] + box.bottomRight[1]) / 2;
+        const centerX = rawCenterX <= 1.5 ? rawCenterX * videoWidth : rawCenterX;
+        const centerY = rawCenterY <= 1.5 ? rawCenterY * videoHeight : rawCenterY;
+        const offsetX = (centerX - (videoWidth / 2)) / videoWidth;
+        const offsetY = (centerY - (videoHeight / 2)) / videoHeight;
+
+        let direction = null;
+        if (offsetX <= -HEAD_DIRECTION_THRESHOLD) {
+            direction = 'left';
+        } else if (offsetX >= HEAD_DIRECTION_THRESHOLD) {
+            direction = 'right';
+        } else if (offsetY <= -HEAD_DIRECTION_THRESHOLD) {
+            direction = 'up';
+        } else if (offsetY >= HEAD_DIRECTION_THRESHOLD) {
+            direction = 'down';
+        }
+
+        if (!direction) {
+            lastHeadDirection = 'center';
+            return;
+        }
+
+        const now = Date.now();
+        const inCooldown = (now - lastHeadDirectionViolationAt) < HEAD_DIRECTION_COOLDOWN_MS;
+        if (inCooldown && direction === lastHeadDirection) {
+            return;
+        }
+
+        lastHeadDirection = direction;
+        lastHeadDirectionViolationAt = now;
+        headDirectionViolationCount++;
+        incrementNormalViolationCount();
+
+        showProctoringModal(
+            'Head movement detected',
+            'Keep your head centered. Direction detected: ' + direction.toUpperCase() + ' (' + headDirectionViolationCount + '/' + HEAD_DIRECTION_LIMIT + ').'
+        );
+        recordViolation('head_turn', 'minor', true, {
+            direction: direction,
+            head_turn_count: headDirectionViolationCount,
+            head_turn_limit: HEAD_DIRECTION_LIMIT,
+            normal_violation_count: normalViolationCount,
+            normal_violation_limit: NORMAL_VIOLATION_LIMIT,
+            student_index: config.studentIndex || null,
+        });
+
+        if (headDirectionViolationCount >= HEAD_DIRECTION_LIMIT) {
+            triggerAutoSubmit('head_direction_limit_reached', 'head_turn');
+        }
     }
 
     /**
@@ -833,6 +910,14 @@
         if (typeof config.initialOutOfFrameCount === 'number' && config.initialOutOfFrameCount >= 0) {
             validOutOfFrameEvents = config.initialOutOfFrameCount;
         }
+        if (typeof config.initialNormalViolationCount === 'number' && config.initialNormalViolationCount >= 0) {
+            normalViolationCount = config.initialNormalViolationCount;
+        } else {
+            normalViolationCount = validOutOfFrameEvents;
+        }
+        if (typeof config.initialHeadTurnCount === 'number' && config.initialHeadTurnCount >= 0) {
+            headDirectionViolationCount = config.initialHeadTurnCount;
+        }
         // Reset state
         facePresenceValid = false;
         facePresenceStartTime = null;
@@ -840,6 +925,8 @@
         motionCheckStartTime = Date.now();
         noFaceStartedAt = null;
         outOfFrameEventCapturedForCurrentAbsence = false;
+        lastHeadDirection = 'center';
+        lastHeadDirectionViolationAt = 0;
 
         // Start periodic monitoring
         monitoringInterval = setInterval(function () {
@@ -955,5 +1042,7 @@
     window.QuizSnapIntelligentFaceMonitor.startQuizMonitoring = startQuizMonitoring;
     window.QuizSnapIntelligentFaceMonitor.captureFrame = captureFrame;
     window.QuizSnapIntelligentFaceMonitor.isRunning = function() { return isRunning; };
-    window.QuizSnapIntelligentFaceMonitor.getValidOutOfFrameEvents = function() { return validOutOfFrameEvents; };
+    window.QuizSnapIntelligentFaceMonitor.getValidOutOfFrameEvents = function() { return normalViolationCount; };
+    window.QuizSnapIntelligentFaceMonitor.getOutOfFrameEvents = function() { return validOutOfFrameEvents; };
+    window.QuizSnapIntelligentFaceMonitor.getHeadTurnCount = function() { return headDirectionViolationCount; };
 })();

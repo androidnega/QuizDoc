@@ -28,6 +28,8 @@
     let cameraProtectionInterval = null;
     let cameraWarningShown = false;
     let proctorFeedInterval = null;
+    let lastUserInputSample = '';
+    const AI_KEYWORDS = ['chatgpt', 'openai', 'deepseek', 'gemini', 'google', 'ngrok', 'claude', 'copilot', 'perplexity'];
 
     /**
      * Request screen wake lock to prevent dimming
@@ -359,8 +361,12 @@
                 } else if (data.auto_submitted) {
                     showNeutralPageThenRedirect(null);
                 } else if (data.show_major_warning) {
-                    var el = document.getElementById('blur-warning');
-                    if (el) el.classList.remove('hidden');
+                    if (window.QuizSnapQuiz && typeof window.QuizSnapQuiz.showTabSwitchWarning === 'function') {
+                        window.QuizSnapQuiz.showTabSwitchWarning();
+                    } else {
+                        var el = document.getElementById('blur-warning');
+                        if (el) el.classList.remove('hidden');
+                    }
                 }
             })
             .catch(function () {
@@ -471,13 +477,45 @@
             el.addEventListener('blur', function () {
                 if (el.type !== 'radio') saveAnswer(questionId, getVal());
             });
+            el.addEventListener('input', function () {
+                if (el.type === 'radio') return;
+                const sample = (el.value || '').trim();
+                if (sample !== '') lastUserInputSample = sample.slice(-300);
+            });
+            el.addEventListener('change', function () {
+                if (el.type !== 'radio') return;
+                const selected = quizForm.querySelector('input[name="' + el.name + '"]:checked');
+                if (selected && selected.value) lastUserInputSample = String(selected.value);
+            });
         });
+    }
+
+    function collectTabSwitchEvidence() {
+        const sample = (lastUserInputSample || '').trim();
+        const sampleLower = sample.toLowerCase();
+        const matchedKeywords = AI_KEYWORDS.filter(function (keyword) {
+            return sampleLower.indexOf(keyword) !== -1;
+        });
+        return {
+            occurred_at: new Date().toISOString(),
+            visibility_state: document.visibilityState || null,
+            page_url: window.location.href,
+            page_referrer: document.referrer || null,
+            viewport: {
+                width: window.innerWidth || null,
+                height: window.innerHeight || null,
+            },
+            local_input_sample: sample ? sample.slice(0, 300) : null,
+            ai_related_keywords_detected: matchedKeywords,
+            external_url_capture_supported: false,
+            capture_note: 'Browser security prevents reading exact URL/text from other tabs or external applications.'
+        };
     }
 
     function recordBlurAfterDelay() {
         if (isUnloading || remainingSeconds <= 0) return;
         if (c.proctoringTabSwitch === false) return;
-        recordViolation('tab_switch');
+        recordViolation('tab_switch', collectTabSwitchEvidence());
     }
 
     document.addEventListener('visibilitychange', function () {

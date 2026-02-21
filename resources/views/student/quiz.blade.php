@@ -197,9 +197,17 @@
             <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                 <div class="p-4">
                     <h2 class="text-sm font-semibold text-gray-700 mb-2">LIVE CAMERA FEED</h2>
-                    <div id="live-camera-frame" class="bg-gray-900 border-2 border-emerald-500 rounded-xl overflow-hidden min-w-0 flex flex-col transition-all duration-200">
-                        <div id="live-camera-video-slot" class="aspect-video bg-gray-900 flex items-center justify-center min-h-[120px]">
+                    <div id="live-camera-frame" class="bg-gray-900 border-2 border-emerald-500 rounded-xl overflow-hidden min-w-0 flex flex-col transition-all duration-200 relative">
+                        <div id="live-camera-video-slot" class="aspect-video bg-gray-900 flex items-center justify-center min-h-[120px] relative">
                             <span class="text-gray-500 text-sm">Camera feed</span>
+                            {{-- Faint guide overlay: crosshair + head frame so user positions face inside --}}
+                            <div id="live-camera-guide-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center z-10" aria-hidden="true">
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <div class="w-[55%] h-[70%] max-w-[180px] max-h-[160px] rounded-[50%] border border-white/25" style="box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);" title="Keep your head inside this frame"></div>
+                                </div>
+                                <div class="absolute top-0 bottom-0 left-1/2 w-px -translate-x-px bg-white/20" style="width: 1px;"></div>
+                                <div class="absolute left-0 right-0 top-1/2 h-px -translate-y-px bg-white/20" style="height: 1px;"></div>
+                            </div>
                         </div>
                         <div class="p-3 border-t border-gray-200 bg-white">
                             <p id="live-camera-status-text" class="text-sm font-medium text-emerald-700">Monitoring camera feed.</p>
@@ -209,7 +217,7 @@
                     <div class="flex items-center justify-between mt-3">
                         <div class="quiz-violation-counter">
                             <span>Violations</span>
-                            <span id="quiz-violation-number" class="quiz-violation-num">{{ (int) ($outOfFrameCount ?? 0) }}/5</span>
+                            <span id="quiz-violation-number" class="quiz-violation-num">{{ (int) ($normalViolationCount ?? 0) }}/10</span>
                         </div>
                     </div>
                 </div>
@@ -286,9 +294,9 @@
 
                 @if($totalPages > 1)
                 <div id="quiz-pagination-bottom" class="flex items-center justify-between gap-4 mt-8 mb-2 py-5 flex-wrap">
-                    <button type="button" id="quiz-prev-bottom" class="btn btn-secondary py-2.5 px-5 text-sm" disabled>Previous</button>
+                    <button type="button" id="quiz-prev-bottom" class="btn btn-secondary py-2.5 px-5 text-sm bg-slate-200 hover:bg-slate-300 text-slate-800 border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Previous</button>
                     <span id="quiz-page-info-bottom" class="text-sm font-medium text-gray-700">Page 1 of {{ $totalPages }}</span>
-                    <button type="button" id="quiz-next-bottom" class="btn btn-secondary py-2.5 px-5 text-sm">Next</button>
+                    <button type="button" id="quiz-next-bottom" class="btn btn-secondary py-2.5 px-5 text-sm bg-slate-200 hover:bg-slate-300 text-slate-800 border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
                 </div>
                 @endif
             </div>
@@ -349,6 +357,8 @@ window.QuizSnapIntelligentFaceMonitor.config.autoSubmitUrl = "{{ route('student.
 window.QuizSnapIntelligentFaceMonitor.config.csrfToken = "{{ csrf_token() }}";
 window.QuizSnapIntelligentFaceMonitor.config.sessionId = {{ $session->id ?? 0 }};
 window.QuizSnapIntelligentFaceMonitor.config.initialOutOfFrameCount = {{ (int) ($outOfFrameCount ?? 0) }};
+window.QuizSnapIntelligentFaceMonitor.config.initialNormalViolationCount = {{ (int) ($normalViolationCount ?? 0) }};
+window.QuizSnapIntelligentFaceMonitor.config.initialHeadTurnCount = {{ (int) (($headTurnCount ?? 0)) }};
 window.QuizSnapIntelligentFaceMonitor.config.studentIndex = @json($session->student_index ?? null);
 window.QuizSnapIntelligentFaceMonitor.config.studentName = @json($matchedStudentName ?? null);
 window.QuizSnapIntelligentFaceMonitor.config.studentNameLinked = {{ ($studentNameLinked ?? false) ? 'true' : 'false' }};
@@ -495,11 +505,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!el) return;
         var mon = window.QuizSnapIntelligentFaceMonitor;
         var count = (mon && typeof mon.getValidOutOfFrameEvents === 'function') ? mon.getValidOutOfFrameEvents() : 0;
-        el.textContent = count + '/5';
+        el.textContent = count + '/10';
         el.className = 'quiz-violation-num';
-        if (count >= 4) el.classList.add('warn-4');
-        else if (count >= 3) el.classList.add('warn-3');
-        else if (count >= 2) el.classList.add('warn-2');
+        if (count >= 9) el.classList.add('warn-4');
+        else if (count >= 7) el.classList.add('warn-3');
+        else if (count >= 5) el.classList.add('warn-2');
         else if (count >= 1) el.classList.add('warn-1');
     }
     setInterval(updateViolationCounter, 500);
