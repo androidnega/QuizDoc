@@ -458,6 +458,7 @@ Route::middleware('admin.auth')->group(function () {
             }
             Route::post('/settings/otp-test', [SettingsController::class, 'otpTest'])->name('settings.otp-test');
             Route::get('/settings/otp-balance', [SettingsController::class, 'otpBalance'])->name('settings.otp-balance');
+            Route::post('/settings/email-test', [SettingsController::class, 'emailTest'])->name('settings.email-test');
             Route::get('/student-levels', [\App\Http\Controllers\Admin\StudentLevelController::class, 'index'])->name('student-levels.index');
             Route::post('/student-levels', [\App\Http\Controllers\Admin\StudentLevelController::class, 'store'])->name('student-levels.store');
             Route::put('/student-levels/{studentLevel}', [\App\Http\Controllers\Admin\StudentLevelController::class, 'update'])->name('student-levels.update');

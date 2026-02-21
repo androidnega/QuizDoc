@@ -9,6 +9,7 @@
 <div class="w-full min-w-0 max-w-full">
 @php
     $quiz = $session->quiz ?? null;
+    $classGroupLabel = $quiz?->classGroup?->display_name ?? $quiz?->classGroup?->name ?? $quiz?->academicClass?->display_label ?? null;
     $hasScore = isset($session->result) && $session->result && $quiz && $quiz->canShowScore();
     $isWithheld = $session->isResultWithheld();
     $canShowFull = $quiz && $quiz->canShowFullReview();
@@ -27,6 +28,9 @@
             · Question review available for 21 days
             @endif
         </p>
+        @if(!empty($classGroupLabel))
+        <p class="text-sm text-slate-500 mt-1">Class group: {{ $classGroupLabel }}</p>
+        @endif
     </div>
     @if($hasScore)
         <a href="{{ route('dashboard.my-quizzes.download-pdf', ['sessionId' => $session->id]) }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-slate-600 text-white hover:bg-slate-700 shrink-0" title="Download PDF">

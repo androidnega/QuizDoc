@@ -148,6 +148,10 @@
         @if($session->quiz->course)
         <p><strong>Course:</strong> {{ $session->quiz->course->name }}</p>
         @endif
+        @php $classGroupLabel = $session->quiz->classGroup->display_name ?? $session->quiz->classGroup->name ?? $session->quiz->academicClass->display_label ?? null; @endphp
+        @if(!empty($classGroupLabel))
+        <p><strong>Class group:</strong> {{ $classGroupLabel }}</p>
+        @endif
     </div>
 
     @php

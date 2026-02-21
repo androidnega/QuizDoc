@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
@@ -338,6 +340,65 @@ class SettingsController extends Controller
     }
 
     /**
+     * Send a test email using current mail settings.
+     * Restricted to the primary super admin.
+     */
+    public function emailTest(Request $request): JsonResponse
+    {
+        $request->validate(['to' => 'required|email|max:255']);
+
+        $currentUser = auth()->user() ?? User::find(session('admin_user_id'));
+        $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
+        $isPrimarySuperAdmin = $primarySuperAdminId !== null && (
+            ($currentUser && (int) $currentUser->id === (int) $primarySuperAdminId)
+            || ((int) session('admin_user_id') === (int) $primarySuperAdminId)
+        );
+
+        if (! $isPrimarySuperAdmin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only the primary super admin can send test email from settings.',
+            ], 403);
+        }
+
+        try {
+            $this->applyMailConfigFromSettings();
+
+            $to = trim((string) $request->input('to'));
+            $mailer = (string) Setting::getValue(Setting::KEY_MAIL_MAILER, (string) config('mail.default'));
+            $host = (string) Setting::getValue(Setting::KEY_MAIL_HOST, (string) config('mail.mailers.smtp.host'));
+            $port = (string) Setting::getValue(Setting::KEY_MAIL_PORT, (string) (config('mail.mailers.smtp.port') ?? ''));
+            $encryption = (string) Setting::getValue(Setting::KEY_MAIL_ENCRYPTION, (string) (config('mail.mailers.smtp.encryption') ?? ''));
+            $fromAddress = (string) Setting::getValue(Setting::KEY_MAIL_FROM_ADDRESS, (string) config('mail.from.address'));
+            $fromName = (string) Setting::getValue(Setting::KEY_MAIL_FROM_NAME, (string) config('mail.from.name'));
+
+            $body = "QuizSnap test email\n\n"
+                . 'Time: ' . now()->toDateTimeString() . "\n"
+                . 'Mailer: ' . ($mailer ?: '—') . "\n"
+                . 'Host: ' . ($host ?: '—') . "\n"
+                . 'Port: ' . ($port ?: '—') . "\n"
+                . 'Encryption: ' . ($encryption !== '' ? $encryption : 'none') . "\n"
+                . 'From: ' . ($fromName ?: 'QuizSnap') . ' <' . ($fromAddress ?: 'noreply@quizsnap.local') . ">\n\n"
+                . "If you received this, your mail settings are working.";
+
+            Mail::raw($body, function ($message) use ($to) {
+                $message->to($to)->subject('QuizSnap mail test');
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test email sent to ' . $to . '.',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send test email.',
+                'detail' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
      * Test OTP delivery (Arkesel). Sends a test SMS with a 6-digit code to the given phone number.
      */
     public function otpTest(Request $request): JsonResponse
@@ -363,6 +424,27 @@ class SettingsController extends Controller
     {
         $result = ArkeselService::checkBalance();
         return response()->json($result, $result['success'] ? 200 : 422);
+    }
+
+    private function applyMailConfigFromSettings(): void
+    {
+        $mailer = Setting::getValue(Setting::KEY_MAIL_MAILER, config('mail.default'));
+        $host = Setting::getValue(Setting::KEY_MAIL_HOST, config('mail.mailers.smtp.host'));
+        $port = (int) Setting::getValue(Setting::KEY_MAIL_PORT, (string) (config('mail.mailers.smtp.port') ?? 587));
+        $username = Setting::getValue(Setting::KEY_MAIL_USERNAME);
+        $password = Setting::getValue(Setting::KEY_MAIL_PASSWORD);
+        $encryption = Setting::getValue(Setting::KEY_MAIL_ENCRYPTION, (string) (config('mail.mailers.smtp.encryption') ?? 'tls'));
+        $fromAddress = Setting::getValue(Setting::KEY_MAIL_FROM_ADDRESS, config('mail.from.address'));
+        $fromName = Setting::getValue(Setting::KEY_MAIL_FROM_NAME, config('mail.from.name'));
+
+        Config::set('mail.default', $mailer);
+        Config::set('mail.from.address', $fromAddress ?: 'noreply@quizsnap.local');
+        Config::set('mail.from.name', $fromName ?: 'QuizSnap');
+        Config::set('mail.mailers.smtp.host', $host);
+        Config::set('mail.mailers.smtp.port', $port);
+        Config::set('mail.mailers.smtp.username', $username);
+        Config::set('mail.mailers.smtp.password', $password);
+        Config::set('mail.mailers.smtp.encryption', $encryption ?: null);
     }
 
     /**

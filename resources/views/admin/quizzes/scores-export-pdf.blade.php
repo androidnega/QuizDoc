@@ -40,6 +40,7 @@
     </div>
 
     <div class="meta">
+        <div class="meta-row"><span class="meta-label">Class group:</span> {{ $classGroupName ?? $quiz->classGroup?->display_name ?? $quiz->classGroup?->name ?? $quiz->academicClass?->display_label ?? '—' }}</div>
         <div class="meta-row"><span class="meta-label">Lecturer:</span> {{ $lecturerName }}</div>
         <div class="meta-row"><span class="meta-label">Course:</span> {{ $courseName }}</div>
         <div class="meta-row"><span class="meta-label">Exam:</span> {{ $examTypeLabel }}</div>

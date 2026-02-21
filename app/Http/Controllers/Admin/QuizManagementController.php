@@ -1513,7 +1513,7 @@ class QuizManagementController extends Controller
     public function exportScoresPdf(Quiz $quiz, Request $request): Response
     {
         $this->authorize('view', $quiz);
-        $quiz->load(['classGroup', 'course', 'academicClass']);
+        $quiz->load(['classGroup.level', 'course', 'academicClass']);
 
         $sessions = $quiz->sessions()
             ->with(['result', 'violations'])
@@ -1556,7 +1556,7 @@ class QuizManagementController extends Controller
         }
 
         $classGroupName = $quiz->classGroup
-            ? $quiz->classGroup->name
+            ? ($quiz->classGroup->display_name ?: $quiz->classGroup->name)
             : ($quiz->academicClass ? $quiz->academicClass->display_label : '—');
         $pdf = Pdf::loadView('admin.quizzes.scores-export-pdf', [
             'quiz' => $quiz,

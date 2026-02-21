@@ -414,7 +414,7 @@ class StudentDashboardController extends Controller
             
             $quizSession = QuizSession::where('id', $sessionId)
                 ->where('student_index', $student->index_number)
-                ->with(['quiz.course', 'result', 'answers.question'])
+                ->with(['quiz.course', 'quiz.classGroup.level', 'quiz.academicClass', 'result', 'answers.question'])
                 ->first();
             
             if (!$quizSession) {
@@ -462,7 +462,7 @@ class StudentDashboardController extends Controller
             
             $quizSession = QuizSession::where('id', $sessionId)
                 ->where('student_index', $student->index_number)
-                ->with(['quiz.course', 'result', 'answers.question'])
+                ->with(['quiz.course', 'quiz.classGroup.level', 'quiz.academicClass', 'result', 'answers.question'])
                 ->first();
             
             if (!$quizSession) {
