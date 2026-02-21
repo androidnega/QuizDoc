@@ -466,18 +466,7 @@
         }
     });
     
-    // Also detect window blur events
-    window.addEventListener('blur', function () {
-        if (isUnloading || remainingSeconds <= 0) return;
-        if (c.proctoringTabSwitch === false) return;
-        if (blurRecordTimer) clearTimeout(blurRecordTimer);
-        blurRecordTimer = setTimeout(function () {
-            blurRecordTimer = null;
-            if (isUnloading) return;
-            recordViolation('blur');
-        }, BLUR_RECORD_DELAY_MS);
-    });
-    
+    // Do NOT record violation on window blur (e.g. user moved to tab bar but did not switch). Only actual tab switch (visibilitychange → document.hidden) triggers violation.
     window.addEventListener('focus', function () {
         if (blurRecordTimer) { clearTimeout(blurRecordTimer); blurRecordTimer = null; }
         sendHeartbeat();
@@ -783,6 +772,10 @@
                     window.QuizSnapObjectMonitor.config.csrfToken = csrfToken;
                     window.QuizSnapObjectMonitor.config.sessionId = c.sessionId || 0;
                     window.QuizSnapObjectMonitor.config.onViolation = function (violation) {
+                        if (violation.type === 'phone_detected') {
+                            var modal = document.getElementById('phone-detected-modal');
+                            if (modal) modal.classList.remove('hidden');
+                        }
                         recordViolation(violation.type || 'other', violation.metadata || {});
                     };
                     if (window.QuizSnapObjectMonitor.start) {

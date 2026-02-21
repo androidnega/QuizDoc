@@ -4,8 +4,19 @@
 @section('body_class', 'bg-offwhite')
 
 @section('content')
+{{-- Mobile block: quizzes must be taken on desktop --}}
+<div id="quiz-mobile-block" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900/90 px-4">
+    <div class="bg-white rounded-xl border border-gray-200 p-6 max-w-md w-full text-center shadow-lg">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-100 text-amber-700 mb-4">
+            <i class="fas fa-mobile-alt text-2xl" aria-hidden="true"></i>
+        </div>
+        <h2 class="text-lg font-bold text-gray-800 mb-2">Mobile devices not supported</h2>
+        <p class="text-sm text-gray-600 mb-4">You cannot take this quiz on a phone or tablet. Please use a desktop or laptop computer to continue.</p>
+        <a href="{{ route('student.landing') }}" class="inline-block px-4 py-2.5 rounded-lg text-sm font-semibold bg-primary-600 text-white hover:bg-primary-700">Back to home</a>
+    </div>
+</div>
 <div class="min-h-[100dvh] min-h-screen flex flex-col px-4 py-8 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-    <div class="max-w-2xl mx-auto">
+    <div class="max-w-2xl mx-auto" id="quiz-rules-content">
         {{-- Very big exclamation / note --}}
         <div class="mb-8 flex flex-col items-center text-center" role="alert" aria-live="polite">
             <div class="flex h-24 w-24 items-center justify-center rounded-full border-4 border-danger-500 bg-danger-50 text-danger-600" aria-hidden="true">
@@ -40,6 +51,20 @@
 
 @push('scripts')
 <script>
+(function() {
+    function isMobile() {
+        var ua = navigator.userAgent || '';
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(ua)) return true;
+        if (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 0 && window.innerWidth < 1024) return true;
+        return window.innerWidth < 768;
+    }
+    if (isMobile()) {
+        var block = document.getElementById('quiz-mobile-block');
+        var content = document.getElementById('quiz-rules-content');
+        if (block) block.classList.remove('hidden');
+        if (content) content.setAttribute('aria-hidden', 'true');
+    }
+})();
 document.getElementById('accept-checkbox').addEventListener('change', function() {
     document.getElementById('accept-btn').disabled = !this.checked;
 });

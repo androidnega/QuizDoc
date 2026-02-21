@@ -285,9 +285,9 @@
             facePresenceValid = false;
             
             if (faceCount === 0) {
-                blockQuiz('No face detected. Please position your face in front of the camera.');
+                blockQuiz('You are out of the camera frame. Please return your face to the center of the camera.');
             } else if (faceCount > 1) {
-                blockQuiz('Multiple faces detected. Only one person should be visible.');
+                blockQuiz(faceCount === 2 ? 'Two faces detected. Only one person should be in the camera frame.' : 'Multiple faces detected. Only one person should be in the camera frame.');
                 recordViolation('multiple_faces_pre_quiz', 'major', true, { face_count: faceCount });
             }
             return;
@@ -368,6 +368,10 @@
         if (effectiveMultiple > 1) {
             multipleFacesConsecutiveCount++;
             if (multipleFacesConsecutiveCount >= MULTIPLE_FACES_CONSECUTIVE_THRESHOLD) {
+                showProctoringModal(
+                    effectiveMultiple === 2 ? 'Two faces detected' : 'Multiple faces detected',
+                    'Only one person should be in the camera frame.'
+                );
                 recordViolation('multiple_faces_during_quiz', 'major', true, { face_count: effectiveMultiple });
                 violationCount++;
                 if (violationCount >= 2) {
@@ -385,9 +389,9 @@
             // Alert immediately if user moves out of frame
             if (lastFacePresent && !outOfFrameAlertDebounce) {
                 outOfFrameAlertDebounce = setTimeout(function() {
-                    alert('⚠️ You moved out of frame! Please return your face to the center of the camera immediately.');
+                    showProctoringModal('You are out of the camera frame', 'Please return your face to the center of the camera immediately.');
                     outOfFrameAlertDebounce = null;
-                }, 1000); // Alert after 1 second of being out of frame
+                }, 1000); // Popup after 1 second of being out of frame
             }
             lastFacePresent = false;
             handleFaceLossDuringQuiz('no_face');
@@ -407,7 +411,7 @@
         if (isFaceOutOfFrame(boundingBoxes[0])) {
             if (!outOfFrameAlertDebounce) {
                 outOfFrameAlertDebounce = setTimeout(function() {
-                    alert('⚠️ Your face is out of frame. Please stay centered in camera view.');
+                    showProctoringModal('You are out of the camera frame', 'Please return your face to the center of the camera and stay centered in view.');
                     outOfFrameAlertDebounce = null;
                 }, 800);
             }
@@ -584,6 +588,19 @@
         }, 2000); // 2 second debounce
     }
     
+    /**
+     * Show reusable proctoring message modal (quiz page only). Used for out-of-frame and two-faces warnings.
+     */
+    function showProctoringModal(title, body) {
+        const el = document.getElementById('proctoring-message-modal');
+        if (!el) return;
+        const titleEl = document.getElementById('proctoring-message-title');
+        const bodyEl = document.getElementById('proctoring-message-body');
+        if (titleEl) titleEl.textContent = title || 'Warning';
+        if (bodyEl) bodyEl.textContent = body || '';
+        el.classList.remove('hidden');
+    }
+
     /**
      * Show face loss warning modal
      */

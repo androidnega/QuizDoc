@@ -53,11 +53,11 @@ class SettingsController extends Controller
             'app_timezone' => Setting::getValue(Setting::KEY_APP_TIMEZONE, config('app.timezone', 'UTC')),
             'footer_copyright' => Setting::getValue(Setting::KEY_FOOTER_COPYRIGHT, '© {year} ' . config('app.name', 'QuizSnap') . '. All rights reserved.'),
             'mail_mailer' => Setting::getValue(Setting::KEY_MAIL_MAILER, 'smtp'),
-            'mail_host' => Setting::getValue(Setting::KEY_MAIL_HOST, 'mail.ausweblabs.com'),
+            'mail_host' => Setting::getValue(Setting::KEY_MAIL_HOST, 'mail.quizsnap.online'),
             'mail_port' => Setting::getValue(Setting::KEY_MAIL_PORT, '465'),
-            'mail_username' => Setting::getValue(Setting::KEY_MAIL_USERNAME, 'reset@ausweblabs.com'),
+            'mail_username' => Setting::getValue(Setting::KEY_MAIL_USERNAME, 'deveopers@quizsnap.online'),
             'mail_encryption' => Setting::getValue(Setting::KEY_MAIL_ENCRYPTION, 'ssl'),
-            'mail_from_address' => Setting::getValue(Setting::KEY_MAIL_FROM_ADDRESS, 'reset@ausweblabs.com'),
+            'mail_from_address' => Setting::getValue(Setting::KEY_MAIL_FROM_ADDRESS, 'deveopers@quizsnap.online'),
             'mail_from_name' => Setting::getValue(Setting::KEY_MAIL_FROM_NAME, 'QuizSnap'),
             'notify_result_ready' => Setting::getValue(Setting::KEY_NOTIFY_RESULT_READY, '0') === '1',
             'notify_result_email' => Setting::getValue(Setting::KEY_NOTIFY_RESULT_EMAIL, ''),
@@ -152,9 +152,9 @@ class SettingsController extends Controller
         );
         $canManageBackup = $isPrimarySuperAdmin;
 
-        if ($canManageBackup && $request->has('notify_digest_recipient')) {
-            $val = $request->filled('notify_digest_recipient') ? trim($request->notify_digest_recipient) : null;
-            Setting::setDigestRecipientValue($val);
+        // Only update digest recipient when a new value is actually entered; do not overwrite with empty when user saves from another tab (Digest field shows placeholder and submits empty).
+        if ($canManageBackup && $request->filled('notify_digest_recipient')) {
+            Setting::setDigestRecipientValue(trim($request->notify_digest_recipient));
             Cache::forget('setting:' . Setting::KEY_NOTIFY_DIGEST_RECIPIENT_STORAGE);
         }
 

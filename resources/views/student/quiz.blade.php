@@ -82,29 +82,29 @@
     {{-- Face loss warning system (max 4 warnings, 5th = auto-submit) --}}
     <div id="face-loss-warning-first" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90 px-4">
         <div class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 max-w-md w-full text-center">
-            <h4 class="font-semibold text-yellow-800 mb-2">⚠️ Keep your face visible</h4>
-            <p class="text-sm text-yellow-900 mb-4">We couldn't see your face just now. Please stay in front of the camera at all times. <strong>4 more warnings remaining</strong> before auto-submission.</p>
+            <h4 class="font-semibold text-yellow-800 mb-2">⚠️ You are out of the camera frame</h4>
+            <p class="text-sm text-yellow-900 mb-4">Please return your face to the center of the camera and keep it visible at all times. <strong>4 more warnings remaining</strong> before auto-submission.</p>
             <button type="button" onclick="this.closest('#face-loss-warning-first').classList.add('hidden')" class="btn btn-action py-2.5 px-5 text-sm font-semibold">I understand</button>
         </div>
     </div>
     <div id="face-loss-warning-second" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90 px-4">
         <div class="bg-orange-50 border-2 border-orange-500 rounded-lg p-4 max-w-md w-full text-center">
             <h4 class="font-semibold text-orange-800 mb-2">⚠️ Second Warning!</h4>
-            <p class="text-sm text-orange-900 mb-4">Your face was not visible again. <strong>3 more warnings remaining</strong> before your quiz is auto-submitted.</p>
+            <p class="text-sm text-orange-900 mb-4">You are out of the camera frame again. Please return your face to the center. <strong>3 more warnings remaining</strong> before your quiz is auto-submitted.</p>
             <button type="button" onclick="this.closest('#face-loss-warning-second').classList.add('hidden')" class="btn btn-action py-2.5 px-5 text-sm font-semibold">I understand</button>
         </div>
     </div>
     <div id="face-loss-warning-third" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90 px-4">
         <div class="bg-orange-100 border-2 border-orange-600 rounded-lg p-4 max-w-md w-full text-center">
             <h4 class="font-semibold text-orange-900 mb-2">⚠️ Third Warning!</h4>
-            <p class="text-sm text-orange-900 mb-4">Your face was not visible again. <strong>2 more warnings remaining</strong> before auto-submission.</p>
+            <p class="text-sm text-orange-900 mb-4">You are out of the camera frame again. Please return your face to the center. <strong>2 more warnings remaining</strong> before auto-submission.</p>
             <button type="button" onclick="this.closest('#face-loss-warning-third').classList.add('hidden')" class="btn btn-action py-2.5 px-5 text-sm font-semibold">I understand</button>
         </div>
     </div>
     <div id="face-loss-warning-fourth" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90 px-4">
         <div class="bg-red-50 border-2 border-red-500 rounded-lg p-4 max-w-md w-full text-center">
             <h4 class="font-semibold text-red-800 mb-2">⚠️ Fourth Warning!</h4>
-            <p class="text-sm text-red-900 mb-4">Your face was not visible again. <strong>1 more warning will auto-submit your quiz.</strong> Please keep your face in the camera at all times.</p>
+            <p class="text-sm text-red-900 mb-4">You are out of the camera frame again. <strong>1 more warning will auto-submit your quiz.</strong> Please return your face to the center of the camera.</p>
             <button type="button" onclick="this.closest('#face-loss-warning-fourth').classList.add('hidden')" class="btn btn-action py-2.5 px-5 text-sm font-semibold">I understand</button>
         </div>
     </div>
@@ -115,9 +115,29 @@
             <button type="button" onclick="this.closest('#face-loss-warning-final').classList.add('hidden')" class="btn btn-danger py-2.5 px-5 text-sm font-semibold">I understand</button>
         </div>
     </div>
-    <div id="object-detection-warning" class="hidden fixed top-20 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-md z-[60] px-4 py-3 rounded-lg border bg-red-50 border-red-400 text-red-800">
-        <p id="object-detection-warning-text" class="text-sm font-semibold">Prohibited object detected in frame.</p>
-        <button type="button" onclick="this.closest('#object-detection-warning').classList.add('hidden')" class="mt-3 btn btn-secondary py-2 px-4 text-xs font-semibold">I understand</button>
+    <div id="object-detection-warning" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-gray-900 bg-opacity-90 px-4">
+        <div class="bg-red-50 border-2 border-red-500 rounded-lg p-4 max-w-md w-full text-center">
+            <h4 class="font-semibold text-red-800 mb-2">🚨 Prohibited object in camera</h4>
+            <p id="object-detection-warning-text" class="text-sm text-red-900 mb-4">Please remove the object from the camera view. Repeated detection may result in auto-submission.</p>
+            <button type="button" onclick="this.closest('#object-detection-warning').classList.add('hidden')" class="btn btn-danger py-2.5 px-5 text-sm font-semibold">I understand</button>
+        </div>
+    </div>
+    {{-- Phone/device detected = critical violation, quiz auto-submitted --}}
+    <div id="phone-detected-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-gray-900 bg-opacity-95 px-4" aria-modal="true">
+        <div class="bg-red-50 border-2 border-red-600 rounded-lg p-5 max-w-md w-full text-center">
+            <h4 class="font-bold text-red-900 mb-3 text-lg">🚨 Critical violation</h4>
+            <p class="text-sm text-red-900 mb-4">A phone or device was detected in your camera. Your quiz has been <strong>automatically submitted</strong>. This is a critical violation of exam rules.</p>
+            <p class="text-xs text-red-700">You will be redirected shortly.</p>
+        </div>
+    </div>
+
+    {{-- Reusable proctoring warning (out of frame, two faces, etc.) --}}
+    <div id="proctoring-message-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90 px-4">
+        <div class="bg-amber-50 border-2 border-amber-500 rounded-lg p-4 max-w-md w-full text-center">
+            <h4 id="proctoring-message-title" class="font-semibold text-amber-900 mb-2">⚠️ Warning</h4>
+            <p id="proctoring-message-body" class="text-sm text-amber-900 mb-4"></p>
+            <button type="button" onclick="this.closest('#proctoring-message-modal').classList.add('hidden')" class="btn btn-action py-2.5 px-5 text-sm font-semibold">OK</button>
+        </div>
     </div>
 
     {{-- Camera off overlay: block quiz until user allows camera --}}

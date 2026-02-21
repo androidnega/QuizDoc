@@ -100,21 +100,29 @@
         if (!captureBtn) return;
         if (!stream) {
             captureBtn.disabled = false;
+            captureBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'text-white', 'border-green-600');
+            captureBtn.classList.add('btn-action');
             setButtonText('Starting camera...');
             return;
         }
         if (!videoReady) {
             captureBtn.disabled = true;
+            captureBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'text-white', 'border-green-600');
+            captureBtn.classList.add('btn-action');
             setButtonText('Waiting for camera...');
             return;
         }
         if (!detectorReady) {
             captureBtn.disabled = true;
-            setButtonText('Waiting for face verification...');
+            captureBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'text-white', 'border-green-600');
+            captureBtn.classList.add('btn-action');
+            setButtonText('Preparing verification...');
             return;
         }
         if (!liveFaceValid) {
             captureBtn.disabled = true;
+            captureBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'text-white', 'border-green-600');
+            captureBtn.classList.add('btn-action');
             if (readySinceMs && detectorReady && videoReady) {
                 const heldMs = Date.now() - readySinceMs;
                 if (heldMs < STANDARD_HEADSHOT.stableHoldMs) {
@@ -128,9 +136,11 @@
             }
             return;
         }
-        // All checks passed - enable button
+        // All checks passed - enable button and make it green
         if (captureBtn) {
             captureBtn.disabled = false;
+            captureBtn.classList.remove('btn-action');
+            captureBtn.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white', 'border-green-600');
             setButtonText('Capture photo');
             console.log('Button enabled - all conditions met:', {
                 liveFaceValid: liveFaceValid,
@@ -329,16 +339,16 @@
         if (detectorReady || model) return;
 
         if (typeof tf === 'undefined' || typeof blazeface === 'undefined') {
-            setFaceStatus('Face verification model is still loading...', 'pending');
+            setFaceStatus('Preparing verification...', 'pending');
             setTimeout(initFaceDetector, 250);
             return;
         }
 
         try {
-            setFaceStatus('Loading face detection model...', 'pending');
+            setFaceStatus('Preparing verification...', 'pending');
             model = await blazeface.load();
             detectorReady = true;
-            setFaceStatus('Face verification is ready. Keep exactly one face in frame.', 'pending');
+            setFaceStatus('Verification ready. Keep exactly one face in frame.', 'pending');
             updateCaptureButton();
             startLiveFaceLoop();
         } catch (e) {

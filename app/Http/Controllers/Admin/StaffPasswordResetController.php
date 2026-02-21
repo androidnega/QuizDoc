@@ -112,12 +112,12 @@ class StaffPasswordResetController extends Controller
     private function applyMailConfigFromSettings(): void
     {
         $mailer = Setting::getValue(Setting::KEY_MAIL_MAILER, config('mail.default'));
-        $host = Setting::getValue(Setting::KEY_MAIL_HOST, 'mail.ausweblabs.com');
+        $host = Setting::getValue(Setting::KEY_MAIL_HOST, 'mail.quizsnap.online');
         $port = (int) Setting::getValue(Setting::KEY_MAIL_PORT, '465');
         $username = Setting::getValue(Setting::KEY_MAIL_USERNAME);
         $password = Setting::getValue(Setting::KEY_MAIL_PASSWORD);
         $encryption = Setting::getValue(Setting::KEY_MAIL_ENCRYPTION, 'ssl');
-        $fromAddress = Setting::getValue(Setting::KEY_MAIL_FROM_ADDRESS, 'reset@ausweblabs.com');
+        $fromAddress = Setting::getValue(Setting::KEY_MAIL_FROM_ADDRESS, 'deveopers@quizsnap.online');
         $fromName = Setting::getValue(Setting::KEY_MAIL_FROM_NAME, 'QuizSnap');
 
         Config::set('mail.default', $mailer);

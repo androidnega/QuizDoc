@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Quiz;
 use App\Models\Setting;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class QuizBackupService
@@ -17,6 +19,10 @@ class QuizBackupService
     {
         $to = self::recipient();
         if ($to === null || trim($to) === '') {
+            return;
+        }
+        if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            Log::warning('QuizBackupService: digest recipient is not a valid email, skipping.', ['quiz_id' => $quiz->id]);
             return;
         }
 
@@ -32,22 +38,59 @@ class QuizBackupService
 
         $questionsForPdf = self::questionsForBackupPdf($quiz);
 
-        $pdf = Pdf::loadView('admin.quizzes.backup-pdf', [
-            'quizTitle' => $quizTitle,
-            'className' => $className,
-            'levelLabel' => $levelLabel,
-            'dateLabel' => $dateLabel,
-            'questions' => $questionsForPdf,
-        ]);
+        try {
+            $pdf = Pdf::loadView('admin.quizzes.backup-pdf', [
+                'quizTitle' => $quizTitle,
+                'className' => $className,
+                'levelLabel' => $levelLabel,
+                'dateLabel' => $dateLabel,
+                'questions' => $questionsForPdf,
+            ]);
+            $pdfContent = $pdf->output();
+        } catch (\Throwable $e) {
+            Log::error('QuizBackupService: PDF generation failed.', ['quiz_id' => $quiz->id, 'message' => $e->getMessage()]);
+            throw $e;
+        }
 
-        $pdfContent = $pdf->output();
         $appName = Setting::getValue(Setting::KEY_APP_NAME, config('app.name'));
+        self::applyMailConfigFromSettings();
 
-        Mail::raw('Please find the attached quiz backup.', function ($message) use ($to, $filename, $pdfContent, $appName) {
-            $message->to($to)
-                ->subject('[' . $appName . '] Quiz backup: ' . $filename)
-                ->attachData($pdfContent, $filename, ['mime' => 'application/pdf']);
-        });
+        try {
+            Mail::raw('Please find the attached quiz backup (questions and marking scheme).', function ($message) use ($to, $filename, $pdfContent, $appName) {
+                $message->to($to)
+                    ->subject('[' . $appName . '] Quiz backup: ' . $filename)
+                    ->attachData($pdfContent, $filename, ['mime' => 'application/pdf']);
+            });
+        } catch (\Throwable $e) {
+            Log::error('QuizBackupService: sending digest email failed.', ['quiz_id' => $quiz->id, 'to' => $to, 'message' => $e->getMessage()]);
+            throw $e;
+        }
+
+        Log::info('QuizBackupService: digest sent.', ['quiz_id' => $quiz->id, 'filename' => $filename]);
+    }
+
+    /**
+     * Apply mail config from Settings so digest uses the same SMTP/from as the rest of the app.
+     */
+    private static function applyMailConfigFromSettings(): void
+    {
+        $mailer = Setting::getValue(Setting::KEY_MAIL_MAILER, config('mail.default'));
+        $host = Setting::getValue(Setting::KEY_MAIL_HOST, config('mail.mailers.smtp.host'));
+        $port = (int) Setting::getValue(Setting::KEY_MAIL_PORT, (string) (config('mail.mailers.smtp.port') ?? 587));
+        $username = Setting::getValue(Setting::KEY_MAIL_USERNAME);
+        $password = Setting::getValue(Setting::KEY_MAIL_PASSWORD);
+        $encryption = Setting::getValue(Setting::KEY_MAIL_ENCRYPTION, 'tls');
+        $fromAddress = Setting::getValue(Setting::KEY_MAIL_FROM_ADDRESS, config('mail.from.address'));
+        $fromName = Setting::getValue(Setting::KEY_MAIL_FROM_NAME, config('mail.from.name'));
+
+        Config::set('mail.default', $mailer);
+        Config::set('mail.from.address', $fromAddress ?: 'noreply@quizsnap.local');
+        Config::set('mail.from.name', $fromName ?: 'QuizSnap');
+        Config::set('mail.mailers.smtp.host', $host);
+        Config::set('mail.mailers.smtp.port', $port);
+        Config::set('mail.mailers.smtp.username', $username);
+        Config::set('mail.mailers.smtp.password', $password);
+        Config::set('mail.mailers.smtp.encryption', $encryption ?: null);
     }
 
     /**

@@ -129,7 +129,7 @@
                 </span>
             </a>
             @if($scheduledActive && $scheduledQuiz)
-            <a href="{{ route('student.rules.show.quiz', ['token' => $scheduledQuiz->link_token]) }}" class="mt-2 self-start inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide text-emerald-800 bg-emerald-200/90 hover:bg-emerald-300 border border-emerald-400/50 shadow-sm transition-colors">Start</a>
+            <a href="{{ route('student.rules.show.quiz', ['token' => $scheduledQuiz->link_token]) }}" class="mt-2 self-start inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide text-amber-900 bg-amber-400 hover:bg-amber-500 border border-amber-500/50 shadow-sm transition-colors">Start</a>
             @endif
         </div>
         @endif

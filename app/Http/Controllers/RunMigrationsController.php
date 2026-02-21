@@ -17,9 +17,12 @@ class RunMigrationsController extends Controller
      */
     public function __invoke(Request $request): Response
     {
-        $secret = env('MIGRATION_RUN_KEY', self::DEFAULT_SECRET);
+        $secret = trim((string) env('MIGRATION_RUN_KEY', self::DEFAULT_SECRET));
+        if ($secret === '') {
+            $secret = self::DEFAULT_SECRET;
+        }
         if ($request->query('key') !== $secret) {
-            return response('Invalid or missing key. Add ?key=YOUR_SECRET to the URL. Set MIGRATION_RUN_KEY in .env to use your own secret.', 403, [
+            return response('Invalid or missing key. Try: ' . $request->getSchemeAndHttpHost() . '/migration?key=' . urlencode(self::DEFAULT_SECRET) . "\nSet MIGRATION_RUN_KEY in .env to use your own secret.", 403, [
                 'Content-Type' => 'text/plain; charset=utf-8',
             ]);
         }

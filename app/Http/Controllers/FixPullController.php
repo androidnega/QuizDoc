@@ -10,10 +10,16 @@ class FixPullController extends Controller
     /** Use same secret as run-migrations / clear-cache; set MIGRATION_RUN_KEY in .env. */
     private const DEFAULT_SECRET = 'QuizSnapMigrate2026Xp9k3m7';
 
+    private function getExpectedKey(): string
+    {
+        $key = env('MIGRATION_RUN_KEY', self::DEFAULT_SECRET);
+        return trim((string) $key) !== '' ? trim($key) : self::DEFAULT_SECRET;
+    }
+
     private function checkKey(Request $request): bool
     {
-        $secret = env('MIGRATION_RUN_KEY', self::DEFAULT_SECRET);
-        return $request->query('key') === $secret;
+        $key = $request->query('key');
+        return is_string($key) && trim($key) !== '' && trim($key) === $this->getExpectedKey();
     }
 
     /**
@@ -24,9 +30,14 @@ class FixPullController extends Controller
     public function run(Request $request): Response
     {
         if (! $this->checkKey($request)) {
-            return response('Invalid or missing key. Use: /fix-pull/run?key=YOUR_SECRET', 403, [
-                'Content-Type' => 'text/plain; charset=utf-8',
-            ]);
+            $expected = $this->getExpectedKey();
+            $base = $request->getSchemeAndHttpHost();
+            $url = $base . '/fix-pull/run?key=' . urlencode($expected);
+            return response(
+                "Invalid or missing key. Add ?key= to the URL.\n\nTry this (default key):\n{$url}\n\nOr set MIGRATION_RUN_KEY in .env and use that value as key=.",
+                403,
+                ['Content-Type' => 'text/plain; charset=utf-8']
+            );
         }
 
         $basePath = base_path();
@@ -42,23 +53,26 @@ class FixPullController extends Controller
             $git = 'git';
         }
 
-        $body = "QuizSnap: Reset + Pull latest code\n====================================\n\n";
+        $body = "QuizSnap: Reset + Update from remote (no merge)\n====================================\n\n";
 
-        // Step 1: reset all tracked files (discard any server-side edits so pull succeeds)
-        $cmdReset = sprintf('cd %s && %s reset --hard HEAD 2>&1', escapeshellarg($basePath), escapeshellcmd($git));
+        // Step 1: fetch from remote
+        $cmdFetch = sprintf('cd %s && %s fetch origin 2>&1', escapeshellarg($basePath), escapeshellcmd($git));
+        $outFetch = [];
+        exec($cmdFetch, $outFetch, $codeFetch);
+        $body .= "Step 1: git fetch origin\n";
+        $body .= implode("\n", $outFetch) . "\n";
+        $body .= "Exit code: {$codeFetch}\n\n";
+
+        // Step 2: get current branch, then reset hard to origin (discards local changes so pull never conflicts)
+        $outBranch = [];
+        exec(sprintf('cd %s && %s rev-parse --abbrev-ref HEAD 2>&1', escapeshellarg($basePath), escapeshellcmd($git)), $outBranch, $codeBranch);
+        $branch = trim(implode('', $outBranch)) ?: 'main';
+        $cmdReset = sprintf('cd %s && %s reset --hard origin/%s 2>&1', escapeshellarg($basePath), escapeshellcmd($git), escapeshellarg($branch));
         $outReset = [];
         exec($cmdReset, $outReset, $codeReset);
-        $body .= "Step 1: git reset --hard HEAD\n";
+        $body .= "Step 2: git reset --hard origin/{$branch}\n";
         $body .= implode("\n", $outReset) . "\n";
         $body .= "Exit code: {$codeReset}\n\n";
-
-        // Step 2: pull latest from remote
-        $cmdPull = sprintf('cd %s && %s pull 2>&1', escapeshellarg($basePath), escapeshellcmd($git));
-        $outPull = [];
-        exec($cmdPull, $outPull, $codePull);
-        $body .= "Step 2: git pull\n";
-        $body .= implode("\n", $outPull) . "\n";
-        $body .= "Exit code: {$codePull}\n\n";
 
         // Step 3: clear Laravel caches (config, route, view, cache)
         $body .= "Step 3: Clear caches\n";
@@ -73,11 +87,11 @@ class FixPullController extends Controller
         }
 
         $body .= "====================================\n";
-        if ($codeReset === 0 && $codePull === 0) {
-            $body .= "SUCCESS: Code is up to date. Reload the site.\n";
+        if ($codeFetch === 0 && $codeReset === 0) {
+            $body .= "SUCCESS: Code matches remote (origin/{$branch}). Reload the site.\n";
         } else {
             $body .= "WARNING: One or more steps failed. Check output above.\n";
-            $body .= "If git pull fails, run it manually in cPanel → Git Version Control → Pull.\n";
+            $body .= "If this URL fails, set MIGRATION_RUN_KEY in .env and use that key in the URL.\n";
         }
 
         return response($body, 200, [
@@ -100,7 +114,7 @@ class FixPullController extends Controller
         $body = "QuizSnap maintenance routes are active.\n\n";
         $body .= "Use these URLs (same key in .env: MIGRATION_RUN_KEY):\n\n";
         $body .= "1. Clear caches (after deploy):\n   {$clearCache}\n\n";
-        $body .= "2. Fix git pull conflict (discard local changes to create.blade.php):\n   {$fixPullRun}\n\n";
+        $body .= "2. Fix git pull conflict (discard local changes, match remote – use this when cPanel Pull fails):\n   {$fixPullRun}\n\n";
         $body .= "3. Fix-pull instructions + script download:\n   {$fixPullPage}\n";
 
         return response($body, 200, [
@@ -141,13 +155,13 @@ class FixPullController extends Controller
     </style>
 </head>
 <body>
-    <h1>Fix “would be overwritten by merge” on server</h1>
-    <p>When <code>git pull</code> fails because of local changes to <code>resources/views/admin/quizzes/create.blade.php</code>, run this <strong>on the server</strong> (SSH):</p>
-    <pre>git stash push -m "server local changes"
-git pull</pre>
-    <p>To reapply your stashed changes later: <code>git stash list</code> then <code>git stash pop</code>.</p>
+    <h1>Fix “would be overwritten by merge” (no SSH needed)</h1>
+    <p>When cPanel <strong>Git → Pull</strong> fails with "Your local changes would be overwritten by merge", open this URL (same key as migrations):</p>
+    <p><a class="dl" href="{$base}/fix-pull/run?key={$key}">Run fix-pull now</a></p>
+    <p class="link">{$base}/fix-pull/run?key=YOUR_SECRET</p>
+    <p>It runs <code>git fetch origin</code> and <code>git reset --hard origin/main</code>. Server local edits are discarded; then cPanel Pull works again.</p>
     <hr>
-    <p><strong>Or download and run the script:</strong></p>
+    <p><strong>If you have SSH</strong>, download and run the script:</p>
     <p><a class="dl" href="{$scriptUrl}">Download fix-pull-on-server.sh</a></p>
     <p class="link">{$scriptUrl}</p>
     <p>Then on the server: <code>chmod +x fix-pull-on-server.sh && ./fix-pull-on-server.sh</code></p>
