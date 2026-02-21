@@ -552,6 +552,84 @@ class QuizManagementController extends Controller
     }
 
     /**
+     * CCTV-style live proctor: one page showing all live sessions across all quizzes the examiner can view.
+     */
+    public function liveProctorAll(): View|RedirectResponse
+    {
+        if (Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') !== '1') {
+            abort(403, 'Live examiner view is disabled by system settings.');
+        }
+        $user = $this->adminUser();
+        if (!$user) {
+            abort(403);
+        }
+        return view('admin.quizzes.live-proctor-all');
+    }
+
+    /**
+     * API: all live sessions across examiner's quizzes (for CCTV dashboard).
+     */
+    public function liveProctorAllSessions(): \Illuminate\Http\JsonResponse
+    {
+        if (Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') !== '1') {
+            return response()->json(['sessions' => []], 403);
+        }
+        $user = $this->adminUser();
+        if (!$user) {
+            return response()->json(['sessions' => []], 403);
+        }
+        $quizQuery = Quiz::query()->where('is_published', true);
+        if ($user->isSuperAdmin()) {
+            // all quizzes
+        } elseif ($user->isExaminer()) {
+            $quizQuery->where('examiner_id', $user->id);
+        } else {
+            $ids = $user->classGroupIds();
+            $quizQuery->whereIn('class_group_id', $ids);
+        }
+        $quizIds = $quizQuery->pluck('id')->all();
+        if (empty($quizIds)) {
+            return response()->json(['sessions' => []]);
+        }
+        $heartbeatCutoff = now()->subSeconds(120);
+        $startedCutoff = now()->subMinutes(3);
+        $sessions = QuizSession::query()
+            ->whereIn('quiz_id', $quizIds)
+            ->whereNotNull('start_time')
+            ->whereNull('ended_at')
+            ->where(function ($q) use ($heartbeatCutoff, $startedCutoff) {
+                $q->where('last_heartbeat_at', '>=', $heartbeatCutoff)
+                    ->orWhere(function ($q2) use ($startedCutoff) {
+                        $q2->whereNull('last_heartbeat_at')->where('start_time', '>=', $startedCutoff);
+                    });
+            })
+            ->orderBy('quiz_id')
+            ->orderBy('student_index')
+            ->get(['id', 'quiz_id', 'student_index', 'last_heartbeat_at']);
+        $quizzes = Quiz::whereIn('id', $sessions->pluck('quiz_id')->unique())->get(['id', 'title', 'class_group_id'])->keyBy('id');
+        $out = [];
+        foreach ($sessions as $s) {
+            $quiz = $quizzes->get($s->quiz_id);
+            $studentName = null;
+            if ($quiz && $quiz->class_group_id) {
+                $cg = \App\Models\ClassGroupStudent::where('class_group_id', $quiz->class_group_id)
+                    ->whereRaw('UPPER(TRIM(index_number)) = ?', [strtoupper(trim((string) $s->student_index))])
+                    ->value('student_name');
+                $studentName = $cg;
+            }
+            $out[] = [
+                'id' => $s->id,
+                'quiz_id' => $s->quiz_id,
+                'quiz_title' => $quiz ? $quiz->title : '—',
+                'student_index' => $s->student_index,
+                'student_name' => $studentName,
+                'last_heartbeat_at' => $s->last_heartbeat_at?->toIso8601String(),
+            ];
+        }
+        return response()->json(['sessions' => $out]);
+    }
+
+    /**
      * API: list live sessions for this quiz (started, not ended, recent heartbeat).
      * Light payload: id, student_index, student_name (from class group), last_heartbeat_at.
      */
@@ -698,14 +776,34 @@ class QuizManagementController extends Controller
             ])->with('info', 'Session opened via updated quiz link.');
         }
         $session = $quizSession;
+        $lockedIp = trim((string) $session->ip_address);
 
-        $session->update([
-            'ip_address' => 'reset-' . $session->id . '-' . now()->timestamp,
-            'session_token' => null,
-        ]);
+        if ($lockedIp === '' || str_starts_with($lockedIp, 'reset-')) {
+            return redirect()->route($this->staffRoutePrefix() . '.quizzes.sessions.show', [$quiz, $session])
+                ->with('info', 'IP lock was already reset for this session.');
+        }
+
+        // Release this IP for the whole quiz so a different student can use it immediately.
+        // We reset every matching session row, not just the clicked one.
+        $sessionsUsingIp = QuizSession::where('quiz_id', $quiz->id)
+            ->where('ip_address', $lockedIp)
+            ->get();
+        $timestamp = now()->timestamp;
+        $releasedCount = 0;
+        foreach ($sessionsUsingIp as $lockedSession) {
+            $lockedSession->update([
+                'ip_address' => 'reset-' . $lockedSession->id . '-' . $timestamp,
+                'session_token' => null,
+            ]);
+            $releasedCount++;
+        }
+
+        $message = $releasedCount > 1
+            ? 'IP lock reset across multiple sessions. This network can now be used by another student.'
+            : 'IP lock reset. This network can now be used by another student.';
 
         return redirect()->route($this->staffRoutePrefix() . '.quizzes.sessions.show', [$quiz, $session])
-            ->with('success', 'Reset');
+            ->with('success', $message);
     }
 
     /**
