@@ -166,7 +166,8 @@ class StudentQuizController extends Controller
         $proctoringObjectDetect = Setting::getValue(Setting::KEY_PROCTORING_OBJECT_DETECT, '1') === '1';
         $proctoringBlockRightClick = Setting::getValue(Setting::KEY_PROCTORING_BLOCK_RIGHT_CLICK, '1') === '1';
         $proctoringBlockCopyPaste = Setting::getValue(Setting::KEY_PROCTORING_BLOCK_COPY_PASTE, '1') === '1';
-        $liveProctorEnabled = Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') === '1';
+        // Live proctoring feed removed from session: do not send camera frames to examiner during quiz.
+        $liveProctorEnabled = false;
         $matchedStudent = Student::query()
             ->whereRaw('UPPER(TRIM(index_number)) = ?', [strtoupper(trim((string) $session->student_index))])
             ->first(['index_number', 'student_name']);
@@ -539,9 +540,9 @@ class StudentQuizController extends Controller
             $this->finalizeQuiz($session);
             $autoSubmitted = true;
         }
-        // Major violations (blur, tab_switch, window_resize, camera_disconnected, no_face, multiple_faces, challenge_failed): max 1 warning per session, then auto-submit
-        // static_face_detected is intentionally excluded from auto-submit thresholds.
-        $majorTypes = ['blur', 'tab_switch', 'window_resize', 'camera_disconnected', 'no_face', 'multiple_faces', 'multiple_faces_during_quiz', 'challenge_failed'];
+        // Major violations (blur, tab_switch, window_resize, camera_disconnected, no_face, multiple_faces, challenge_failed): max 1 warning per session, then auto-submit.
+        // multiple_faces_during_quiz has its own threshold (5) below.
+        $majorTypes = ['blur', 'tab_switch', 'window_resize', 'camera_disconnected', 'no_face', 'multiple_faces', 'challenge_failed'];
         if (!$autoSubmitted && in_array($type, $majorTypes, true)) {
             $majorCount = $session->violations()->whereIn('type', $majorTypes)->count();
             if ($majorCount >= 2) {
@@ -549,6 +550,21 @@ class StudentQuizController extends Controller
                     'post_face_skipped_at' => now(),
                     'post_face_skipped_reason' => 'auto_submit',
                     'auto_submit_after' => null,
+                ]);
+                $this->finalizeQuiz($session);
+                $autoSubmitted = true;
+            }
+        }
+        // Multiple faces during quiz: auto-submit only after 5 occurrences (critical).
+        if (!$autoSubmitted && $type === 'multiple_faces_during_quiz') {
+            $multipleFacesCount = $session->violations()->where('type', 'multiple_faces_during_quiz')->count();
+            if ($multipleFacesCount >= 5) {
+                $session->update([
+                    'post_face_skipped_at' => now(),
+                    'post_face_skipped_reason' => 'auto_submit',
+                    'auto_submit_after' => null,
+                    'auto_submitted' => true,
+                    'submission_reason' => 'critical_violation_auto_submit',
                 ]);
                 $this->finalizeQuiz($session);
                 $autoSubmitted = true;
@@ -570,21 +586,7 @@ class StudentQuizController extends Controller
             }
         }
 
-        // Combined head-direction violations (left/right/up/down) are logged as head_turn.
-        if (!$autoSubmitted && $type === 'head_turn') {
-            $headTurnCount = $session->violations()->where('type', 'head_turn')->count();
-            if ($headTurnCount >= self::HEAD_DIRECTION_LIMIT) {
-                $session->update([
-                    'post_face_skipped_at' => now(),
-                    'post_face_skipped_reason' => 'auto_submit',
-                    'auto_submit_after' => null,
-                    'auto_submitted' => true,
-                    'submission_reason' => 'withheld_due_to_violations',
-                ]);
-                $this->finalizeQuiz($session);
-                $autoSubmitted = true;
-            }
-        }
+        // Head turn (left/right/up/down) is violation-only; no auto-submit (critical violations auto-submit).
 
         // Normal violation threshold across configured warning-level proctoring events.
         if (!$autoSubmitted) {

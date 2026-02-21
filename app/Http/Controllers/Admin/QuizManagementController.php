@@ -407,15 +407,16 @@ class QuizManagementController extends Controller
         $approvedQuestionsTotal = $approvedQuestionsQuery->count();
         $approvedQuestions = $approvedQuestionsQuery->get();
 
-        // Completed sessions for Sessions tab: load all for live search (with violations for action-column highlight)
+        // Completed sessions for Sessions tab: only sessions that have a result (tally sessions = results)
         $sessionsQuery = $quiz->sessions()
             ->with(['result', 'violations'])
             ->whereNotNull('ended_at')
+            ->whereHas('result')
             ->orderByDesc('ended_at');
         $sessionsPaginator = $sessionsQuery->get();
 
-        // Stats for Sessions tab (from all completed sessions, not just current page)
-        $completedSessions = $quiz->sessions()->whereNotNull('ended_at')->with(['result', 'violations'])->get();
+        // Stats for Sessions tab (only completed sessions with result; broken/incomplete sessions not counted)
+        $completedSessions = $quiz->sessions()->whereNotNull('ended_at')->whereHas('result')->with(['result', 'violations'])->get();
         $scores = $completedSessions->pluck('result.score')->filter()->values();
         $sessionsStats = [
             'total_students' => $completedSessions->count(),
@@ -872,13 +873,7 @@ class QuizManagementController extends Controller
         
         $studentIndex = $quizSession->student_index;
         
-        // Delete the result first (if exists)
-        $result = $quizSession->result;
-        if ($result) {
-            $result->delete();
-        }
-        
-        // Delete the session (this will cascade to answers and violations via FK constraints)
+        // Delete the session (DB cascade deletes result, answers, violations)
         $quizSession->delete();
         
         broadcast(new DataUpdated('dashboard'))->toOthers();
@@ -1579,16 +1574,17 @@ class QuizManagementController extends Controller
     {
         $this->authorize('view', $quiz);
         
-        // Load sessions with results and violations, only for sessions that have been completed
+        // Load only sessions that have a result (sessions count = results count; incomplete/broken sessions excluded)
         $sessions = $quiz->sessions()
             ->with(['result', 'violations'])
             ->whereNotNull('ended_at')
+            ->whereHas('result')
             ->orderByDesc('ended_at')
             ->get();
         
-        // Calculate statistics
+        // Session count = result count (every listed session has a result)
         $totalStudents = $sessions->count();
-        $completedWithResults = $sessions->filter(fn($s) => $s->result !== null)->count();
+        $completedWithResults = $totalStudents;
         
         $scores = $sessions->pluck('result.score')->filter()->values();
         $averageScore = $scores->isNotEmpty() ? round($scores->average(), 1) : 0;
@@ -1622,6 +1618,7 @@ class QuizManagementController extends Controller
         $sessions = $quiz->sessions()
             ->with(['result', 'violations'])
             ->whereNotNull('ended_at')
+            ->whereHas('result')
             ->orderBy('student_index')
             ->get();
 
@@ -1692,7 +1689,7 @@ class QuizManagementController extends Controller
     {
         $this->authorize('view', $quiz);
         $quiz->load(['classGroup', 'course', 'questions', 'academicClass']);
-        $completedSessions = $quiz->sessions()->whereNotNull('ended_at')->with(['result', 'violations'])->get();
+        $completedSessions = $quiz->sessions()->whereNotNull('ended_at')->whereHas('result')->with(['result', 'violations'])->get();
         $questionStats = $this->computeQuestionStats($quiz, $completedSessions);
 
         $courseName = '—';
@@ -1922,6 +1919,7 @@ class QuizManagementController extends Controller
         $sessions = $quiz->sessions()
             ->with('result')
             ->whereNotNull('ended_at')
+            ->whereHas('result')
             ->orderBy('student_index')
             ->get();
 

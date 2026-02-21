@@ -216,7 +216,9 @@
     function setLiveFrameState(state, headline, detail) {
         const frameEl = document.getElementById('live-camera-frame');
         const textEl = document.getElementById('live-camera-status-text');
-        const subTextEl = document.getElementById('live-camera-status-subtext');
+        const pillEl = document.getElementById('live-camera-pill');
+        const bannerIconEl = document.getElementById('live-camera-banner-icon');
+        const positionLabelEl = document.getElementById('live-camera-position-label');
         if (frameEl) {
             frameEl.classList.remove('border-emerald-500', 'border-amber-400', 'border-red-500');
             if (state === 'red') {
@@ -229,26 +231,70 @@
         }
         if (textEl) {
             textEl.textContent = headline || 'Monitoring camera feed.';
-            textEl.classList.remove('text-emerald-700', 'text-amber-700', 'text-red-700');
-            if (state === 'red') {
-                textEl.classList.add('text-red-700');
-            } else if (state === 'yellow') {
-                textEl.classList.add('text-amber-700');
+        }
+        if (pillEl) {
+            pillEl.textContent = 'FACE DETECTED';
+            pillEl.classList.remove('bg-emerald-500', 'bg-amber-400', 'bg-red-500');
+            if (state === 'green') {
+                pillEl.classList.remove('hidden');
+                pillEl.classList.add('bg-emerald-500');
             } else {
-                textEl.classList.add('text-emerald-700');
+                pillEl.classList.add('hidden');
             }
         }
-        if (subTextEl) {
-            subTextEl.textContent = detail || '';
-            subTextEl.classList.remove('text-gray-500', 'text-amber-600', 'text-red-600');
+        if (bannerIconEl) {
+            bannerIconEl.classList.remove('bg-emerald-500', 'bg-amber-400', 'bg-red-500');
             if (state === 'red') {
-                subTextEl.classList.add('text-red-600');
+                bannerIconEl.classList.add('bg-red-500');
+                bannerIconEl.textContent = '!';
             } else if (state === 'yellow') {
-                subTextEl.classList.add('text-amber-600');
+                bannerIconEl.classList.add('bg-amber-400');
+                bannerIconEl.textContent = '!';
             } else {
-                subTextEl.classList.add('text-gray-500');
+                bannerIconEl.classList.add('bg-emerald-500');
+                bannerIconEl.textContent = '\u2713';
             }
         }
+        if (positionLabelEl) {
+            positionLabelEl.textContent = state === 'green' ? 'Position: Good' : 'Position: Adjust';
+        }
+    }
+
+    function updateLiveFramePosition(box) {
+        const videoEl = config.videoElement || videoElement;
+        const dotEl = document.getElementById('live-camera-face-dot');
+        const barXEl = document.getElementById('live-bar-x');
+        const barYEl = document.getElementById('live-bar-y');
+        const barSizeEl = document.getElementById('live-bar-size');
+        if (!videoEl || !box) {
+            if (dotEl) dotEl.classList.add('hidden');
+            if (barXEl) barXEl.style.width = '0%';
+            if (barYEl) barYEl.style.width = '0%';
+            if (barSizeEl) barSizeEl.style.width = '0%';
+            return;
+        }
+        const videoWidth = videoEl.videoWidth || 640;
+        const videoHeight = videoEl.videoHeight || 480;
+        const rawCenterX = (box.topLeft[0] + box.bottomRight[0]) / 2;
+        const rawCenterY = (box.topLeft[1] + box.bottomRight[1]) / 2;
+        const centerX = rawCenterX <= 1.5 ? rawCenterX * videoWidth : rawCenterX;
+        const centerY = rawCenterY <= 1.5 ? rawCenterY * videoHeight : rawCenterY;
+        const width = Math.abs((box.bottomRight[0] || 0) - (box.topLeft[0] || 0));
+        const height = Math.abs((box.bottomRight[1] || 0) - (box.topLeft[1] || 0));
+        const pixelW = width <= 1.5 ? width * videoWidth : width;
+        const pixelH = height <= 1.5 ? height * videoHeight : height;
+        const sizeRatio = Math.min(1, (pixelW * pixelH) / (videoWidth * videoHeight));
+        const xPct = Math.max(0, Math.min(1, centerX / videoWidth));
+        const yPct = Math.max(0, Math.min(1, centerY / videoHeight));
+        if (dotEl) {
+            dotEl.classList.remove('hidden');
+            dotEl.style.left = (xPct * 100) + '%';
+            dotEl.style.top = (yPct * 100) + '%';
+            dotEl.style.transform = 'translate(-50%, -50%)';
+        }
+        if (barXEl) barXEl.style.width = (xPct * 100) + '%';
+        if (barYEl) barYEl.style.width = (yPct * 100) + '%';
+        if (barSizeEl) barSizeEl.style.width = (sizeRatio * 100) + '%';
     }
 
     function getFaceAreaRatio(box) {
@@ -477,9 +523,7 @@
                     'Only one person should be in the camera frame.'
                 );
                 recordViolation('multiple_faces_during_quiz', 'major', true, { face_count: effectiveMultiple });
-                if (violationCount >= 2) {
-                    triggerAutoSubmit('multiple_faces_repeated', 'multiple_faces');
-                }
+                // Auto-submit only after 5 multiple-face events (handled by server).
                 multipleFacesConsecutiveCount = 0;
             }
             return;
@@ -502,6 +546,7 @@
                         ? (outOfFrameWarningsLeft + ' warning(s) remaining before auto-submission.')
                         : 'Auto-submission in progress.'
                 );
+                updateLiveFramePosition(null);
                 if (!outOfFrameEventCapturedForCurrentAbsence) {
                     outOfFrameEventCapturedForCurrentAbsence = true;
                     registerValidatedOutOfFrameEvent(now, noFaceDurationMs);
@@ -513,6 +558,7 @@
                     'Face not detected',
                     'Return to frame within ' + Math.max(0, secondsLeft) + 's to avoid a warning.'
                 );
+                updateLiveFramePosition(null);
             }
             return;
         }
@@ -526,10 +572,15 @@
         // Guidance only: face exists but partially outside frame.
         if (primaryBox && isFaceOutOfFrame(primaryBox)) {
             setLiveFrameState('yellow', 'Keep your full face in frame', 'Face detected, but part of your face is near the edge.');
+            updateLiveFramePosition(primaryBox);
         } else if (primaryBox && getFaceAreaRatio(primaryBox) > 0 && getFaceAreaRatio(primaryBox) < FACE_TOO_FAR_RATIO) {
             setLiveFrameState('yellow', 'Move closer to the camera', 'Your face appears too far for reliable monitoring.');
+            updateLiveFramePosition(primaryBox);
+        } else if (primaryBox) {
+            setLiveFrameState('green', 'Face detected - Good position', '');
+            updateLiveFramePosition(primaryBox);
         } else {
-            setLiveFrameState('green', 'Face in frame', 'Keep your face centered and visible.');
+            updateLiveFramePosition(null);
         }
 
         // Motion detection (photo attack)
@@ -670,10 +721,7 @@
             normal_violation_limit: NORMAL_VIOLATION_LIMIT,
             student_index: config.studentIndex || null,
         });
-
-        if (headDirectionViolationCount >= HEAD_DIRECTION_LIMIT) {
-            triggerAutoSubmit('head_direction_limit_reached', 'head_turn');
-        }
+        // Head turn is violation-only; no auto-submit (critical violations auto-submit).
     }
 
     /**

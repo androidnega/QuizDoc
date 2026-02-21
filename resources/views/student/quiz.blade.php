@@ -46,9 +46,8 @@
 @keyframes quiz-frame-pulse-warn { 0%,100%{border-color:#eab308} 50%{border-color:#fbbf24} }
 @keyframes quiz-frame-pulse-critical { 0%,100%{border-color:#ef4444} 50%{border-color:#dc2626} }
 
-/* Violation counter in left panel */
-.quiz-violation-counter { background: #1f2937; border-radius: 9999px; padding: 0.5rem 1rem; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.75rem; }
-.quiz-violation-num { background: #374151; padding: 0.25rem 0.75rem; border-radius: 9999px; color: white; }
+/* Violation number in live feed banner */
+.quiz-violation-num { padding: 0.25rem 0.5rem; border-radius: 0.375rem; color: white; font-size: 0.875rem; }
 .quiz-violation-num.warn-1 { background: #eab308; color: black; }
 .quiz-violation-num.warn-2 { background: #f97316; color: white; }
 .quiz-violation-num.warn-3 { background: #ef4444; color: white; }
@@ -192,33 +191,52 @@
         </div>
     </div>
 
-        {{-- Fixed left panel: camera, timer, questions (scrollbar hidden) --}}
+        {{-- Fixed left panel: camera, timer, questions (scrollbar hidden) - styled per reference image --}}
         <aside class="quiz-left-panel hidden lg:block space-y-4" aria-label="Quiz sidebar">
-            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="rounded-xl overflow-hidden shadow-sm" style="background: #1f2937;">
                 <div class="p-4">
-                    <h2 class="text-sm font-semibold text-gray-700 mb-2">LIVE CAMERA FEED</h2>
+                    <h2 class="text-sm font-semibold text-gray-300 mb-2">LIVE CAMERA FEED</h2>
                     <div id="live-camera-frame" class="bg-gray-900 border-2 border-emerald-500 rounded-xl overflow-hidden min-w-0 flex flex-col transition-all duration-200 relative">
+                        {{-- Pill: FACE DETECTED (top-center, green when face in frame) --}}
+                        <div id="live-camera-pill" class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 px-3 py-1 rounded-full text-xs font-bold uppercase text-white bg-emerald-500 hidden">Face detected</div>
                         <div id="live-camera-video-slot" class="aspect-video bg-gray-900 flex items-center justify-center min-h-[120px] relative">
                             <span class="text-gray-500 text-sm">Camera feed</span>
-                            {{-- Faint guide overlay: crosshair + head frame so user positions face inside --}}
+                            {{-- Guide overlay: dashed circle + faint crosshairs + green center dot --}}
                             <div id="live-camera-guide-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center z-10" aria-hidden="true">
                                 <div class="absolute inset-0 flex items-center justify-center">
-                                    <div class="w-[55%] h-[70%] max-w-[180px] max-h-[160px] rounded-[50%] border border-white/25" style="box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);" title="Keep your head inside this frame"></div>
+                                    <div class="w-[55%] h-[70%] max-w-[180px] max-h-[160px] rounded-[50%] border-2 border-dashed border-gray-400/40" style="box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);" title="Keep your head inside this frame"></div>
                                 </div>
-                                <div class="absolute top-0 bottom-0 left-1/2 w-px -translate-x-px bg-white/20" style="width: 1px;"></div>
-                                <div class="absolute left-0 right-0 top-1/2 h-px -translate-y-px bg-white/20" style="height: 1px;"></div>
+                                <div class="absolute top-0 bottom-0 left-1/2 w-px -translate-x-px bg-white/25" style="width: 1px;"></div>
+                                <div class="absolute left-0 right-0 top-1/2 h-px -translate-y-px bg-white/25" style="height: 1px;"></div>
+                                <div id="live-camera-face-dot" class="absolute w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-lg z-10 hidden" style="left:50%;top:50%;transform:translate(-50%,-50%);"></div>
                             </div>
                         </div>
-                        <div class="p-3 border-t border-gray-200 bg-white">
-                            <p id="live-camera-status-text" class="text-sm font-medium text-emerald-700">Monitoring camera feed.</p>
-                            <p id="live-camera-status-subtext" class="text-xs text-gray-500 mt-0.5"></p>
+                        {{-- Bottom banner: Face detected - Good position (dark gray) --}}
+                        <div id="live-camera-banner" class="absolute bottom-0 left-0 right-0 px-3 py-2 rounded-b-xl z-10 flex items-center gap-2" style="background: rgba(31,41,55,0.95);">
+                            <span id="live-camera-banner-icon" class="flex-shrink-0 w-5 h-5 rounded bg-emerald-500 flex items-center justify-center text-white text-xs">✓</span>
+                            <p id="live-camera-status-text" class="text-sm font-medium text-white truncate">Monitoring camera feed.</p>
                         </div>
                     </div>
-                    <div class="flex items-center justify-between mt-3">
-                        <div class="quiz-violation-counter">
-                            <span>Violations</span>
-                            <span id="quiz-violation-number" class="quiz-violation-num">{{ (int) ($normalViolationCount ?? 0) }}/10</span>
+                    {{-- X, Y, Size bars (dark gray card) --}}
+                    <div id="live-camera-bars" class="mt-3 p-3 rounded-xl space-y-2" style="background: #374151;">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-medium text-white w-6">X</span>
+                            <div class="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden"><div id="live-bar-x" class="h-full bg-emerald-500 rounded-full transition-all duration-200" style="width: 50%;"></div></div>
                         </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-medium text-white w-6">Y</span>
+                            <div class="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden"><div id="live-bar-y" class="h-full bg-emerald-500 rounded-full transition-all duration-200" style="width: 50%;"></div></div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-medium text-white w-6">Size</span>
+                            <div class="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden"><div id="live-bar-size" class="h-full bg-emerald-500 rounded-full transition-all duration-200" style="width: 50%;"></div></div>
+                        </div>
+                    </div>
+                    {{-- Violation counter + Position: Good (dark gray banner) --}}
+                    <div class="mt-3 flex items-center gap-3 px-3 py-2 rounded-xl" style="background: #374151;">
+                        <span class="flex-shrink-0 text-amber-400" aria-hidden="true"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg></span>
+                        <span id="quiz-violation-number" class="quiz-violation-num font-bold text-white">{{ (int) ($normalViolationCount ?? 0) }}/10</span>
+                        <span id="live-camera-position-label" class="ml-auto text-sm font-medium text-white">Position: Good</span>
                     </div>
                 </div>
             </div>
