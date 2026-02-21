@@ -466,7 +466,7 @@ class StudentQuizController extends Controller
                 'post_face_skipped_reason' => 'auto_submit',
                 'auto_submit_after' => null,
                 'auto_submitted' => true,
-                'submission_reason' => 'critical_violation_auto_submit',
+                'submission_reason' => 'withheld_due_to_violations',
             ]);
             $this->finalizeQuiz($session);
             $autoSubmitted = true;
@@ -554,7 +554,8 @@ class StudentQuizController extends Controller
         $majorCount = isset($violationSummary['major_count']) ? (int) $violationSummary['major_count'] : (int) ($session->major_violations ?? 0);
         $outOfFrameCount = $session->violations()->where('type', 'face_out_of_frame')->count();
         $hasOutOfFrameEvidence = $outOfFrameCount > 0;
-        $withholdDueToViolations = $outOfFrameCount > 3 && $hasOutOfFrameEvidence;
+        $withholdDueToViolations = ($outOfFrameCount > 3 && $hasOutOfFrameEvidence)
+            || $this->isCriticalAutoSubmitReason((string) $request->reason);
         $submissionReason = $withholdDueToViolations ? 'withheld_due_to_violations' : trim((string) $request->reason);
         if ($submissionReason === '') {
             $submissionReason = 'auto_submit';
@@ -873,6 +874,34 @@ class StudentQuizController extends Controller
         }
 
         return true;
+    }
+
+    private function isCriticalAutoSubmitReason(string $reason): bool
+    {
+        $normalized = Str::lower(trim($reason));
+        if ($normalized === '') {
+            return false;
+        }
+
+        if (str_contains($normalized, 'critical')) {
+            return true;
+        }
+
+        foreach ([
+            'copy_paste',
+            'multiple_ip',
+            'screenshot_attempt',
+            'camera_disconnected',
+            'face_lost_repeatedly',
+            'phone_detected',
+            'external_audio',
+        ] as $needle) {
+            if (str_contains($normalized, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function storeViolationCaptureLocally(int $sessionId, string $dataUrl): string

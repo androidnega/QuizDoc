@@ -61,6 +61,11 @@ class QuizSession extends Model
 
     public function isResultWithheld(): bool
     {
-        return trim((string) $this->submission_reason) === 'withheld_due_to_violations';
+        $reason = trim((string) $this->submission_reason);
+        return in_array($reason, [
+            'withheld_due_to_violations',
+            'critical_violation_auto_submit',
+            'critical_violation',
+        ], true);
     }
 }
