@@ -28,6 +28,16 @@
     .home-feature-card .feature-icon { width: 32px; height: 32px; margin: 0 auto 0.5rem; display: block; }
     .home-feature-card .feature-title { font-size: 0.875rem; font-weight: 700; color: #1e293b; margin-bottom: 0.25rem; }
     .home-feature-card .feature-desc { font-size: 0.75rem; color: #64748b; line-height: 1.35; margin: 0; }
+    /* Desktop: bigger hero + feature cards */
+    @media (min-width: 769px) {
+        .home-hero h1 { font-size: 2.75rem; line-height: 1.2; }
+        .home-hero p { font-size: 1.375rem; line-height: 1.5; }
+        .home-features-row { gap: 1.75rem; max-width: 880px; }
+        .home-feature-card { padding: 1.5rem 1.75rem; border-radius: 1rem; }
+        .home-feature-card .feature-icon { width: 56px; height: 56px; margin: 0 auto 0.875rem; }
+        .home-feature-card .feature-title { font-size: 1.375rem; margin-bottom: 0.5rem; }
+        .home-feature-card .feature-desc { font-size: 1.125rem; color: #475569; line-height: 1.5; }
+    }
     /* Desktop: deeper card colors */
     .home-feature-card.card-secure { background: #93c5fd; }
     .home-feature-card.card-secure .feature-icon { color: #1d4ed8; }
@@ -151,8 +161,8 @@
         <div class="site-container">
             <div class="home-container max-w-xl mx-auto">
                 <div class="home-hero">
-                    <h1 class="text-xl sm:text-2xl md:text-4xl font-bold text-slate-900 mb-1 tracking-tight">Welcome to QuizSnap</h1>
-                    <p class="text-sm md:text-lg text-slate-500 mb-4">A modern platform for secure and efficient online assessments</p>
+                    <h1 class="text-xl sm:text-2xl md:text-5xl font-bold text-slate-900 mb-2 md:mb-3 tracking-tight">Welcome to QuizSnap</h1>
+                    <p class="text-sm md:text-xl text-slate-500 mb-4 md:mb-6">A modern platform for secure and efficient online assessments</p>
                     @if($landingShowQuizToken ?? false)
                     <form action="{{ route('student.start-quiz') }}" method="post" id="start-quiz-form" class="mb-4 home-quiz-form-mobile-hide">
                         @csrf
