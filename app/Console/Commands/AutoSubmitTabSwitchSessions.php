@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Http\Controllers\Student\StudentQuizController;
 use App\Models\QuizSession;
+use App\Models\Setting;
 use Illuminate\Console\Command;
 
 class AutoSubmitTabSwitchSessions extends Command
@@ -14,6 +15,14 @@ class AutoSubmitTabSwitchSessions extends Command
 
     public function handle(): int
     {
+        if (Setting::getValue(Setting::KEY_PROCTORING_TAB_SWITCH, '1') !== '1') {
+            QuizSession::query()
+                ->whereNull('ended_at')
+                ->whereNotNull('auto_submit_after')
+                ->update(['auto_submit_after' => null]);
+            return Command::SUCCESS;
+        }
+
         $sessions = QuizSession::whereNull('ended_at')
             ->whereNotNull('auto_submit_after')
             ->where('auto_submit_after', '<=', now())

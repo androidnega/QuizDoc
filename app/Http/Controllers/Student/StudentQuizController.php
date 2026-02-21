@@ -110,9 +110,15 @@ class StudentQuizController extends Controller
         if ($session->ended_at) {
             return redirect()->to($this->quizCompleteUrl());
         }
-        // Enforce pre-capture gate only; do not use legacy /quiz/ready screen.
-        if (!$session->camera_verified) {
+        // Enforce pre-capture gate only when camera is required by settings.
+        if (!$session->camera_verified && $this->isProctoringCameraRequired()) {
             return redirect()->route('student.proctoring.capture')->with('error', 'Error');
+        }
+        if (!$session->camera_verified && !$this->isProctoringCameraRequired()) {
+            $session->update([
+                'camera_verified' => true,
+                'camera_started_at' => now(),
+            ]);
         }
         if ($session->start_time === null) {
             $session->update(['start_time' => now()]);
@@ -158,6 +164,7 @@ class StudentQuizController extends Controller
         $proctoringObjectDetect = Setting::getValue(Setting::KEY_PROCTORING_OBJECT_DETECT, '1') === '1';
         $proctoringBlockRightClick = Setting::getValue(Setting::KEY_PROCTORING_BLOCK_RIGHT_CLICK, '1') === '1';
         $proctoringBlockCopyPaste = Setting::getValue(Setting::KEY_PROCTORING_BLOCK_COPY_PASTE, '1') === '1';
+        $liveProctorEnabled = Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') === '1';
         $matchedStudent = Student::query()
             ->whereRaw('UPPER(TRIM(index_number)) = ?', [strtoupper(trim((string) $session->student_index))])
             ->first(['index_number', 'student_name']);
@@ -184,6 +191,7 @@ class StudentQuizController extends Controller
                 'proctoringObjectDetect' => $proctoringObjectDetect,
                 'proctoringBlockRightClick' => $proctoringBlockRightClick,
                 'proctoringBlockCopyPaste' => $proctoringBlockCopyPaste,
+                'liveProctorEnabled' => $liveProctorEnabled,
                 'matchedStudentName' => $matchedStudentName,
                 'studentNameLinked' => $studentNameLinked,
             ])
@@ -318,6 +326,13 @@ class StudentQuizController extends Controller
         }
 
         $violationType = (string) $request->violation_type;
+        if (!$this->isProctoringTypeEnabled($violationType)) {
+            return response()->json([
+                'success' => true,
+                'captured' => false,
+                'ignored_by_setting' => true,
+            ]);
+        }
         $faceLossTypes = ['no_face_during_quiz', 'face_out_of_frame'];
         $isFaceLossCapture = in_array($violationType, $faceLossTypes, true);
         $capturedCount = $isFaceLossCapture
@@ -426,6 +441,13 @@ class StudentQuizController extends Controller
             return response()->json(['success' => true]);
         }
         $type = $request->type;
+        if (!$this->isProctoringTypeEnabled($type)) {
+            return response()->json([
+                'success' => true,
+                'auto_submitted' => false,
+                'ignored_by_setting' => true,
+            ]);
+        }
         $severity = QuizViolation::severityForType($type);
         $metadata = $this->normalizeViolationMetadata($request->input('metadata'));
         $metadata['logged_at'] = now()->toIso8601String();
@@ -611,6 +633,9 @@ class StudentQuizController extends Controller
         if (!$session || $session->ended_at) {
             return response()->json(['success' => false, 'message' => 'Session not found or ended.'], 403);
         }
+        if (Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') !== '1') {
+            return response()->json(['success' => false, 'message' => 'Live examiner view is disabled.'], 403);
+        }
 
         $request->validate([
             'image_base64' => 'required|string',
@@ -681,7 +706,7 @@ class StudentQuizController extends Controller
         if ($this->isIpDeviceRestrictionEnabled() && $session->ip_address !== $request->ip()) {
             return response()->json(['success' => false], 403);
         }
-        if (!$session->post_face_image && !$session->post_face_skipped_reason) {
+        if ($this->isProctoringCameraRequired() && !$session->post_face_image && !$session->post_face_skipped_reason) {
             return response()->json([
                 'success' => false,
                 'message' => 'Post-quiz photo is required. Please capture your photo before submitting.',
@@ -799,6 +824,55 @@ class StudentQuizController extends Controller
     private function isIpDeviceRestrictionEnabled(): bool
     {
         return Setting::getValue(Setting::KEY_DISABLE_IP_DEVICE_RESTRICTIONS, '0') !== '1';
+    }
+
+    private function isProctoringCameraRequired(): bool
+    {
+        return Setting::getValue(Setting::KEY_PROCTORING_CAMERA_REQUIRED, '1') === '1';
+    }
+
+    private function isProctoringTypeEnabled(string $type): bool
+    {
+        $tabSwitchEnabled = Setting::getValue(Setting::KEY_PROCTORING_TAB_SWITCH, '1') === '1';
+        $faceMonitorEnabled = Setting::getValue(Setting::KEY_PROCTORING_FACE_MONITOR, '1') === '1';
+        $objectDetectEnabled = Setting::getValue(Setting::KEY_PROCTORING_OBJECT_DETECT, '1') === '1';
+        $rightClickBlocked = Setting::getValue(Setting::KEY_PROCTORING_BLOCK_RIGHT_CLICK, '1') === '1';
+        $copyPasteBlocked = Setting::getValue(Setting::KEY_PROCTORING_BLOCK_COPY_PASTE, '1') === '1';
+        $cameraRequired = $this->isProctoringCameraRequired();
+
+        if (in_array($type, ['tab_switch', 'blur', 'window_resize', 'screenshot_attempt'], true)) {
+            return $tabSwitchEnabled;
+        }
+        if ($type === 'right_click') {
+            return $rightClickBlocked;
+        }
+        if ($type === 'copy_paste') {
+            return $copyPasteBlocked;
+        }
+        if ($type === 'phone_detected') {
+            return $cameraRequired && $objectDetectEnabled;
+        }
+        if (in_array($type, [
+            'camera_disconnected',
+            'no_face',
+            'multiple_faces',
+            'multiple_faces_pre_quiz',
+            'multiple_faces_during_quiz',
+            'random_snapshot',
+            'external_audio',
+            'no_blink',
+            'head_turn',
+            'brief_face_loss',
+            'challenge_failed',
+            'static_face_detected',
+            'no_face_during_quiz',
+            'face_out_of_frame',
+            'face_lost_repeatedly',
+        ], true)) {
+            return $cameraRequired && $faceMonitorEnabled;
+        }
+
+        return true;
     }
 
     private function storeViolationCaptureLocally(int $sessionId, string $dataUrl): string

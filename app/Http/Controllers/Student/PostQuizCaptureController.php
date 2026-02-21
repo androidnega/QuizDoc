@@ -33,6 +33,9 @@ class PostQuizCaptureController extends Controller
         if ($session->ended_at) {
             return redirect()->route('student.quiz.complete');
         }
+        if (!$this->isProctoringCameraRequired()) {
+            return redirect()->route('student.quiz.show');
+        }
         if ($this->isIpDeviceRestrictionEnabled() && $session->ip_address !== $request->ip()) {
             return redirect()->route('student.quiz.complete')->with('info', 'Session could not be verified. If you completed the quiz, check your results.');
         }
@@ -47,6 +50,9 @@ class PostQuizCaptureController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        if (!$this->isProctoringCameraRequired()) {
+            return response()->json(['success' => true]);
+        }
         $request->validate(['face_image' => 'required|string']);
         $token = session('quiz_session_token');
         if (!$token) {
@@ -99,5 +105,10 @@ class PostQuizCaptureController extends Controller
     private function isIpDeviceRestrictionEnabled(): bool
     {
         return Setting::getValue(Setting::KEY_DISABLE_IP_DEVICE_RESTRICTIONS, '0') !== '1';
+    }
+
+    private function isProctoringCameraRequired(): bool
+    {
+        return Setting::getValue(Setting::KEY_PROCTORING_CAMERA_REQUIRED, '1') === '1';
     }
 }

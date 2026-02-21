@@ -9,6 +9,7 @@
     const violationUrl = c.violationUrl;
     const heartbeatUrl = c.heartbeatUrl;
     const finalPhotoUrl = c.finalPhotoUrl;
+    const finalizeUrl = c.finalizeUrl;
     const timeSyncUrl = c.timeSyncUrl;
     const csrfToken = c.csrfToken;
     const storagePrefix = c.storagePrefix || 'quizsnap_quiz';
@@ -374,6 +375,34 @@
             if (offlineBanner) offlineBanner.textContent = 'Offline. Connect to the internet, then click Finish quiz again.';
             return;
         }
+        if (!cameraRequired) {
+            flushSavePending();
+            fetch(finalizeUrl || '/quiz/finalize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf(),
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({}),
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data && data.redirect) {
+                        window.location.href = data.redirect;
+                    } else if (data && data.success) {
+                        window.location.href = '/quiz/complete';
+                    } else {
+                        showOfflineBanner(true);
+                        if (offlineBanner) offlineBanner.textContent = (data && data.message) ? data.message : 'Could not submit quiz. Please try again.';
+                    }
+                })
+                .catch(function () {
+                    showOfflineBanner(true);
+                    if (offlineBanner) offlineBanner.textContent = 'Network error. Please try again.';
+                });
+            return;
+        }
         if (window.QuizSnapQuiz) window.QuizSnapQuiz.navigatingToFinalPhoto = true;
         flushSavePending();
         if (finalPhotoUrl) {
@@ -482,6 +511,7 @@
     }
 
     (function () {
+        if (c.proctoringTabSwitch === false) return;
         var NEW_TAB_ZONE_PX = 80;
         var showDelay = null;
         document.addEventListener('mousemove', function (e) {
@@ -529,6 +559,7 @@
     });
 
     document.addEventListener('keydown', function (e) {
+        if (c.proctoringTabSwitch === false) return;
         var key = e.keyCode || e.which;
         var meta = e.metaKey || e.ctrlKey;
         var shift = e.shiftKey;
@@ -614,6 +645,7 @@
     }
 
     function onWindowResizeOrExitFullscreen() {
+        if (c.proctoringTabSwitch === false) return;
         if (remainingSeconds <= 0) return;
         if (!wasFullscreenOrMaximized) return;
         wasFullscreenOrMaximized = false;
@@ -654,6 +686,7 @@
     }
 
     function handleResizeOrFullscreenChange() {
+        if (c.proctoringTabSwitch === false) return;
         if (remainingSeconds <= 0) return;
         if (isFullscreenOrMaximized()) {
             clearInvalidStateTimer();
@@ -672,15 +705,18 @@
         }
     }
 
-    window.addEventListener('resize', handleResizeOrFullscreenChange);
-    document.addEventListener('fullscreenchange', handleResizeOrFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleResizeOrFullscreenChange);
-    document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'visible') checkWindowState();
-    });
-    window.addEventListener('focus', checkWindowState);
-
-    setInterval(checkWindowState, 500);
+    if (c.proctoringTabSwitch !== false) {
+        window.addEventListener('resize', handleResizeOrFullscreenChange);
+        document.addEventListener('fullscreenchange', handleResizeOrFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleResizeOrFullscreenChange);
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') checkWindowState();
+        });
+        window.addEventListener('focus', checkWindowState);
+        setInterval(checkWindowState, 500);
+    } else {
+        hideResizeBlur();
+    }
 
     // --- Camera monitoring during quiz (single background camera stream) ---
     if (cameraRequired) {
@@ -785,7 +821,7 @@
 
                 // Proctor feed: send camera frame to examiner every 4 seconds
                 var proctorFeedUrl = c.proctorFeedUrl;
-                if (proctorFeedUrl && monitorVideo.videoWidth > 0) {
+                if (proctorFeedUrl && c.liveProctorEnabled !== false && monitorVideo.videoWidth > 0) {
                     var proctorCanvas = document.createElement('canvas');
                     var proctorCtx = proctorCanvas.getContext('2d');
                     function sendProctorFrame() {

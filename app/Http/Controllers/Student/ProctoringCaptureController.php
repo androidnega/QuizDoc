@@ -48,6 +48,54 @@ class ProctoringCaptureController extends Controller
                 return redirect()->route('student.landing')->with('error', 'Error');
             }
         }
+
+        // Camera optional mode: skip capture page and bootstrap/resume session directly.
+        if (!$this->isProctoringCameraRequired()) {
+            $existingSession = QuizSession::where('quiz_id', $quiz->id)
+                ->whereRaw('UPPER(TRIM(student_index)) = ?', [$studentIndex])
+                ->whereNull('ended_at')
+                ->latest('id')
+                ->first();
+
+            if ($existingSession) {
+                session(['quiz_session_token' => $existingSession->session_token]);
+                if ($existingSession->start_time !== null) {
+                    return redirect()->route('student.quiz.show');
+                }
+                return redirect()->route('student.quiz.ready');
+            }
+
+            try {
+                $assignment = $this->assignmentService->assignQuestions($quiz);
+            } catch (\Throwable $e) {
+                report($e);
+                return redirect()->route('student.landing')->with('error', 'Error');
+            }
+
+            $assignedIds = $assignment['question_ids'] ?? [];
+            if (count($assignedIds) < $quiz->getQuestionsPerStudent()) {
+                return redirect()->route('student.landing')->with('error', 'Error');
+            }
+
+            $session = QuizSession::create([
+                'quiz_id' => $quiz->id,
+                'student_index' => $studentIndex,
+                'ip_address' => $ip,
+                'start_time' => null,
+                'camera_verified' => true,
+                'camera_started_at' => now(),
+                'pre_face_image' => null,
+                'pre_face_image_hash' => null,
+                'assigned_question_ids' => $assignment['question_ids'] ?? [],
+                'assigned_correct_answers' => $assignment['correct_answers'] ?? [],
+                'shuffled_question_options' => $assignment['shuffled_options'] ?? [],
+                'session_token' => QuizSession::generateToken(),
+            ]);
+
+            session(['quiz_session_token' => $session->session_token]);
+
+            return redirect()->route('student.quiz.ready');
+        }
         return view('student.proctoring-capture', [
             'quiz' => $quiz,
             'indexNumber' => $indexNumber,
@@ -162,5 +210,10 @@ class ProctoringCaptureController extends Controller
     private function isIpDeviceRestrictionEnabled(): bool
     {
         return Setting::getValue(Setting::KEY_DISABLE_IP_DEVICE_RESTRICTIONS, '0') !== '1';
+    }
+
+    private function isProctoringCameraRequired(): bool
+    {
+        return Setting::getValue(Setting::KEY_PROCTORING_CAMERA_REQUIRED, '1') === '1';
     }
 }
