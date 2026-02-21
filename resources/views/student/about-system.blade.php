@@ -281,7 +281,10 @@
 
     <footer class="shrink-0 border-t border-slate-200 bg-white py-8">
         <div class="mx-auto max-w-7xl px-6 text-center">
-            <p class="text-sm text-slate-500">&copy; {{ date('Y') }} QuizSnap. All rights reserved.</p>
+            <p class="text-sm text-slate-500">
+                &copy; {{ date('Y') }} QuizSnap. All rights reserved -
+                <a href="https://www.ausweblabs.com" target="_blank" rel="noopener noreferrer" class="no-underline hover:no-underline text-slate-500 hover:text-slate-600">ausweblabs</a>
+            </p>
         </div>
     </footer>
 </div>

@@ -19,8 +19,8 @@ class StudentTempProposalUploadController extends Controller
         if (!$user) {
             return response()->json(['ok' => false, 'message' => 'Unauthorized.'], 401);
         }
-        if ($user->isClassRep()) {
-            return response()->json(['ok' => false, 'message' => 'Only Level 400+ group leaders can upload proposals.'], 403);
+        if (! $user->canLeadDocuMentorProjects()) {
+            return response()->json(['ok' => false, 'message' => 'Only level 300/400 students assigned as group leaders can upload proposals.'], 403);
         }
 
         $request->validate([

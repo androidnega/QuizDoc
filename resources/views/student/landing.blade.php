@@ -212,7 +212,10 @@
 
     <footer class="shrink-0 border-t border-slate-200 bg-white py-3">
         <div class="site-container text-center">
-            <p class="text-xs text-slate-400">&copy; {{ date('Y') }} QuizSnap. All rights reserved.</p>
+            <p class="text-xs text-slate-400">
+                &copy; {{ date('Y') }} QuizSnap. All rights reserved -
+                <a href="https://www.ausweblabs.com" target="_blank" rel="noopener noreferrer" class="no-underline hover:no-underline text-slate-400 hover:text-slate-500">ausweblabs</a>
+            </p>
         </div>
     </footer>
 </div>
