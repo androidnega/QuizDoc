@@ -153,7 +153,21 @@ class ClassGroupController extends Controller
         $quizCategories = \App\Models\QuizCategory::ordered();
         $academicYears = \App\Models\DocuMentor\AcademicYear::orderBy('year', 'desc')->get(['id', 'year']);
 
-        return view('admin.class-groups.index', compact('classGroups', 'levels', 'courses', 'lecturers', 'quizCategories', 'academicYears'));
+        // Class groups that have at least one student currently live writing a quiz (for breathing indicator)
+        $classGroupIdsWithLiveSessions = [];
+        if ($classGroups->isNotEmpty()) {
+            $pageIds = $classGroups->pluck('id')->all();
+            $classGroupIdsWithLiveSessions = \Illuminate\Support\Facades\DB::table('quiz_sessions')
+                ->join('quizzes', 'quizzes.id', '=', 'quiz_sessions.quiz_id')
+                ->whereNotNull('quiz_sessions.start_time')
+                ->whereNull('quiz_sessions.ended_at')
+                ->whereIn('quizzes.class_group_id', $pageIds)
+                ->distinct()
+                ->pluck('quizzes.class_group_id')
+                ->all();
+        }
+
+        return view('admin.class-groups.index', compact('classGroups', 'levels', 'courses', 'lecturers', 'quizCategories', 'academicYears', 'classGroupIdsWithLiveSessions'));
     }
 
     public function create(): View

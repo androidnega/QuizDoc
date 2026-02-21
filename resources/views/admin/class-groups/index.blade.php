@@ -3,6 +3,18 @@
 @section('title', 'Class Groups')
 @section('dashboard_heading', 'Class Groups')
 
+@push('styles')
+<style>
+    @keyframes breathe-glow {
+        0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+        50% { opacity: 0.92; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    }
+    .breathe-dot {
+        animation: breathe-glow 2.2s ease-in-out infinite;
+    }
+</style>
+@endpush
+
 @section('dashboard_content')
 <div class="w-full space-y-4">
     <div class="flex items-center justify-between flex-wrap gap-3">
