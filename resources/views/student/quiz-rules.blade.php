@@ -54,8 +54,9 @@
 (function() {
     function isMobile() {
         var ua = navigator.userAgent || '';
-        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(ua)) return true;
-        if (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 0 && window.innerWidth < 1024) return true;
+        // UA-based mobile/tablet detection first. Do not classify touch laptops as mobile.
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|Tablet/i.test(ua)) return true;
+        // Fallback only for truly phone-sized viewports.
         return window.innerWidth < 768;
     }
     if (isMobile()) {

@@ -5,7 +5,9 @@
 (function () {
     'use strict';
 
-    var MIN_DESKTOP_WIDTH = 1024;
+    // Align desktop gate with app layout breakpoints:
+    // allow smaller laptop widths while still blocking phone-sized screens.
+    var MIN_DESKTOP_WIDTH = 768;
     var BLOCK_MESSAGE = 'This system is only available on desktop.';
     var BLOCK_REASONS = {
         mobile: BLOCK_MESSAGE,
