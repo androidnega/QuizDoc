@@ -39,9 +39,15 @@
     </div>
 
     <div class="rounded-lg border border-gray-200 bg-white overflow-hidden">
-        <h2 class="font-semibold text-gray-900 p-4 border-b border-gray-200">Manual assignment</h2>
+        <div class="p-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
+            <h2 class="font-semibold text-gray-900">Manual assignment</h2>
+            <div class="flex items-center gap-2">
+                <label for="assign-leaders-search" class="text-sm text-gray-600 whitespace-nowrap">Search</label>
+                <input type="text" id="assign-leaders-search" placeholder="Name, username, index, phone…" class="input w-56 sm:w-64 rounded-md border-gray-300 text-sm" autocomplete="off">
+            </div>
+        </div>
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[500px] divide-y divide-gray-200">
+            <table class="w-full min-w-[500px] divide-y divide-gray-200" id="assign-leaders-table">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
@@ -52,7 +58,7 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($users as $u)
-                        <tr class="hover:bg-gray-50">
+                        <tr class="assign-leader-row hover:bg-gray-50" data-search="{{ strtolower(trim(($u->name ?? '') . ' ' . ($u->username ?? '') . ' ' . ($u->index_number ?? '') . ' ' . ($u->phone ?? ''))) }}">
                             <td class="px-3 py-2 text-sm font-medium text-gray-900">{{ $u->name ?? $u->username }}</td>
                             <td class="px-3 py-2 text-sm text-gray-600">{{ $u->username }} · {{ $u->index_number ?? '—' }} · {{ $u->phone ?? '—' }}</td>
                             <td class="px-3 py-2 text-sm">{{ ($u->group_leader ?? false) ? 'Yes' : 'No' }}</td>
@@ -64,13 +70,43 @@
                             </td>
                         </tr>
                     @empty
-                        <tr>
+                        <tr id="assign-leaders-empty-row">
                             <td colspan="4" class="px-3 py-8 text-center text-gray-500">No students found.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+        <div id="assign-leaders-no-results" class="hidden px-4 py-8 text-center text-gray-500 text-sm border-t border-gray-200">No rows match your search.</div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+(function() {
+    var searchEl = document.getElementById('assign-leaders-search');
+    var table = document.getElementById('assign-leaders-table');
+    var noResultsEl = document.getElementById('assign-leaders-no-results');
+    var emptyRow = document.getElementById('assign-leaders-empty-row');
+    if (!searchEl || !table) return;
+    var rows = table.querySelectorAll('tbody tr.assign-leader-row');
+    function runSearch() {
+        var q = (searchEl.value || '').toLowerCase().trim().replace(/\s+/g, ' ');
+        var visible = 0;
+        rows.forEach(function(tr) {
+            var text = (tr.getAttribute('data-search') || '');
+            var show = q === '' || text.indexOf(q) !== -1;
+            tr.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        if (emptyRow) emptyRow.style.display = rows.length === 0 ? '' : 'none';
+        if (noResultsEl) {
+            noResultsEl.classList.toggle('hidden', q === '' || visible > 0);
+        }
+    }
+    searchEl.addEventListener('input', runSearch);
+    searchEl.addEventListener('keyup', runSearch);
+})();
+</script>
+@endpush
 @endsection
