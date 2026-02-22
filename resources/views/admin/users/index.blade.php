@@ -123,7 +123,7 @@
                                     <div class="flex flex-col gap-0.5">
                                         <div class="flex items-center gap-2">
                                             <span class="text-gray-600" id="sms-display-{{ $u->id }}">
-                                                SMS: {{ $u->sms_remaining ?? 0 }}
+                                                SMS: {{ $u->sms_allocation ?? 0 }}@if(($u->sms_used ?? 0) > 0)<span class="text-xs text-gray-500"> ({{ $u->sms_remaining ?? 0 }} left)</span>@endif
                                             </span>
                                             <button type="button" onclick="openSmsModal({{ $u->id }}, '{{ $u->username }}', {{ $u->sms_allocation ?? 0 }}, {{ $u->sms_used ?? 0 }})" class="inline-flex p-1 rounded text-gray-500 hover:text-primary-600 hover:bg-primary-50 transition-colors" title="Set SMS allocation">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
@@ -244,9 +244,9 @@ document.getElementById('smsForm').addEventListener('submit', async function(e) 
         const data = await response.json();
         
         if (data.success) {
-            // Update display
+            // Update display: show allocation (exactly what admin set), not deduction
             const display = document.getElementById('sms-display-' + userId);
-            display.textContent = data.remaining + ' / ' + data.allocation;
+            display.innerHTML = 'SMS: ' + data.allocation + (data.used > 0 ? '<span class="text-xs text-gray-500"> (' + data.remaining + ' left)</span>' : '');
             closeSmsModal();
             
             // Show success message (you could add a toast notification here)
