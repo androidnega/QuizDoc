@@ -6,14 +6,10 @@
 @push('styles')
 <style>
 .quiz-timer-green{color:#059669}.quiz-timer-blue{color:#2563eb}.quiz-timer-red{color:#dc2626}.quiz-side-num.quiz-side-answered{border-color:#22c55e;background-color:#f0fdf4;color:#15803d}
-/* Pulsing AI invigilator badge when camera is active */
-#ai-invigilator-badge{display:none;align-items:center;justify-content:center;gap:0.5rem;padding:0.5rem 1rem;background:linear-gradient(135deg,#1e3a5f 0%,#0f172a 100%);color:#e2e8f0;font-size:0.75rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(148,163,184,0.3);border-radius:9999px;box-shadow:0 0 0 2px rgba(59,130,246,0.2)}
-#ai-invigilator-badge.visible{display:flex}
+/* AI invigilator badge (top panel only) when camera is active */
 #ai-invigilator-badge-panel.visible{display:flex!important}
-#ai-invigilator-badge .pulse-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;animation:ai-invigilator-pulse 1.5s ease-in-out infinite}
-#ai-invigilator-badge .text{animation:ai-invigilator-glow 2s ease-in-out infinite}
+#ai-invigilator-badge-panel .pulse-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;animation:ai-invigilator-pulse 1.5s ease-in-out infinite}
 @keyframes ai-invigilator-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.2)}}
-@keyframes ai-invigilator-glow{0%,100%{opacity:1;text-shadow:0 0 8px rgba(34,197,94,0.4)}50%{opacity:0.9;text-shadow:0 0 14px rgba(34,197,94,0.6)}}
 
 /* Fixed left panel - camera, timer, questions (hide vertical scrollbar); narrower for live feed */
 .quiz-left-panel {
@@ -76,12 +72,6 @@
                 <h1 class="text-base font-semibold text-gray-800 truncate">{{ $session->quiz->title }}</h1>
             </div>
         </header>
-
-        {{-- AI invigilator badge: fixed fallback for small viewports; in-panel copy shown on lg before live feed --}}
-        <div id="ai-invigilator-badge" class="fixed left-4 bottom-4 z-50 pointer-events-none lg:hidden" aria-hidden="true">
-            <span class="pulse-dot" aria-hidden="true"></span>
-            <span class="text">AI Invigilator Watching</span>
-        </div>
 
     {{-- Single major violation warning (max once per session): calm, non-accusatory --}}
     <div id="blur-warning" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90 px-4">

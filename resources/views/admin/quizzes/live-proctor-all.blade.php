@@ -8,10 +8,15 @@
     <p class="text-sm text-gray-600">All your live sessions in one view. Sessions with recent activity (heartbeat in the last 2 minutes or started in the last 5 minutes) are shown. Click a feed to enlarge; you may end a student’s quiz if they violate rules.</p>
     <div class="bg-white rounded-lg border border-gray-200 p-2 flex items-center gap-3 flex-wrap">
         <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Live mic</span>
-        <button type="button" id="live-proctor-mic-btn" class="inline-flex items-center justify-center w-10 h-10 rounded-full border-2 border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1" aria-label="Microphone off" title="Click to start speaking; click again to stop. Students must allow audio to hear you.">
+        <button type="button" id="live-proctor-mic-btn" class="inline-flex items-center justify-center w-10 h-10 rounded-full border-2 border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-600 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1" aria-label="Microphone off" title="Click to start speaking; click again to stop. Students must allow audio to hear you.">
             <svg id="live-proctor-mic-icon-off" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0V8a5 5 0 0110 0v3z"/></svg>
-            <svg id="live-proctor-mic-icon-on" class="w-5 h-5 hidden text-red-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
+            <svg id="live-proctor-mic-icon-on" class="w-5 h-5 hidden text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
         </button>
+        <div id="live-proctor-mic-level-wrap" class="hidden flex items-center gap-1.5 h-6" aria-hidden="true">
+            <div class="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div id="live-proctor-mic-level-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-75" style="width: 0%;"></div>
+            </div>
+        </div>
         <div class="flex items-center gap-2">
             <label for="live-proctor-mic-target" class="text-sm text-gray-600">To</label>
             <select id="live-proctor-mic-target" class="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
@@ -230,6 +235,7 @@
     var micIconOn = document.getElementById('live-proctor-mic-icon-on');
     var micTarget = document.getElementById('live-proctor-mic-target');
     var micStatus = document.getElementById('live-proctor-mic-status');
+    var micLevelWrap = document.getElementById('live-proctor-mic-level-wrap');
     var micStream = null;
     var mediaRecorder = null;
     var sendChunkInterval = null;
@@ -279,7 +285,62 @@
         if (micStatus) micStatus.textContent = 'Off';
         if (micBtn) {
             micBtn.setAttribute('aria-label', 'Microphone off – click to speak to students');
-            micBtn.classList.remove('bg-red-50', 'border-red-400');
+            micBtn.classList.remove('bg-red-500', 'border-red-600', 'text-white');
+            micBtn.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
+        }
+        if (micLevelWrap) { micLevelWrap.classList.add('hidden'); micLevelWrap.style.display = ''; }
+        stopMicLevelMeter();
+    }
+
+    var audioContextForMic = null;
+    var micLevelAnimationId = null;
+    var analyserNode = null;
+
+    function stopMicLevelMeter() {
+        if (micLevelAnimationId != null) {
+            cancelAnimationFrame(micLevelAnimationId);
+            micLevelAnimationId = null;
+        }
+        if (analyserNode) analyserNode = null;
+        if (audioContextForMic) {
+            try { audioContextForMic.close(); } catch (e) {}
+            audioContextForMic = null;
+        }
+        var bar = document.getElementById('live-proctor-mic-level-bar');
+        if (bar) bar.style.width = '0%';
+    }
+
+    function runMicLevelMeter(stream) {
+        try {
+            var AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            var ctx = new AudioContext();
+            audioContextForMic = ctx;
+            var source = ctx.createMediaStreamSource(stream);
+            var analyser = ctx.createAnalyser();
+            analyser.fftSize = 256;
+            analyser.smoothingTimeConstant = 0.8;
+            source.connect(analyser);
+            analyserNode = analyser;
+            var dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            function updateLevel() {
+                if (!analyserNode || !micStream) {
+                    stopMicLevelMeter();
+                    return;
+                }
+                analyser.getByteFrequencyData(dataArray);
+                var sum = 0;
+                for (var i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                var avg = dataArray.length ? sum / dataArray.length : 0;
+                var pct = Math.min(100, Math.round((avg / 255) * 100 * 2.5));
+                var bar = document.getElementById('live-proctor-mic-level-bar');
+                if (bar) bar.style.width = pct + '%';
+                micLevelAnimationId = requestAnimationFrame(updateLevel);
+            }
+            updateLevel();
+        } catch (e) {
+            console.warn('Mic level meter failed:', e);
         }
     }
 
@@ -317,8 +378,14 @@
                 if (micStatus) micStatus.textContent = 'On – students can hear you';
                 if (micBtn) {
                     micBtn.setAttribute('aria-label', 'Microphone on – click to stop');
-                    micBtn.classList.add('bg-red-50', 'border-red-400');
+                    micBtn.classList.remove('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
+                    micBtn.classList.add('bg-red-500', 'border-red-600', 'text-white');
                 }
+                if (micLevelWrap) {
+                    micLevelWrap.classList.remove('hidden');
+                    micLevelWrap.style.display = 'flex';
+                }
+                runMicLevelMeter(stream);
             })
             .catch(function(err) {
                 alert('Could not access microphone. Please allow microphone permission and try again.');

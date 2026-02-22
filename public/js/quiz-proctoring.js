@@ -806,8 +806,6 @@
     if (cameraRequired) {
         function handleCameraDisconnection() {
             if (remainingSeconds <= 0 || isUnloading) return;
-            var invigilatorBadge = document.getElementById('ai-invigilator-badge');
-            if (invigilatorBadge) invigilatorBadge.classList.remove('visible');
             var panelBadge = document.getElementById('ai-invigilator-badge-panel');
             if (panelBadge) panelBadge.classList.remove('visible');
             showCameraOffOverlay();
@@ -873,8 +871,6 @@
 
         function setupMonitoringWithStream(stream) {
             hideCameraOffOverlay();
-            var invigilatorBadge = document.getElementById('ai-invigilator-badge');
-            if (invigilatorBadge) invigilatorBadge.classList.add('visible');
             var panelBadge = document.getElementById('ai-invigilator-badge-panel');
             if (panelBadge) panelBadge.classList.add('visible');
             cameraStream = stream;
@@ -1002,8 +998,6 @@
         }
 
         window.addEventListener('beforeunload', function () {
-            var invigilatorBadge = document.getElementById('ai-invigilator-badge');
-            if (invigilatorBadge) invigilatorBadge.classList.remove('visible');
             var panelBadge = document.getElementById('ai-invigilator-badge-panel');
             if (panelBadge) panelBadge.classList.remove('visible');
             releaseWakeLock();
