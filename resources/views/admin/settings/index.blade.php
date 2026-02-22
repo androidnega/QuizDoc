@@ -139,6 +139,31 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-4">
+                            <h3 class="text-sm font-semibold text-gray-800">Login page hero image</h3>
+                            <p class="text-xs text-gray-500">Hero section on the staff login page (<code class="px-1 py-0.5 bg-gray-100 rounded text-gray-700">/login</code>). Use a direct image URL or upload from local; uploads are stored on Cloudinary. Default: <code class="px-1 py-0.5 bg-gray-100 rounded text-gray-700">public/assets/hero-section.jpg</code>.</p>
+                            @if(!empty(trim($login_hero_image ?? '')))
+                                @php $loginHeroImgUrl = trim($login_hero_image); @endphp
+                                <div class="pt-2 border-t border-gray-200">
+                                    <p class="text-xs font-medium text-gray-500 mb-1.5">Current image</p>
+                                    <img src="{{ e($loginHeroImgUrl) }}" alt="Login hero" class="max-w-[200px] max-h-[120px] object-cover rounded-lg border border-gray-200" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'; var n=this.nextElementSibling; if(n) n.style.display='block';">
+                                    <p class="login-hero-img-error text-xs text-amber-600 mt-1" style="display: none;">Image could not be loaded. Use a direct image link or upload a file.</p>
+                                </div>
+                            @endif
+                            <div class="pt-2 {{ !empty(trim($login_hero_image ?? '')) ? 'border-t border-gray-200' : '' }} space-y-4">
+                                <div>
+                                    <label for="login_hero_image_url" class="block text-sm font-medium text-gray-700 mb-1.5">Image URL</label>
+                                    <input type="url" name="login_hero_image_url" id="login_hero_image_url" value="{{ old('login_hero_image_url', $login_hero_image ?? '') }}" placeholder="https://res.cloudinary.com/... or any image URL" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                                    <p class="text-xs text-gray-500 mt-1">Paste a direct link to an image. Leave blank to keep current or use upload below.</p>
+                                </div>
+                                <div>
+                                    <label for="login_hero_image_file" class="block text-sm font-medium text-gray-700 mb-1.5">Or upload from local</label>
+                                    <input type="file" name="login_hero_image_file" id="login_hero_image_file" accept="image/*" class="block w-full text-sm text-gray-600 file:mr-2 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 file:border file:border-gray-200">
+                                    <p class="text-xs text-gray-500 mt-1">Stored on Cloudinary. Max 5 MB. If both URL and file are set, file is used.</p>
+                                </div>
+                            </div>
+                        </div>
                         @endif
 
                         @if(session('admin_role') === 'super_admin')

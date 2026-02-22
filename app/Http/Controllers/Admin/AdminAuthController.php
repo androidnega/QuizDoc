@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -25,7 +26,8 @@ class AdminAuthController extends Controller
             return redirect()->intended(route('dashboard'));
         }
 
-        return view('admin.login');
+        $loginHeroImage = Setting::getValue(Setting::KEY_LOGIN_HERO_IMAGE);
+        return view('admin.login', compact('loginHeroImage'));
     }
 
     /**

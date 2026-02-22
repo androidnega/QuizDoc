@@ -105,6 +105,8 @@ class Setting extends Model
     public const KEY_LANDING_SHOW_QUIZ_TOKEN = 'landing_show_quiz_token';
     /** Mobile landing hero image URL (Super Admin). Shown on phone only when enabled. Can be set via URL or local upload (stored on Cloudinary). */
     public const KEY_LANDING_HERO_IMAGE = 'landing_hero_image';
+    /** Staff login page hero image URL. Direct link or upload (stored on Cloudinary). No DB table – uses settings. */
+    public const KEY_LOGIN_HERO_IMAGE = 'login_hero_image';
     public const KEY_INSTITUTION_NAME = 'institution_name';
     public const KEY_INSTITUTION_LOGO = 'institution_logo';
 

@@ -86,6 +86,7 @@ class SettingsController extends Controller
             'landing_hero_image' => Setting::getValue(Setting::KEY_LANDING_HERO_IMAGE),
             'landing_hero_enabled' => Setting::getValue(Setting::KEY_LANDING_HERO_ENABLED, '1') === '1',
             'landing_show_quiz_token' => Setting::getValue(Setting::KEY_LANDING_SHOW_QUIZ_TOKEN, '0') === '1',
+            'login_hero_image' => Setting::getValue(Setting::KEY_LOGIN_HERO_IMAGE),
             'can_manage_proctoring' => $canManageProctoring,
             'can_manage_backup' => $canManageBackup,
             'show_backup_tab' => $canManageBackup, // only primary sees the Backup tab
@@ -171,6 +172,8 @@ class SettingsController extends Controller
             'ai_quiz_cooldown_hours' => 'nullable|integer|min:1|max:168',
             'landing_hero_image_url' => 'nullable|string|max:2048',
             'landing_hero_image_file' => 'nullable|image|max:5120',
+            'login_hero_image_file' => 'nullable|image|max:5120',
+            'login_hero_image_url' => 'nullable|url|max:2048',
             'landing_hero_enabled' => 'nullable|boolean',
             'landing_show_quiz_token' => 'nullable|boolean',
             'notify_digest_recipient' => 'nullable|email|max:255',
@@ -300,6 +303,20 @@ class SettingsController extends Controller
                 if ($url !== '' && (preg_match('#^https?://#i', $url) || filter_var($url, FILTER_VALIDATE_URL))) {
                     Setting::setValue(Setting::KEY_LANDING_HERO_IMAGE, $url);
                     Cache::forget('setting:' . Setting::KEY_LANDING_HERO_IMAGE);
+                }
+            }
+            // Login page hero image: direct URL or upload (stored on Cloudinary)
+            if ($request->hasFile('login_hero_image_file')) {
+                $url = CloudinaryService::uploadFromFile($request->file('login_hero_image_file'));
+                if ($url) {
+                    Setting::setValue(Setting::KEY_LOGIN_HERO_IMAGE, $url);
+                    Cache::forget('setting:' . Setting::KEY_LOGIN_HERO_IMAGE);
+                }
+            } elseif ($request->filled('login_hero_image_url')) {
+                $url = trim(preg_replace('/[\r\n]+/', '', $request->login_hero_image_url));
+                if ($url !== '' && (preg_match('#^https?://#i', $url) || filter_var($url, FILTER_VALIDATE_URL))) {
+                    Setting::setValue(Setting::KEY_LOGIN_HERO_IMAGE, $url);
+                    Cache::forget('setting:' . Setting::KEY_LOGIN_HERO_IMAGE);
                 }
             }
         }
