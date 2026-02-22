@@ -833,21 +833,46 @@
         }
 
         function requestCameraAndContinue() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                alert('Camera is not supported in this browser.');
+            // Check if page is loaded over HTTPS or localhost (required for camera access)
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                alert('Camera access requires HTTPS. Please access this page using https:// or contact your administrator.');
                 return;
             }
+            
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Camera is not supported in this browser. Please use a modern browser like Chrome, Firefox, or Safari.');
+                return;
+            }
+            
+            console.log('Requesting camera access for quiz monitoring...');
+            
             // Request with explicit constraints so browser shows permission prompt
             var constraints = { video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false };
+            
             navigator.mediaDevices.getUserMedia(constraints)
+                .catch(function (err) {
+                    console.warn('Initial camera request failed:', err.name, err.message);
+                    // If specific constraints fail, try with basic video
+                    if (err && (err.name === 'OverconstrainedError' || err.name === 'NotFoundError')) {
+                        console.log('Retrying with basic video constraints...');
+                        return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    }
+                    throw err;
+                })
                 .then(function (stream) {
+                    console.log('Camera access granted successfully');
                     hideCameraOffOverlay();
                     setupMonitoringWithStream(stream);
                 })
                 .catch(function (err) {
+                    console.error('Camera access error:', err);
                     var msg = 'Could not access camera. Please allow camera permission when your browser asks, then click "Allow camera & continue" again.';
                     if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                        msg = 'Camera permission was denied. Please allow camera in your browser (click the lock or info icon in the address bar) and refresh, then click "Allow camera & continue".';
+                        msg = 'Camera permission was denied. Please click "Allow camera & continue" again and then click "Allow" in the browser prompt that appears. If the prompt doesn\'t appear, click the camera/lock icon in your browser\'s address bar to allow camera access.';
+                    } else if (err.name === 'NotFoundError') {
+                        msg = 'No camera found. Please connect a camera and try again.';
+                    } else if (err.name === 'NotReadableError') {
+                        msg = 'Camera is already in use by another application. Please close other apps using the camera and try again.';
                     }
                     alert(msg);
                 });

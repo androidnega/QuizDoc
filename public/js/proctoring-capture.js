@@ -697,15 +697,18 @@
         });
     }
     
-    // Initialize on page load - start camera immediately so browser shows permission prompt
+    // Initialize face detector on page load, but DON'T auto-start camera
+    // Camera will start when user clicks the button (browser requires user gesture)
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             initFaceDetector();
-            startCamera();
+            // Don't auto-start camera - wait for user click
+            updateCaptureButton();
         });
     } else {
         initFaceDetector();
-        startCamera();
+        // Don't auto-start camera - wait for user click
+        updateCaptureButton();
     }
     
     window.addEventListener('beforeunload', function () {
