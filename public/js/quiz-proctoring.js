@@ -968,11 +968,30 @@
                     }
                 }
 
-                // Proctor feed: send camera frame to examiner every 4 seconds
+                // Proctor feed: send camera frame to examiner every 2 seconds (skip too-dark frames so examiner sees live video, not black)
                 var proctorFeedUrl = c.proctorFeedUrl;
                 if (proctorFeedUrl && c.liveProctorEnabled !== false && monitorVideo.videoWidth > 0) {
                     var proctorCanvas = document.createElement('canvas');
                     var proctorCtx = proctorCanvas.getContext('2d');
+                    var minBrightness = 18;
+                    function isFrameTooDark(ctx, w, h) {
+                        try {
+                            var cx = Math.floor(w / 2);
+                            var cy = Math.floor(h / 2);
+                            var size = 20;
+                            var x0 = Math.max(0, cx - size);
+                            var y0 = Math.max(0, cy - size);
+                            var x1 = Math.min(w, cx + size);
+                            var y1 = Math.min(h, cy + size);
+                            var data = ctx.getImageData(x0, y0, x1 - x0, y1 - y0);
+                            var sum = 0;
+                            var n = data.data.length / 4;
+                            for (var i = 0; i < data.data.length; i += 4) {
+                                sum += (data.data[i] + data.data[i + 1] + data.data[i + 2]) / 3;
+                            }
+                            return n > 0 && sum / n < minBrightness;
+                        } catch (e) { return false; }
+                    }
                     function sendProctorFrame() {
                         if (remainingSeconds <= 0 || isUnloading || !cameraStream) return;
                         var track = cameraStream.getVideoTracks()[0];
@@ -982,6 +1001,7 @@
                             proctorCanvas.width = monitorVideo.videoWidth;
                             proctorCanvas.height = monitorVideo.videoHeight;
                             proctorCtx.drawImage(monitorVideo, 0, 0);
+                            if (isFrameTooDark(proctorCtx, proctorCanvas.width, proctorCanvas.height)) return;
                             var dataUrl = proctorCanvas.toDataURL('image/jpeg', 0.7);
                             fetch(proctorFeedUrl, {
                                 method: 'POST',
@@ -991,8 +1011,8 @@
                         } catch (e) {}
                     }
                     if (proctorFeedInterval) clearInterval(proctorFeedInterval);
-                    proctorFeedInterval = setInterval(sendProctorFrame, 4000);
-                    sendProctorFrame();
+                    proctorFeedInterval = setInterval(sendProctorFrame, 2000);
+                    setTimeout(sendProctorFrame, 800);
                 }
             }
 

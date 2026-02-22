@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Events\DataUpdated;
+use App\Events\ProctorFrameUpdated;
 use App\Jobs\SendQuizResultReadyNotification;
 use App\Models\Answer;
 use App\Models\Question;
@@ -792,6 +793,8 @@ class StudentQuizController extends Controller
         }
 
         $session->update(['last_heartbeat_at' => now()]);
+
+        broadcast(new ProctorFrameUpdated($session->id))->toOthers();
 
         return response()->json(['success' => true]);
     }

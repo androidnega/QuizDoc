@@ -81,12 +81,14 @@
     var csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content;
     var placeholderDataUri = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
-    var frameRefreshIntervalMs = 6000;
+    var frameRefreshIntervalMs = 2000;
     var batchSize = 4;
     var batchDelayMs = 180;
+    var proctorPusher = null;
+    var proctorSubscribedSessionIds = {};
 
     function frameUrl(quizId, sessionId) {
-        return frameUrlTemplate.replace('__QID__', String(quizId)).replace('__SID__', String(sessionId)) + '?t=' + (Date.now() / (frameRefreshIntervalMs / 1000) | 0);
+        return frameUrlTemplate.replace('__QID__', String(quizId)).replace('__SID__', String(sessionId)) + '?t=' + Date.now();
     }
 
     function onProctorImgError(img) {
@@ -192,6 +194,7 @@
         Object.keys(existing).forEach(function(id) {
             if (!seen[id]) existing[id].remove();
         });
+        subscribeProctorFrameChannels();
     }
 
     function fetchSessions() {
@@ -219,6 +222,54 @@
         if (modal && !modal.classList.contains('hidden') && modalImg && endQuizBtn && endQuizBtn.dataset.quizId && endQuizBtn.dataset.sessionId) {
             modalImg.src = frameUrl(endQuizBtn.dataset.quizId, endQuizBtn.dataset.sessionId);
         }
+    }
+
+    function refreshSessionFrame(sessionId) {
+        var session = currentSessions.filter(function(s) { return String(s.id) === String(sessionId); })[0];
+        if (!session) return;
+        var img = grid && grid.querySelector('.proctor-frame-img[data-session-id="' + sessionId + '"]');
+        if (img) img.src = frameUrl(session.quiz_id, session.id);
+        if (modal && !modal.classList.contains('hidden') && endQuizBtn && String(endQuizBtn.dataset.sessionId) === String(sessionId)) {
+            modalImg.src = frameUrl(session.quiz_id, session.id);
+        }
+    }
+
+    function subscribeProctorFrameChannels() {
+        if (typeof Pusher === 'undefined' || !window.REVERB_CONFIG || !window.REVERB_CONFIG.key) return;
+        var c = window.REVERB_CONFIG;
+        if (!proctorPusher) {
+            try {
+                proctorPusher = new Pusher(c.key, {
+                    wsHost: c.host,
+                    wsPort: parseInt(c.port, 10) || 8080,
+                    wssPort: 443,
+                    forceTLS: (c.scheme || 'http') === 'https',
+                    disableStats: true,
+                    enabledTransports: ['ws', 'wss'],
+                    cluster: 'mt1'
+                });
+            } catch (e) { return; }
+        }
+        var want = {};
+        currentSessions.forEach(function(s) { want[String(s.id)] = true; });
+        Object.keys(proctorSubscribedSessionIds).forEach(function(sid) {
+            if (!want[sid]) {
+                try { proctorPusher.unsubscribe('live-proctor-frame.' + sid); } catch (e) {}
+                delete proctorSubscribedSessionIds[sid];
+            }
+        });
+        currentSessions.forEach(function(s) {
+            var sid = String(s.id);
+            if (proctorSubscribedSessionIds[sid]) return;
+            try {
+                var ch = proctorPusher.subscribe('live-proctor-frame.' + sid);
+                ch.bind('ProctorFrameUpdated', function(data) {
+                    var id = (data && data.session_id) ? data.session_id : sid;
+                    refreshSessionFrame(id);
+                });
+                proctorSubscribedSessionIds[sid] = true;
+            } catch (e) {}
+        });
     }
 
     fetchSessions();

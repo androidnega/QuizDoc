@@ -770,7 +770,10 @@ class QuizManagementController extends Controller
         if (! is_file($path)) {
             return $placeholderResponse;
         }
-        return response()->file($path, ['Content-Type' => 'image/jpeg']);
+        return response()->file($path, [
+            'Content-Type' => 'image/jpeg',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+        ]);
     }
 
     /**
