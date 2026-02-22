@@ -10,6 +10,7 @@ use App\Models\ClassGroupStudent;
 use App\Models\Course;
 use App\Models\DocuMentor\AcademicYear;
 use App\Models\QuizCategory;
+use App\Models\QuizSession;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Models\StudentLevel;
@@ -317,21 +318,27 @@ class CoordinatorStudentController extends Controller
                 $qualificationType = $qualificationType ?? $categoryMap->get($cg->quiz_category_id)?->name;
             }
         }
+        // Prefer student account qualification type (Category) when set, so coordinator selection shows on details
+        if ($studentAccount && $studentAccount->quiz_category_id) {
+            $qualificationType = $categoryMap->get($studentAccount->quiz_category_id)?->name ?? $qualificationType;
+        }
 
+        // Quiz history: match by index (case-insensitive, trimmed) so sessions are found regardless of exact string stored
         $quizzesCount = 0;
         $averageScore = null;
         $lastQuizDate = null;
-        if ($studentAccount) {
-            $sessions = $studentAccount->quizSessions()->with('result')->get();
-            $quizzesCount = $sessions->count();
-            if ($quizzesCount > 0) {
-                $scores = $sessions->filter(fn ($s) => $s->result)->map(fn ($s) => $s->result->score);
-                if ($scores->isNotEmpty()) {
-                    $averageScore = $scores->average();
-                }
-                $lastSession = $sessions->sortByDesc('created_at')->first();
-                $lastQuizDate = $lastSession?->created_at?->format('M j, Y');
+        $indexUpper = strtoupper(trim($indexNumber));
+        $sessions = QuizSession::whereRaw('UPPER(TRIM(student_index)) = ?', [$indexUpper])
+            ->with('result')
+            ->get();
+        $quizzesCount = $sessions->count();
+        if ($quizzesCount > 0) {
+            $scores = $sessions->filter(fn ($s) => $s->result)->map(fn ($s) => $s->result->score);
+            if ($scores->isNotEmpty()) {
+                $averageScore = $scores->average();
             }
+            $lastSession = $sessions->sortByDesc('created_at')->first();
+            $lastQuizDate = $lastSession?->created_at?->format('M j, Y');
         }
 
         $dmUser = User::whereIn('role', [User::DM_ROLE_STUDENT, User::DM_ROLE_LEADER])
@@ -431,12 +438,59 @@ class CoordinatorStudentController extends Controller
         }
         [$indexNumber, $classGroupIds] = $this->resolveStudentByIndex($encodedIndex, $user);
 
-        $studentAccount = Student::where('index_number_hash', Student::hashIndexNumber($indexNumber))->first();
-        $cgStudent = ClassGroupStudent::whereIn('class_group_id', $classGroupIds)
+        $cgStudents = ClassGroupStudent::whereIn('class_group_id', $classGroupIds)
             ->whereRaw('UPPER(TRIM(index_number)) = ?', [strtoupper(trim($indexNumber))])
-            ->first();
-        $displayName = $studentAccount?->student_name ?? $cgStudent?->student_name ?? '';
+            ->with(['classGroup' => fn ($q) => $q->with(['level', 'academicYear', 'courses'])])
+            ->get();
+        $studentAccount = Student::where('index_number_hash', Student::hashIndexNumber($indexNumber))->first();
+        $displayName = $studentAccount?->student_name ?? $cgStudents->first()?->student_name ?? '';
         $phone = $studentAccount?->phone_contact ?? null;
+
+        $levelMap = StudentLevel::ordered()->keyBy('id');
+        $categoryMap = QuizCategory::ordered()->keyBy('id');
+        $yearGroup = null;
+        $levelLabel = null;
+        $qualificationType = null;
+        foreach ($cgStudents as $cgs) {
+            $cg = $cgs->classGroup;
+            if ($cg) {
+                $yearGroup = $yearGroup ?? $cg->academicYear?->year;
+                $levelLabel = $levelLabel ?? $levelMap->get($cg->level_id)?->label;
+                $qualificationType = $qualificationType ?? $categoryMap->get($cg->quiz_category_id)?->name;
+            }
+        }
+        if ($studentAccount && $studentAccount->quiz_category_id) {
+            $qualificationType = $categoryMap->get($studentAccount->quiz_category_id)?->name ?? $qualificationType;
+        }
+
+        $studentCourseAssignments = [];
+        $examinerIds = [];
+        foreach ($cgStudents as $cgs) {
+            $cg = $cgs->classGroup;
+            if (!$cg || !$cg->relationLoaded('courses')) {
+                continue;
+            }
+            foreach ($cg->courses as $course) {
+                $lecturerId = \Illuminate\Support\Facades\Schema::hasColumn('class_group_course', 'examiner_id')
+                    ? ($course->pivot->examiner_id ?? null)
+                    : null;
+                $studentCourseAssignments[] = [
+                    'course_name' => $course->name ?? '',
+                    'course_code' => $course->code ?? '',
+                    'lecturer_id' => $lecturerId,
+                ];
+                if ($lecturerId) {
+                    $examinerIds[] = $lecturerId;
+                }
+            }
+        }
+        $examinerIds = array_unique(array_filter($examinerIds));
+        $examiners = $examinerIds ? User::whereIn('id', $examinerIds)->get()->keyBy('id') : collect();
+        foreach ($studentCourseAssignments as &$a) {
+            $a['lecturer_name'] = $a['lecturer_id'] ? ($examiners->get($a['lecturer_id'])?->name ?: $examiners->get($a['lecturer_id'])?->username) : null;
+        }
+        unset($a);
+        $coursesCount = count($studentCourseAssignments);
 
         $levels = StudentLevel::ordered();
         $quizCategories = QuizCategory::ordered();
@@ -446,7 +500,8 @@ class CoordinatorStudentController extends Controller
 
         return view('docu-mentor.coordinators.students.edit', compact(
             'indexNumber', 'encodedIndex', 'studentAccount', 'displayName', 'phone',
-            'levels', 'quizCategories', 'semesters', 'academicYears', 'academicClasses'
+            'levels', 'quizCategories', 'semesters', 'academicYears', 'academicClasses',
+            'cgStudents', 'studentCourseAssignments', 'coursesCount', 'levelLabel', 'yearGroup', 'qualificationType'
         ));
     }
 

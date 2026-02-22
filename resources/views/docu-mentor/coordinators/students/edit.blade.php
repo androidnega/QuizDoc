@@ -13,6 +13,52 @@
         <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ session('error') }}</div>
     @endif
 
+    {{-- Class group context (read-only) — same as view details --}}
+    <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden mb-6">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h3 class="text-sm font-semibold text-gray-800 uppercase tracking-wide">Class group & context</h3>
+        </div>
+        <div class="px-6 py-5 space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-0.5">Class group</p>
+                    @if(isset($cgStudents) && $cgStudents->isNotEmpty())
+                        <ul class="text-sm text-gray-900 space-y-0.5">
+                            @foreach($cgStudents as $cgs)
+                                <li>{{ $cgs->classGroup?->name }}{{ $cgs->classGroup?->level ? ' — ' . $cgs->classGroup->level->label : '' }}{{ $cgs->classGroup?->academicYear ? ' (' . $cgs->classGroup->academicYear->year . ')' : '' }}</li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <p class="text-sm text-gray-500">—</p>
+                    @endif
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-0.5">Level</p>
+                    <p class="text-sm text-gray-900">{{ $levelLabel ?? '—' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-0.5">Year group</p>
+                    <p class="text-sm text-gray-900">{{ $yearGroup ?? '—' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-0.5">Qualification type</p>
+                    <p class="text-sm text-gray-900">{{ $qualificationType ?? '—' }}</p>
+                </div>
+            </div>
+            @if(isset($studentCourseAssignments) && count($studentCourseAssignments) > 0)
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Courses (by lecturers assigned)</p>
+                <p class="text-sm text-gray-700 mb-1">Number of courses: <strong>{{ $coursesCount ?? 0 }}</strong></p>
+                <ul class="text-sm text-gray-900 space-y-0.5">
+                    @foreach($studentCourseAssignments as $a)
+                        <li>{{ $a['course_name'] }}{{ !empty($a['course_code']) ? ' (' . $a['course_code'] . ')' : '' }}{{ !empty($a['lecturer_name']) ? ' — ' . $a['lecturer_name'] : '' }}</li>
+                    @endforeach
+                </ul>
+            </div>
+            @endif
+        </div>
+    </div>
+
     <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <form action="{{ route('dashboard.coordinators.students.update', ['encodedIndex' => $encodedIndex]) }}" method="post" class="p-0">
             @csrf
@@ -58,13 +104,14 @@
                 <p class="text-sm font-semibold text-gray-800 uppercase tracking-wide mb-4">QuizSnap context (optional)</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     <div>
-                        <label for="quiz_category_id" class="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
+                        <label for="quiz_category_id" class="block text-sm font-medium text-gray-700 mb-1.5">Qualification type</label>
                         <select name="quiz_category_id" id="quiz_category_id" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-400 text-gray-900">
                             <option value="">— None —</option>
                             @foreach($quizCategories as $c)
                                 <option value="{{ $c->id }}" {{ old('quiz_category_id', $studentAccount?->quiz_category_id) == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
                             @endforeach
                         </select>
+                        <p class="text-xs text-gray-500 mt-1">When selected, this shows on the student details page.</p>
                     </div>
                     <div>
                         <label for="semester_id" class="block text-sm font-medium text-gray-700 mb-1.5">Semester</label>
