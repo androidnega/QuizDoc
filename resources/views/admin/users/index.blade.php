@@ -288,8 +288,14 @@ document.getElementById('smsModal').addEventListener('click', function(e) {
     }
 });
 
-document.getElementById('smsAllocationInput').addEventListener('input', updateSmsRemainingDisplay);
-document.getElementById('smsAllocationInput').addEventListener('change', updateSmsRemainingDisplay);
+(function() {
+    var inputEl = document.getElementById('smsAllocationInput');
+    if (inputEl) {
+        inputEl.addEventListener('input', updateSmsRemainingDisplay);
+        inputEl.addEventListener('change', updateSmsRemainingDisplay);
+        inputEl.addEventListener('keyup', updateSmsRemainingDisplay);
+    }
+})();
 </script>
 @endpush
 
