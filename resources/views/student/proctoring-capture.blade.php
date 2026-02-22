@@ -77,7 +77,7 @@
 <!-- TensorFlow.js + BlazeFace for Face Detection -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.1.0/dist/blazeface.min.umd.js" crossorigin="anonymous"></script>
-<script src="{{ asset('js/proctoring-capture.js') }}" defer></script>
+<script src="{{ asset('js/proctoring-capture.js') }}?v={{ filemtime(public_path('js/proctoring-capture.js')) }}" defer></script>
 <script>
 window.QuizSnapProctoring = {
     quizId: {{ $quiz->id }},

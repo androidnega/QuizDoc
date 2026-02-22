@@ -295,7 +295,7 @@
                 // Alert if user moves out of frame
                 if (lastFaceState === 'ok' && !state.ok) {
                     if (!outOfFrameAlertShown) {
-                        alert('⚠️ You moved out of frame! Please return your face to the center of the camera.');
+                        alert('Warning: You moved out of frame. Please return your face to the center of the camera.');
                         outOfFrameAlertShown = true;
                         setTimeout(function() {
                             outOfFrameAlertShown = false;
@@ -312,7 +312,7 @@
                     if (heldMs >= STANDARD_HEADSHOT.stableHoldMs) {
                         if (!liveFaceValid) {
                             liveFaceValid = true;
-                            setFaceStatus('✅ Face well positioned. You can capture now.', 'ok');
+                            setFaceStatus('Face well positioned. You can capture now.', 'ok');
                             console.log('Face validation: PASSED - Button should be enabled');
                         }
                     } else {
@@ -362,18 +362,19 @@
         }
     }
 
-    async function checkCameraPermission() {
-        if (navigator.permissions && navigator.permissions.query) {
-            try {
-                const result = await navigator.permissions.query({ name: 'camera' });
+    function checkCameraPermission() {
+        if (!(navigator.permissions && navigator.permissions.query)) {
+            return Promise.resolve('prompt');
+        }
+        return navigator.permissions.query({ name: 'camera' })
+            .then(function (result) {
                 console.log('Camera permission state:', result.state);
                 return result.state;
-            } catch (err) {
+            })
+            .catch(function (err) {
                 console.warn('Could not query camera permission:', err);
                 return 'prompt';
-            }
-        }
-        return 'prompt';
+            });
     }
 
     function startCamera() {
@@ -610,7 +611,7 @@
             return;
         }
         if (!liveFaceValid) {
-            alert('⚠️ Please center your face in the frame and wait for the green border before capturing.');
+            alert('Please center your face in the frame and wait for the green border before capturing.');
             return;
         }
         if (!detectorReady || !model) {
@@ -627,14 +628,14 @@
         runFaceCheckOnce().then(function (check) {
             if (!check.ok) {
                 setFaceStatus(check.message, check.type || 'error');
-                alert('⚠️ ' + check.message + ' Please adjust your position and try again.');
+                alert(check.message + ' Please adjust your position and try again.');
                 captureBtn.disabled = false;
                 startLiveFaceLoop();
                 updateCaptureButton();
                 return;
             }
 
-            setFaceStatus('✅ Face verified. Sending...', 'ok');
+            setFaceStatus('Face verified. Sending...', 'ok');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
@@ -662,7 +663,7 @@
                 })
                 .then(function (data) {
                     if (data.success && data.redirect) {
-                        setFaceStatus('✅ Success! Redirecting...', 'ok');
+                        setFaceStatus('Success! Redirecting...', 'ok');
                         stopCamera();
                         window.location.href = data.redirect;
                     } else {
