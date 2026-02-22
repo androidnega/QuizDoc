@@ -530,13 +530,14 @@
     }
 
     function captureAndSubmit() {
-        // Prevent double-click
-        if (captureBtn.disabled) {
-            return;
-        }
-
+        // If no stream yet, start camera (this triggers permission prompt)
         if (!stream) {
             startCamera();
+            return;
+        }
+        
+        // Prevent double-click during capture
+        if (captureBtn.disabled) {
             return;
         }
         if (!videoReady || !video || video.videoWidth <= 0 || video.videoHeight <= 0) {
