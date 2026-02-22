@@ -19,7 +19,7 @@
     let timerInterval = null;
     let timeSyncInterval = null;
     const TIME_SYNC_INTERVAL_MS = 30000;
-    const BLUR_RECORD_DELAY_MS = 2500;
+    const BLUR_RECORD_DELAY_MS = 500;
     let blurRecordTimer = null;
     let isUnloading = false;
     let cameraStream = null;
@@ -369,6 +369,33 @@
         }
     }
 
+    var criticalTypes = [
+        'phone_detected',
+        'screenshot_attempt',
+        'tab_switch',
+        'multiple_faces',
+        'multiple_faces_during_quiz',
+        'window_resize',
+        'blur',
+        'copy_paste',
+        'multiple_ip'
+    ];
+
+    function addViolationMessage(text, isError) {
+        var list = document.getElementById('live-camera-violations-list');
+        if (!list) return;
+        var li = document.createElement('li');
+        li.className = isError ? 'text-red-700' : 'text-amber-800';
+        li.textContent = text;
+        list.appendChild(li);
+        list.scrollTop = list.scrollHeight;
+    }
+
+    function setCriticalViolationDisplay(count) {
+        var el = document.getElementById('quiz-critical-violation-number');
+        if (el) el.textContent = count + '/1';
+    }
+
     /**
      * Record proctoring violation. Only auto-submit when the server explicitly returns auto_submitted
      * (i.e. user broke proctoring rules). Never auto-submit on network failure or when offline.
@@ -376,18 +403,10 @@
     function recordViolation(type, metadata) {
         var body = { type: type };
         if (metadata) body.metadata = typeof metadata === 'string' ? metadata : JSON.stringify(metadata);
-        var criticalTypes = [
-            'phone_detected',
-            'screenshot_attempt',
-            'tab_switch',
-            'multiple_faces',
-            'multiple_faces_during_quiz',
-            'window_resize',
-            'blur',
-            'copy_paste',
-            'multiple_ip'
-        ];
+        var label = type.replace(/_/g, ' ');
+        addViolationMessage(label, criticalTypes.indexOf(type) !== -1);
         if (criticalTypes.indexOf(type) !== -1) {
+            setCriticalViolationDisplay(1);
             sendCriticalEvidenceSnapshot(type, metadata || {});
         }
         fetch(violationUrl, {
@@ -1016,5 +1035,10 @@
                 });
             }
         });
+    }
+
+    if (window.QuizSnapQuiz) {
+        window.QuizSnapQuiz.addViolationMessage = addViolationMessage;
+        window.QuizSnapQuiz.setCriticalViolationDisplay = setCriticalViolationDisplay;
     }
 })();

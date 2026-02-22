@@ -47,8 +47,8 @@
     const DETECTION_INTERVAL_MS = 200; // Run detection every 200ms (~5 FPS)
     const QUIZ_FRAME_MARGIN = 0.05;
     const FACE_TOO_FAR_RATIO = 0.04;
-    const OUT_OF_FRAME_EVENT_MIN_MS = 10000;
-    const OUT_OF_FRAME_EVENT_LIMIT = 10;
+    const OUT_OF_FRAME_EVENT_MIN_MS = 15000;
+    const OUT_OF_FRAME_EVENT_LIMIT = 1;
     const NORMAL_VIOLATION_LIMIT = 10;
     const QUIZ_START_GRACE_MS = 12000; // Allow monitor/camera to stabilize before counting violations
     // Require this many consecutive frames with 2+ faces before recording (reduces false positives)
@@ -217,6 +217,9 @@
         });
 
         violationCount++;
+        if (window.QuizSnapQuiz && typeof window.QuizSnapQuiz.addViolationMessage === 'function') {
+            window.QuizSnapQuiz.addViolationMessage(type.replace(/_/g, ' '), severity === 'critical');
+        }
     }
 
     function triggerAutoSubmit(reason, violationType) {
@@ -616,7 +619,7 @@
             if (noFaceDurationMs >= OUT_OF_FRAME_EVENT_MIN_MS) {
                 setLiveFrameState(
                     'red',
-                    'Face missing for 10s+',
+                    'Face missing for 15s+',
                     outOfFrameWarningsLeft > 0
                         ? (outOfFrameWarningsLeft + ' warning(s) remaining before auto-submission.')
                         : 'Auto-submission in progress.'

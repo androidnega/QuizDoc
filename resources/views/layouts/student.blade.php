@@ -22,6 +22,9 @@ quizsnap-select-none
 @endsection
 
 @section('copy_restriction_script')
+@php
+    $blockRightClick = \App\Models\Setting::getValue(\App\Models\Setting::KEY_PROCTORING_BLOCK_RIGHT_CLICK, '1') === '1';
+@endphp
 <script>
 (function() {
     document.addEventListener('copy', function(e) { e.preventDefault(); });
@@ -29,6 +32,9 @@ quizsnap-select-none
     document.addEventListener('paste', function(e) { e.preventDefault(); });
     document.addEventListener('selectstart', function(e) { e.preventDefault(); });
     document.addEventListener('select', function(e) { e.preventDefault(); });
+    @if($blockRightClick)
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    @endif
 })();
 </script>
 @endsection
