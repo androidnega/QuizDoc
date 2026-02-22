@@ -8,13 +8,13 @@
     $heroUrl = !empty(trim($loginHeroImage ?? '')) ? trim($loginHeroImage) : $defaultHero;
 @endphp
 <div class="min-h-screen flex items-center justify-center px-4 py-10" style="background-color: #eef1f4;">
-    <div class="w-full max-w-[460px] bg-white rounded-xl shadow-lg overflow-hidden">
+    <div class="w-full max-w-[520px] bg-white rounded-xl shadow-lg overflow-hidden">
         {{-- Hero section inside card: image + overlay + SIGN IN --}}
-        <div class="relative h-32 sm:h-36 overflow-hidden">
+        <div class="relative h-36 sm:h-44 overflow-hidden">
             <img
                 src="{{ $heroUrl }}"
                 alt=""
-                class="absolute inset-0 w-full h-full object-cover"
+                class="absolute inset-0 w-full h-full object-cover object-center"
                 fetchpriority="high"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
             >
