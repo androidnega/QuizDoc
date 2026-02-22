@@ -221,14 +221,18 @@ Route::middleware(['dashboard.auth', 'student.auth', 'student.has-level'])->pref
     Route::get('/course-materials', [\App\Http\Controllers\Student\StudentDashboardController::class, 'courseMaterials'])->name('course-materials');
     Route::get('/calendar', [\App\Http\Controllers\Student\StudentDashboardController::class, 'calendar'])->name('calendar');
     Route::post('/push-subscribe', [\App\Http\Controllers\Student\PushSubscribeController::class, 'store'])->name('push-subscribe');
+    // Class results: accessible with student session (no staff login); controller resolves class rep from student
+    Route::get('/class-results', [\App\Http\Controllers\DocuMentor\ClassRepController::class, 'index'])->name('class-results.index');
+    Route::get('/class-results/{quiz}/preview-pdf', [\App\Http\Controllers\DocuMentor\ClassRepController::class, 'previewPdf'])->name('class-results.preview-pdf');
+    Route::get('/class-results/{quiz}/download-pdf', [\App\Http\Controllers\DocuMentor\ClassRepController::class, 'downloadPdf'])->name('class-results.download-pdf');
+    Route::get('/class-results/{quiz}/download-excel', [\App\Http\Controllers\DocuMentor\ClassRepController::class, 'downloadExcel'])->name('class-results.download-excel');
+    Route::get('/class-results/{quiz}/download-csv', [\App\Http\Controllers\DocuMentor\ClassRepController::class, 'downloadCsv'])->name('class-results.download-csv');
 });
 
 // Project (student) routes under /dashboard — same controllers as docu-mentor, unified URLs
 Route::middleware(['dashboard.auth', 'docu-mentor.auth', 'docu-mentor.student', 'docu-mentor.project-access'])->prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/projects', [\App\Http\Controllers\DocuMentor\StudentProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/create', [\App\Http\Controllers\DocuMentor\StudentProjectController::class, 'create'])->name('projects.create');
-    Route::get('/class-results', [\App\Http\Controllers\DocuMentor\ClassRepController::class, 'index'])->name('class-results.index');
-    Route::get('/class-results/{quiz}/download-pdf', [\App\Http\Controllers\DocuMentor\ClassRepController::class, 'downloadPdf'])->name('class-results.download-pdf');
     Route::post('/projects', [\App\Http\Controllers\DocuMentor\StudentProjectController::class, 'store'])->name('projects.store');
     Route::get('/projects/{project}', [\App\Http\Controllers\DocuMentor\StudentProjectController::class, 'show'])->name('projects.show');
     Route::put('/projects/{project}', [\App\Http\Controllers\DocuMentor\StudentProjectController::class, 'update'])->name('projects.update');
@@ -408,13 +412,14 @@ Route::middleware('admin.auth')->group(function () {
             Route::post('assign-group-leaders/toggle/{user}', [\App\Http\Controllers\DocuMentor\AssignGroupLeaderController::class, 'toggle'])->name('assign-group-leaders.toggle');
             Route::post('assign-group-leaders/upload', [\App\Http\Controllers\DocuMentor\AssignGroupLeaderController::class, 'upload'])->name('assign-group-leaders.upload');
             Route::get('projects', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'index'])->name('projects.index');
+            // More specific routes first so download is matched before projects/{project}
+            Route::get('projects/{project}/proposals/{proposal}/download', [\App\Http\Controllers\DocuMentor\SupervisorFileController::class, 'downloadProposal'])->name('projects.proposals.download');
+            Route::post('projects/{project}/proposals/{proposal}/comment', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'commentProposal'])->name('projects.proposals.comment');
             Route::get('projects/{project}', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'show'])->name('projects.show');
             Route::put('projects/{project}', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'update'])->name('projects.update');
             Route::delete('projects/{project}', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'destroy'])->name('projects.destroy');
             Route::post('projects/{project}/alert', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'alertProject'])->name('projects.alert');
             Route::post('projects/{project}/chapters', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'storeChapter'])->name('projects.chapters.store');
-            Route::post('projects/{project}/proposals/{proposal}/comment', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'commentProposal'])->name('projects.proposals.comment');
-            Route::get('projects/{project}/proposals/{proposal}/download', [\App\Http\Controllers\DocuMentor\SupervisorFileController::class, 'downloadProposal'])->name('projects.proposals.download');
             Route::get('workload', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'workload'])->name('workload');
             Route::get('export-report', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'exportReportPage'])->name('export-report');
             Route::get('export-report/download', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'exportReport'])->name('export-report.download');

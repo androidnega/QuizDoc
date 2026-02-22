@@ -27,6 +27,7 @@ class AssignGroupLeaderController extends Controller
             $columns[] = 'group_leader';
         }
         $users = User::whereIn('role', [User::DM_ROLE_STUDENT, User::DM_ROLE_LEADER])
+            ->where('group_leader', true)
             ->orderBy('name')
             ->get($columns);
         return view('docu-mentor.coordinators.assign-group-leaders.index', compact('users'));

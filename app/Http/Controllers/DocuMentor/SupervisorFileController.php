@@ -66,17 +66,18 @@ class SupervisorFileController extends Controller
     public function downloadProposal(Project $project, ProjectProposal $proposal): StreamedResponse
     {
         $this->authorize('view', $project);
-        if ($proposal->project_id !== $project->id) {
-            abort(404);
+        if ($proposal->project_id !== (int) $project->id) {
+            abort(404, 'Proposal does not belong to this project.');
         }
 
-        if (!Storage::disk('public')->exists($proposal->file)) {
-            abort(404, 'File not found.');
+        $path = $proposal->file;
+        if (!$path || !Storage::disk('public')->exists($path)) {
+            abort(404, 'Proposal file is missing or was removed. The record exists but the file is not on disk.');
         }
 
         return Storage::disk('public')->download(
-            $proposal->file,
-            'proposal-v' . $proposal->version_number . '-' . basename($proposal->file)
+            $path,
+            'proposal-v' . $proposal->version_number . '-' . basename($path)
         );
     }
 

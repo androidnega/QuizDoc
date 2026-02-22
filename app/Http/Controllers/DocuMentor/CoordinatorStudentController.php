@@ -523,7 +523,9 @@ class CoordinatorStudentController extends Controller
             'academic_class_id' => 'nullable|exists:academic_classes,id',
         ]);
 
-        $name = $request->filled('student_name') ? trim($request->student_name) : null;
+        $existingStudent = Student::where('index_number_hash', Student::hashIndexNumber($indexNumber))->first();
+        $currentName = $existingStudent?->student_name ?? null;
+        $name = $request->has('student_name') ? (trim((string) $request->student_name) ?: null) : $currentName;
         $phoneRaw = $request->filled('phone_contact') ? trim($request->phone_contact) : null;
         $phone = $phoneRaw ? preg_replace('/\D/', '', $phoneRaw) : null;
         $phone = ($phone !== null && $phone !== '') ? $phone : null;
@@ -536,7 +538,7 @@ class CoordinatorStudentController extends Controller
             ['index_number_hash' => Student::hashIndexNumber($indexNumber)],
             ['index_number' => $indexNumber, 'student_name' => $name]
         );
-        $studentAccount->student_name = $name ?? $studentAccount->student_name;
+        $studentAccount->student_name = $name;
         if ($request->has('level_id')) {
             $studentAccount->level_id = $request->level_id ? (int) $request->level_id : null;
             $studentAccount->level = null;

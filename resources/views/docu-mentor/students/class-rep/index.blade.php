@@ -6,7 +6,7 @@
 @section('dashboard_content')
 <header class="mb-6">
     <h1 class="text-xl font-semibold text-slate-800 tracking-tight">Class results</h1>
-    <p class="text-sm text-slate-500 mt-1">As a class rep, you can download quiz result PDFs for your class.</p>
+    <p class="text-sm text-slate-500 mt-1">As a class rep, you can preview or download exam results (PDF, Excel, CSV) for your class.</p>
 </header>
 
 <section class="mb-8">
@@ -14,7 +14,7 @@
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         @if($quizzes->isEmpty())
         <div class="p-8 text-center">
-            <span class="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 mx-auto"><i class="fas fa-file-pdf"></i></span>
+            <span class="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 mx-auto"><i class="fas fa-file-alt"></i></span>
             <h3 class="text-sm font-medium text-slate-800 mt-3">No quizzes yet</h3>
             <p class="text-sm text-slate-500 mt-1 max-w-sm mx-auto">No published quizzes have been completed in your class groups. Results will appear here once available.</p>
         </div>
@@ -35,9 +35,20 @@
                             @endif
                         </p>
                     </div>
-                    <a href="{{ route('dashboard.class-results.download-pdf', $quiz) }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-slate-600 text-white hover:bg-slate-700 flex-shrink-0 min-h-[44px] sm:min-h-0">
-                        <i class="fas fa-file-pdf"></i> Download PDF
-                    </a>
+                    <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
+                        <a href="{{ route('dashboard.class-results.preview-pdf', $quiz) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 min-h-[44px] sm:min-h-0">
+                            <i class="fas fa-eye"></i> Preview PDF
+                        </a>
+                        <a href="{{ route('dashboard.class-results.download-pdf', $quiz) }}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white bg-slate-600 hover:bg-slate-700 min-h-[44px] sm:min-h-0" download>
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </a>
+                        <a href="{{ route('dashboard.class-results.download-excel', $quiz) }}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 min-h-[44px] sm:min-h-0" download>
+                            <i class="fas fa-file-excel"></i> Excel
+                        </a>
+                        <a href="{{ route('dashboard.class-results.download-csv', $quiz) }}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 min-h-[44px] sm:min-h-0" download>
+                            <i class="fas fa-file-csv"></i> CSV
+                        </a>
+                    </div>
                 </div>
             </li>
             @endforeach

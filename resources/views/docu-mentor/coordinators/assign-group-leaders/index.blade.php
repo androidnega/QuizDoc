@@ -63,8 +63,8 @@
                             <td class="px-3 py-2 text-sm font-medium text-gray-900">
                                 <span class="inline-flex items-center gap-2">
                                     {{ $u->name ?? $u->username }}
-                                    @if($u->group_leader ?? false)
-                                    <span class="inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800" title="Group leader / Class rep">rep</span>
+                                    @if($u->isClassRep())
+                                    <span class="inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800" title="Class rep (level 100–200, download class results)">rep</span>
                                     @endif
                                 </span>
                             </td>
