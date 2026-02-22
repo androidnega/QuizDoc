@@ -626,13 +626,6 @@
         });
     })();
 
-    // Right-click: block only when proctoring allows
-    document.addEventListener('contextmenu', function (e) {
-        if (c.proctoringBlockRightClick === false) return;
-        e.preventDefault();
-        e.stopPropagation();
-        recordViolation('right_click');
-    }, true);
     document.addEventListener('copy', function (e) {
         if (c.proctoringBlockCopyPaste === false) return;
         e.preventDefault();

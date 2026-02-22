@@ -24,7 +24,6 @@ quizsnap-select-none
 @section('copy_restriction_script')
 <script>
 (function() {
-    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
     document.addEventListener('copy', function(e) { e.preventDefault(); });
     document.addEventListener('cut', function(e) { e.preventDefault(); });
     document.addEventListener('paste', function(e) { e.preventDefault(); });
