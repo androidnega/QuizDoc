@@ -371,7 +371,7 @@ class UserManagementController extends Controller
             }
             if ($request->has('sms_allocation') && $request->input('sms_allocation') !== null && $request->input('sms_allocation') !== '') {
                 $user->sms_allocation = max(0, (int) $request->sms_allocation);
-                $user->sms_used = 0; // reset remaining to allocation whenever allocation is set
+                // Do not reset sms_used: remaining = allocation - used (top-up behavior)
             }
             if (($user->isExaminer() || $user->role === User::DM_ROLE_COORDINATOR) && $request->has('ai_quiz_tokens_allocation')) {
                 $defaultAllocation = $user->role === User::DM_ROLE_COORDINATOR ? 3 : 10;
@@ -640,14 +640,14 @@ class UserManagementController extends Controller
 
         $allocation = max(0, (int) $request->sms_allocation);
         $user->sms_allocation = $allocation;
-        $user->sms_used = 0; // reset remaining to allocation whenever allocation is set
+        // Do not reset sms_used: remaining = allocation - used (e.g. had 20 left, set allocation to 2020 → remaining 40)
         $user->save();
 
         return response()->json([
             'success' => true,
             'allocation' => $user->sms_allocation,
-            'used' => 0,
-            'remaining' => $user->sms_allocation,
+            'used' => $user->sms_used ?? 0,
+            'remaining' => $user->sms_remaining,
             'message' => 'SMS allocation updated successfully.',
         ]);
     }

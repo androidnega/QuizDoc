@@ -194,26 +194,32 @@
 
 @push('scripts')
 <script>
-// SMS Allocation Modal
+// SMS Allocation Modal: allocation is new total; remaining = allocation - used (e.g. had 20 left, set 2020 → remaining 40)
 function openSmsModal(userId, username, currentAllocation, currentUsed) {
     const modal = document.getElementById('smsModal');
-    const form = document.getElementById('smsForm');
-    const display = document.getElementById('sms-display-' + userId);
-    
+    const inputEl = document.getElementById('smsAllocationInput');
     document.getElementById('smsUserId').value = userId;
     document.getElementById('smsUsername').textContent = username;
+    modal.dataset.currentUsed = currentUsed;
     document.getElementById('smsAllocationDisplay').textContent = currentAllocation;
-    // In this modal, remaining = allocation (the value in the field); saving resets used so remaining equals allocation
-    document.getElementById('smsRemaining').textContent = currentAllocation;
+    var remaining = Math.max(0, (currentAllocation || 0) - (currentUsed || 0));
+    document.getElementById('smsRemaining').textContent = remaining;
     document.getElementById('smsRemainingWrap').style.display = '';
-    document.getElementById('smsAllocationInput').value = currentAllocation;
+    inputEl.value = currentAllocation;
     document.getElementById('smsError').classList.add('hidden');
     document.getElementById('smsError').textContent = '';
-    
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     document.body.style.overflow = 'hidden';
-    document.getElementById('smsAllocationInput').focus();
+    inputEl.focus();
+}
+
+function updateSmsRemainingDisplay() {
+    var modal = document.getElementById('smsModal');
+    var inputEl = document.getElementById('smsAllocationInput');
+    var used = parseInt(modal.dataset.currentUsed, 10) || 0;
+    var alloc = parseInt(inputEl.value, 10) || 0;
+    document.getElementById('smsRemaining').textContent = Math.max(0, alloc - used);
 }
 
 function closeSmsModal() {
@@ -281,6 +287,9 @@ document.getElementById('smsModal').addEventListener('click', function(e) {
         closeSmsModal();
     }
 });
+
+document.getElementById('smsAllocationInput').addEventListener('input', updateSmsRemainingDisplay);
+document.getElementById('smsAllocationInput').addEventListener('change', updateSmsRemainingDisplay);
 </script>
 @endpush
 
