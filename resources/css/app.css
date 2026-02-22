@@ -159,13 +159,17 @@
     overflow-x: hidden;
     box-sizing: border-box;
 }
-/* Hide scrollbar on examiner main and sidebar nav; content still scrolls */
+/* Hide scrollbar on examiner main and sidebar; content still scrolls */
 .examiner-main main,
+.examiner-sidebar,
+.examiner-sidebar-inner,
 .examiner-sidebar-nav {
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
 .examiner-main main::-webkit-scrollbar,
+.examiner-sidebar::-webkit-scrollbar,
+.examiner-sidebar-inner::-webkit-scrollbar,
 .examiner-sidebar-nav::-webkit-scrollbar {
     display: none;
 }

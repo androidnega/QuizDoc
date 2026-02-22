@@ -130,6 +130,19 @@
             }
         }
 
+        /* Hide vertical scrollbar on coordinator/examiner sidebar; content still scrolls */
+        .examiner-sidebar,
+        .examiner-sidebar-inner,
+        .examiner-sidebar-nav {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .examiner-sidebar::-webkit-scrollbar,
+        .examiner-sidebar-inner::-webkit-scrollbar,
+        .examiner-sidebar-nav::-webkit-scrollbar {
+            display: none;
+        }
+
         /* Hide horizontal scrollbar for student dashboard chips while keeping scroll */
         .student-chip-scroll {
             -ms-overflow-style: none;  /* IE and Edge */

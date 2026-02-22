@@ -3,6 +3,15 @@
 @section('title', 'Project Groups')
 @section('dashboard_heading', 'Project Groups')
 
+@php
+    $groupNameEmojis = [
+        'Ghost API'   => '👻 ✨',
+        'Eish Branch' => '🌿 🌱',
+        'Wossop Git'  => '🦊 💻',
+        'Demure SQL'  => '🗄️ 📊',
+    ];
+@endphp
+
 @section('dashboard_content')
 <div class="w-full min-w-0 max-w-full space-y-6">
     <div class="card overflow-hidden min-w-0 rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -20,7 +29,10 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($groups as $g)
                         <tr class="hover:bg-gray-50">
-                            <td class="px-3 py-2 text-sm font-medium text-gray-900">{{ $g->name }}</td>
+                            <td class="px-3 py-2 text-sm font-medium text-gray-900">
+                                @php $emojis = $groupNameEmojis[trim($g->name)] ?? '🚀'; @endphp
+                                <span class="inline-flex items-center gap-1">{{ $emojis }}</span> {{ $g->name }}
+                            </td>
                             <td class="px-3 py-2 text-sm font-mono text-primary-600">{{ $g->token ?? '—' }}</td>
                             <td class="px-3 py-2 text-sm text-gray-600">{{ $g->academicYear?->year ?? '—' }}</td>
                             <td class="px-3 py-2 text-sm text-gray-600">{{ $g->leader?->name ?? $g->leader?->username ?? '—' }}</td>
