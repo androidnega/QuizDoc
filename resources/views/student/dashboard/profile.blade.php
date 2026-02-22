@@ -103,5 +103,19 @@
     </div>
 </section>
 @endif
+
+@if(isset($studentCourses) && $studentCourses->isNotEmpty())
+<section class="mb-8" aria-label="Courses being offered">
+    <h2 class="text-sm font-medium text-slate-700 mb-3">Courses being offered</h2>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5">
+        <p class="text-xs text-slate-500 mb-3">Courses assigned to your class group(s).</p>
+        <ul class="space-y-1.5 text-sm text-slate-800">
+            @foreach($studentCourses as $c)
+            <li>{{ $c['name'] }}{{ !empty($c['code']) ? ' (' . $c['code'] . ')' : '' }}</li>
+            @endforeach
+        </ul>
+    </div>
+</section>
+@endif
 </div>
 @endsection

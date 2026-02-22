@@ -298,9 +298,16 @@ class StudentDashboardController extends Controller
 
         // Same resolution as coordinator: class groups by case-insensitive index so student sees same institution/faculty/department as coordinator
         $cgStudents = ClassGroupStudent::whereRaw('UPPER(TRIM(index_number)) = ?', [$indexUpper])
-            ->with(['classGroup' => fn ($q) => $q->with(['examiner' => fn ($e) => $e->with(['institution', 'faculty', 'department']), 'academicYear', 'level'])])
+            ->with(['classGroup' => fn ($q) => $q->with(['examiner' => fn ($e) => $e->with(['institution', 'faculty', 'department']), 'academicYear', 'level', 'courses'])])
             ->get();
         $classGroups = $cgStudents->map(fn ($s) => $s->classGroup)->filter()->unique('id')->values();
+
+        // Courses being offered (from student's class groups) — unique by course id, display name + code
+        $studentCourses = $classGroups->flatMap(fn ($g) => $g->relationLoaded('courses') ? $g->courses : collect())
+            ->unique('id')
+            ->values()
+            ->map(fn ($c) => ['name' => $c->name ?? '', 'code' => $c->code ?? ''])
+            ->values();
 
         $institution = null;
         $faculty = null;
@@ -394,6 +401,7 @@ class StudentDashboardController extends Controller
         return view('student.dashboard.profile', [
             'student' => $student,
             'classGroups' => $classGroups,
+            'studentCourses' => $studentCourses,
             'levelLabel' => $levelLabel,
             'institution' => $institution ?? null,
             'faculty' => $faculty,

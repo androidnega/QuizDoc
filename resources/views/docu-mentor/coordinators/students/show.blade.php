@@ -87,6 +87,22 @@
                 @endif
             </div>
 
+            <div class="pt-4 border-t border-gray-100">
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Courses (by lecturers assigned)</p>
+                @if(empty($studentCourseAssignments))
+                    <p class="text-sm text-gray-500">No courses assigned for this student’s class group(s).</p>
+                @else
+                    <p class="text-sm text-gray-700 mb-2">Number of courses: <strong>{{ $coursesCount }}</strong></p>
+                    <ul class="space-y-1.5">
+                        @foreach($studentCourseAssignments as $a)
+                            <li class="text-sm text-gray-900">
+                                {{ $a['course_name'] }}{{ !empty($a['course_code']) ? ' (' . $a['course_code'] . ')' : '' }}{{ !empty($a['lecturer_name']) ? ' — ' . $a['lecturer_name'] : '' }}
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+
             @if($studentAccount)
             <div class="pt-4 border-t border-gray-100">
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Quiz history</p>

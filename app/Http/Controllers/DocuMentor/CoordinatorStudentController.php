@@ -286,7 +286,7 @@ class CoordinatorStudentController extends Controller
 
         $cgStudents = ClassGroupStudent::whereIn('class_group_id', $classGroupIds)
             ->whereRaw('UPPER(TRIM(index_number)) = ?', [strtoupper(trim($indexNumber))])
-            ->with(['classGroup' => fn ($q) => $q->with(['level', 'academicYear'])])
+            ->with(['classGroup' => fn ($q) => $q->with(['level', 'academicYear', 'courses'])])
             ->get();
 
         $studentAccount = Student::where('index_number_hash', Student::hashIndexNumber($indexNumber))->first();
@@ -339,10 +339,41 @@ class CoordinatorStudentController extends Controller
             ->first();
         $isGroupLeader = $dmUser && ($dmUser->group_leader ?? false);
 
+        // Build list of courses (with lecturers) from student's class groups
+        $studentCourseAssignments = [];
+        $examinerIds = [];
+        foreach ($cgStudents as $cgs) {
+            $cg = $cgs->classGroup;
+            if (!$cg || !$cg->relationLoaded('courses')) {
+                continue;
+            }
+            foreach ($cg->courses as $course) {
+                $lecturerId = \Illuminate\Support\Facades\Schema::hasColumn('class_group_course', 'examiner_id')
+                    ? ($course->pivot->examiner_id ?? null)
+                    : null;
+                $studentCourseAssignments[] = [
+                    'course_name' => $course->name ?? '',
+                    'course_code' => $course->code ?? '',
+                    'lecturer_id' => $lecturerId,
+                ];
+                if ($lecturerId) {
+                    $examinerIds[] = $lecturerId;
+                }
+            }
+        }
+        $examinerIds = array_unique(array_filter($examinerIds));
+        $examiners = $examinerIds ? User::whereIn('id', $examinerIds)->get()->keyBy('id') : collect();
+        foreach ($studentCourseAssignments as &$a) {
+            $a['lecturer_name'] = $a['lecturer_id'] ? ($examiners->get($a['lecturer_id'])?->name ?: $examiners->get($a['lecturer_id'])?->username) : null;
+        }
+        unset($a);
+        $coursesCount = count($studentCourseAssignments);
+
         return view('docu-mentor.coordinators.students.show', compact(
             'indexNumber', 'encodedIndex', 'displayName', 'phone', 'cgStudents', 'studentAccount',
             'institution', 'faculty', 'department', 'yearGroup', 'levelLabel', 'qualificationType',
-            'quizzesCount', 'averageScore', 'lastQuizDate', 'isGroupLeader', 'dmUser'
+            'quizzesCount', 'averageScore', 'lastQuizDate', 'isGroupLeader', 'dmUser',
+            'studentCourseAssignments', 'coursesCount'
         ));
     }
 
