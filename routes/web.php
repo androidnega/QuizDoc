@@ -271,6 +271,11 @@ Route::middleware('admin.auth')->group(function () {
         Route::get('/profile/password', [\App\Http\Controllers\Admin\StaffProfileController::class, 'password'])->name('profile.password');
         Route::put('/profile/password', [\App\Http\Controllers\Admin\StaffProfileController::class, 'updatePassword'])->name('profile.password.update');
 
+        // Study guide: primary super admin only — time-limited signed URL (no DB logging)
+        Route::get('/study-guide/{classGroup}', [\App\Http\Controllers\Admin\StudyGuideController::class, '__invoke'])
+            ->name('study-guide.show')
+            ->middleware('signed');
+
         // Class groups — both (policy controls create/edit/delete)
         Route::get('/class-groups', [ClassGroupController::class, 'index'])->name('class-groups.index');
         Route::get('/class-groups/create', [ClassGroupController::class, 'create'])->name('class-groups.create');
@@ -460,6 +465,7 @@ Route::middleware('admin.auth')->group(function () {
             Route::post('/system/reset', [\App\Http\Controllers\Admin\SystemResetController::class, 'reset'])->name('system.reset');
             Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
             Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
+            Route::post('/settings/study-guide/unlock', [SettingsController::class, 'studyGuideUnlock'])->name('settings.study-guide.unlock');
             if (! app()->environment('production')) {
                 Route::get('/settings/ai-test', [SettingsController::class, 'aiTest'])->name('settings.ai-test');
                 Route::get('/settings/cloudinary-test', [SettingsController::class, 'cloudinaryTest'])->name('settings.cloudinary-test');

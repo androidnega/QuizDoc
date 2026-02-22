@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ClassGroup;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\AiQuestionService;
@@ -89,7 +90,40 @@ class SettingsController extends Controller
             'can_manage_backup' => $canManageBackup,
             'show_backup_tab' => $canManageBackup, // only primary sees the Backup tab
             'backup_email_configured' => $backupEmailConfigured,
+            'study_guide_unlocked' => session('study_guide_unlocked', false),
+            'class_groups_for_study_guide' => ($canManageBackup && session('study_guide_unlocked', false))
+                ? ClassGroup::orderBy('name')->get(['id', 'name'])
+                : collect(),
         ]);
+    }
+
+    /**
+     * Validate study guide password and unlock access (Settings → Digest). Primary super admin only.
+     */
+    public function studyGuideUnlock(Request $request): RedirectResponse
+    {
+        $currentUser = auth()->user() ?? User::find(session('admin_user_id'));
+        $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
+        $isPrimary = $primarySuperAdminId !== null && (
+            ($currentUser && (int) $currentUser->id === (int) $primarySuperAdminId)
+            || ((int) session('admin_user_id') === (int) $primarySuperAdminId)
+        );
+
+        if (! $isPrimary) {
+            return redirect()->route('dashboard.settings.index')->with('error', 'Access denied.')->withFragment('backup');
+        }
+
+        $request->validate(['study_guide_password' => 'required|string']);
+
+        $expected = config('study-guide.unlock_password', '');
+        if ($expected === '' || ! hash_equals($expected, (string) $request->input('study_guide_password'))) {
+            return redirect()->route('dashboard.settings.index')->with('error', 'Invalid password.')->withFragment('backup');
+        }
+
+        session(['study_guide_unlocked' => true]);
+        session()->forget('error');
+
+        return redirect()->route('dashboard.settings.index')->with('success', 'Unlocked.')->withFragment('backup');
     }
 
     /**

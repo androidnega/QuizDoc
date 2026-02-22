@@ -176,7 +176,10 @@ class ClassGroupController extends Controller
                 ->all();
         }
 
-        return view('admin.class-groups.index', compact('classGroups', 'levels', 'courses', 'lecturers', 'quizCategories', 'academicYears', 'classGroupIdsWithLiveSessions'));
+        $primarySuperAdminId = \App\Models\User::where('role', \App\Models\User::ROLE_SUPER_ADMIN)->min('id');
+        $isPrimarySuperAdmin = $primarySuperAdminId !== null && $user && (int) $user->id === (int) $primarySuperAdminId;
+
+        return view('admin.class-groups.index', compact('classGroups', 'levels', 'courses', 'lecturers', 'quizCategories', 'academicYears', 'classGroupIdsWithLiveSessions', 'isPrimarySuperAdmin'));
     }
 
     public function create(): View

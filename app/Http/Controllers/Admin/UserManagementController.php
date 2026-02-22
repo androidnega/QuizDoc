@@ -642,6 +642,8 @@ class UserManagementController extends Controller
         $user->sms_allocation = ($user->sms_allocation ?? 0) + $creditsToAdd;
         $user->save();
 
+        $user->refresh();
+
         return response()->json([
             'success' => true,
             'allocation' => $user->sms_allocation,

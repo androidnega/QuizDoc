@@ -7,8 +7,9 @@
 <div class="w-full space-y-8 min-w-0 overflow-x-hidden">
     @php
         $examiner = auth()->user();
-        $smsRemaining = $examiner && $examiner->isExaminer() ? $examiner->sms_remaining : 0;
-        $showLowSmsWarning = $examiner && $examiner->isExaminer() && $smsRemaining < 100 && $smsRemaining > 0;
+        $showSmsForUser = $examiner && ($examiner->isExaminer() || $examiner->role === \App\Models\User::DM_ROLE_COORDINATOR);
+        $smsRemaining = $showSmsForUser ? $examiner->sms_remaining : 0;
+        $showLowSmsWarning = $showSmsForUser && $smsRemaining < 100 && $smsRemaining > 0;
     @endphp
     
     {{-- Faculty/Department Notice --}}
