@@ -845,11 +845,13 @@
         function requestCameraAndContinue() {
             // Check if page is loaded over HTTPS or localhost (required for camera access)
             if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                showCameraOffOverlay();
                 alert('Camera access requires HTTPS. Please access this page using https:// or contact your administrator.');
                 return;
             }
             
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showCameraOffOverlay();
                 alert('Camera is not supported in this browser. Please use a modern browser like Chrome, Firefox, or Safari.');
                 return;
             }
@@ -876,13 +878,14 @@
                 })
                 .catch(function (err) {
                     console.error('Camera access error:', err);
-                    var msg = 'Could not access camera. Please allow camera permission when your browser asks, then click "Allow camera & continue" again.';
+                    showCameraOffOverlay();
+                    var msg = 'Could not access camera. Please allow camera permission when your browser asks, then click "Allow camera & continue" below.';
                     if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                        msg = 'Camera permission was denied. Please click "Allow camera & continue" again and then click "Allow" in the browser prompt that appears. If the prompt doesn\'t appear, click the camera/lock icon in your browser\'s address bar to allow camera access.';
+                        msg = 'Camera permission was denied. Click "Allow camera & continue" below, then click "Allow" in the browser prompt.';
                     } else if (err.name === 'NotFoundError') {
                         msg = 'No camera found. Please connect a camera and try again.';
                     } else if (err.name === 'NotReadableError') {
-                        msg = 'Camera is already in use by another application. Please close other apps using the camera and try again.';
+                        msg = 'Camera is in use by another app. Close it and click "Allow camera & continue" below.';
                     }
                     alert(msg);
                 });
@@ -1004,13 +1007,12 @@
             cameraCheckInterval = setInterval(checkCameraStatus, 2000);
         }
 
-        // Always show camera prompt first so permission is requested on user click (browser will show permission dialog)
-        showCameraOffOverlay();
-
+        // Try to start camera immediately (user already allowed on proctoring capture); only show overlay if that fails
         var cameraOffAllowBtn = document.getElementById('camera-off-allow-btn');
         if (cameraOffAllowBtn) {
             cameraOffAllowBtn.addEventListener('click', requestCameraAndContinue);
         }
+        requestCameraAndContinue();
 
         if (navigator.mediaDevices && navigator.mediaDevices.ondevicechange !== undefined) {
             navigator.mediaDevices.addEventListener('devicechange', checkCameraStatus);

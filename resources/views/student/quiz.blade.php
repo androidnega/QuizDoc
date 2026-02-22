@@ -168,7 +168,7 @@
         <div class="bg-white border border-gray-200 rounded-lg p-4 max-w-md w-full border border-gray-200 text-center">
             <h4 class="font-semibold text-gray-800 mb-2">Camera is required</h4>
             <p class="text-sm text-gray-600 mb-4">Your camera must stay on throughout the quiz. Click the button below — your browser will ask for camera permission.</p>
-            <button type="button" id="camera-off-allow-btn" class="btn btn-action py-2.5 px-5 text-sm font-semibold">Allow camera &amp; continue</button>
+            <button type="button" id="camera-off-allow-btn" class="py-2.5 px-5 text-sm font-semibold rounded-lg border-2 border-sky-400 bg-sky-50 text-sky-800 hover:bg-sky-100 focus:ring-2 focus:ring-sky-500 focus:ring-offset-1 transition-colors">Allow camera &amp; continue</button>
         </div>
     </div>
 

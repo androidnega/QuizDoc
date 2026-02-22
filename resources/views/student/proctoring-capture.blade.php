@@ -62,7 +62,7 @@
             <p id="face-check-status-text" class="text-xs text-blue-700">Initializing face verification...</p>
         </div>
 
-        <button type="button" class="btn btn-action w-full py-2.5 text-sm font-semibold" id="capture-btn">
+        <button type="button" class="w-full py-2.5 px-4 text-sm font-semibold rounded-lg border-2 border-sky-400 bg-sky-50 text-sky-800 hover:bg-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-1 transition-colors" id="capture-btn">
             <span id="capture-btn-text">Start camera</span>
         </button>
 

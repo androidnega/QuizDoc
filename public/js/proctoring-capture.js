@@ -117,7 +117,7 @@
         if (!stream) {
             captureBtn.disabled = false;
             captureBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'text-white', 'border-green-600');
-            captureBtn.classList.add('btn-action');
+            captureBtn.classList.add('border-sky-400', 'bg-sky-50', 'text-sky-800');
             setButtonText('Allow camera & continue');
             hideLoading();
             return;
@@ -125,21 +125,21 @@
         if (!videoReady) {
             captureBtn.disabled = true;
             captureBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'text-white', 'border-green-600');
-            captureBtn.classList.add('btn-action');
+            captureBtn.classList.add('border-sky-400', 'bg-sky-50', 'text-sky-800');
             setButtonText('Waiting for camera...');
             return;
         }
         if (!detectorReady) {
             captureBtn.disabled = true;
             captureBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'text-white', 'border-green-600');
-            captureBtn.classList.add('btn-action');
+            captureBtn.classList.add('border-sky-400', 'bg-sky-50', 'text-sky-800');
             setButtonText('Preparing verification...');
             return;
         }
         if (!liveFaceValid) {
             captureBtn.disabled = true;
             captureBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'text-white', 'border-green-600');
-            captureBtn.classList.add('btn-action');
+            captureBtn.classList.add('border-sky-400', 'bg-sky-50', 'text-sky-800');
             if (readySinceMs && detectorReady && videoReady) {
                 const heldMs = Date.now() - readySinceMs;
                 if (heldMs < STANDARD_HEADSHOT.stableHoldMs) {
@@ -156,7 +156,7 @@
         // All checks passed - enable button and make it green
         if (captureBtn) {
             captureBtn.disabled = false;
-            captureBtn.classList.remove('btn-action');
+            captureBtn.classList.remove('border-sky-400', 'bg-sky-50', 'text-sky-800');
             captureBtn.classList.add('bg-green-600', 'hover:bg-green-700', 'text-white', 'border-green-600');
             setButtonText('Capture photo');
             console.log('Button enabled - all conditions met:', {
