@@ -191,7 +191,7 @@
                                 $studentAnswerRaw = trim((string) ($answer->student_answer ?? ''));
                                 $sessionCorrect = $assignedCorrectMap[$question->id] ?? $assignedCorrectMap[(string)$question->id] ?? ($question->correct_answer ?? '');
                                 $isAnswered = $studentAnswerRaw !== '';
-                                $correct = $isAnswered && trim((string)$studentAnswerRaw) === trim((string)$sessionCorrect);
+                                $correct = $isAnswered && strtoupper(trim((string)$studentAnswerRaw)) === strtoupper(trim((string)$sessionCorrect));
                                 $shuffledOpts = $shuffledByQuestion[$question->id] ?? $shuffledByQuestion[(string)$question->id] ?? null;
                                 $yourText = null;
                                 $correctText = null;

@@ -9,17 +9,18 @@
 /* Pulsing AI invigilator badge when camera is active */
 #ai-invigilator-badge{display:none;align-items:center;justify-content:center;gap:0.5rem;padding:0.5rem 1rem;background:linear-gradient(135deg,#1e3a5f 0%,#0f172a 100%);color:#e2e8f0;font-size:0.75rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;border:1px solid rgba(148,163,184,0.3);border-radius:9999px;box-shadow:0 0 0 2px rgba(59,130,246,0.2)}
 #ai-invigilator-badge.visible{display:flex}
+#ai-invigilator-badge-panel.visible{display:flex!important}
 #ai-invigilator-badge .pulse-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;animation:ai-invigilator-pulse 1.5s ease-in-out infinite}
 #ai-invigilator-badge .text{animation:ai-invigilator-glow 2s ease-in-out infinite}
 @keyframes ai-invigilator-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.2)}}
 @keyframes ai-invigilator-glow{0%,100%{opacity:1;text-shadow:0 0 8px rgba(34,197,94,0.4)}50%{opacity:0.9;text-shadow:0 0 14px rgba(34,197,94,0.6)}}
 
-/* Fixed left panel - camera, timer, questions (hide vertical scrollbar) */
+/* Fixed left panel - camera, timer, questions (hide vertical scrollbar); narrower for live feed */
 .quiz-left-panel {
     position: fixed;
     top: 4rem;
     left: 1rem;
-    width: 300px;
+    width: 260px;
     max-height: calc(100vh - 5rem);
     overflow-y: auto;
     overflow-x: hidden;
@@ -36,7 +37,7 @@
     padding: 1rem 1rem 2rem 1rem;
 }
 @media (min-width: 1024px) {
-    .quiz-main-content { margin-left: 320px; width: calc(100% - 340px); padding: 1rem 1.5rem 2rem 0; }
+    .quiz-main-content { margin-left: 280px; width: calc(100% - 300px); padding: 1rem 1.5rem 2rem 0; }
 }
 
 /* Live camera frame border states (synced with intelligentFaceMonitor) */
@@ -76,8 +77,8 @@
             </div>
         </header>
 
-        {{-- Pulsing "AI INVIGILATOR WATCHING" when camera is active --}}
-        <div id="ai-invigilator-badge" class="fixed left-4 bottom-4 z-50 pointer-events-none" aria-hidden="true">
+        {{-- AI invigilator badge: fixed fallback for small viewports; in-panel copy shown on lg before live feed --}}
+        <div id="ai-invigilator-badge" class="fixed left-4 bottom-4 z-50 pointer-events-none lg:hidden" aria-hidden="true">
             <span class="pulse-dot" aria-hidden="true"></span>
             <span class="text">AI Invigilator Watching</span>
         </div>
@@ -191,30 +192,35 @@
         </div>
     </div>
 
-        {{-- Fixed left panel: camera, timer, questions (scrollbar hidden) - styled per reference image --}}
-        <aside class="quiz-left-panel hidden lg:block space-y-4" aria-label="Quiz sidebar">
-            <div class="rounded-xl overflow-hidden shadow-sm" style="background: #1f2937;">
-                <div class="p-4">
-                    <h2 class="text-sm font-semibold text-gray-300 mb-2">LIVE CAMERA FEED</h2>
-                    <div id="live-camera-frame" class="bg-gray-900 border-2 border-emerald-500 rounded-xl overflow-hidden min-w-0 flex flex-col transition-all duration-200 relative">
-                        {{-- Pill: FACE DETECTED (top-center, green when face in frame) --}}
-                        <div id="live-camera-pill" class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 px-3 py-1 rounded-full text-xs font-bold uppercase text-white bg-emerald-500 hidden">Face detected</div>
-                        <div id="live-camera-video-slot" class="aspect-video bg-gray-900 flex items-center justify-center min-h-[120px] relative">
-                            <span class="text-gray-500 text-sm">Camera feed</span>
-                            {{-- Guide: green dotted circle (reacts green/yellow/red) + vertical/horizontal center lines + face dot --}}
+        {{-- Fixed left panel: AI invigilator label first, then camera, then timer, then questions --}}
+        <aside class="quiz-left-panel hidden lg:flex lg:flex-col lg:gap-4" aria-label="Quiz sidebar">
+            {{-- AI invigilator watching (before time / live coverage on lg); visibility toggled with camera --}}
+            <div id="ai-invigilator-badge-panel" class="hidden items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 text-slate-200 text-xs font-bold uppercase tracking-wider shadow-sm" aria-hidden="true">
+                <span class="pulse-dot w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true"></span>
+                <span>AI Invigilator Watching</span>
+            </div>
+            <div class="rounded-xl overflow-hidden shadow-sm bg-amber-50 border border-amber-200 min-w-0">
+                <div class="p-3">
+                    <h2 class="text-xs font-semibold text-amber-900 mb-2">LIVE CAMERA FEED</h2>
+                    <div id="live-camera-frame" class="bg-amber-100 border-2 border-emerald-500 rounded-xl overflow-visible min-w-0 flex flex-col transition-all duration-200 relative">
+                        <div id="live-camera-video-slot" class="aspect-video bg-gray-900 rounded-t-lg flex items-center justify-center min-h-[100px] relative overflow-hidden">
+                            <span class="text-gray-500 text-xs">Camera feed</span>
+                            {{-- Guide: oval/circle (reacts green/yellow/red) + center lines + face dot; preserved when video is injected --}}
                             <div id="live-camera-guide-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center z-10" aria-hidden="true">
                                 <div class="absolute inset-0 flex items-center justify-center">
-                                    <div id="live-camera-guide-circle" class="w-[52%] min-w-[120px] max-w-[200px] aspect-square rounded-full border-2 border-dashed border-emerald-500 transition-colors duration-300" style="box-shadow: 0 0 0 1px rgba(0,0,0,0.2);" title="Keep your head inside this circle"></div>
+                                    <div id="live-camera-guide-circle" class="w-[55%] min-w-[80px] max-w-[180px] aspect-square rounded-full border-2 border-dashed border-emerald-500 transition-colors duration-300 bg-transparent" style="box-shadow: 0 0 0 1px rgba(0,0,0,0.15);" title="Keep your head inside this circle"></div>
                                 </div>
                                 <div class="absolute top-0 bottom-0 left-1/2 w-0.5 -translate-x-px bg-emerald-400/60 transition-colors duration-300 guide-line-v" style="width: 2px;"></div>
                                 <div class="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-px bg-emerald-400/60 transition-colors duration-300 guide-line-h" style="height: 2px;"></div>
-                                <div id="live-camera-face-dot" class="absolute w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-lg z-10 hidden" style="left:50%;top:50%;transform:translate(-50%,-50%);"></div>
+                                <div id="live-camera-face-dot" class="absolute w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white shadow z-10 hidden" style="left:50%;top:50%;transform:translate(-50%,-50%);"></div>
                             </div>
                         </div>
-                        {{-- Bottom banner: Face detected - Good position (dark gray) --}}
-                        <div id="live-camera-banner" class="absolute bottom-0 left-0 right-0 px-3 py-2 rounded-b-xl z-10 flex items-center gap-2" style="background: rgba(31,41,55,0.95);">
-                            <span id="live-camera-banner-icon" class="flex-shrink-0 w-5 h-5 rounded bg-emerald-500 flex items-center justify-center text-white text-xs">✓</span>
-                            <p id="live-camera-status-text" class="text-sm font-medium text-white truncate">Monitoring camera feed.</p>
+                        {{-- Face detected pill: inside frame, responsive, never clipped --}}
+                        <div id="live-camera-pill" class="absolute top-1.5 left-1/2 -translate-x-1/2 z-20 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase text-white bg-emerald-500 shadow-sm hidden">Face detected</div>
+                        {{-- Bottom banner: status text (face detected / good position) --}}
+                        <div id="live-camera-banner" class="rounded-b-xl px-2 py-1.5 z-10 flex items-center gap-2 min-h-[36px]" style="background: rgba(251,191,36,0.95);">
+                            <span id="live-camera-banner-icon" class="flex-shrink-0 w-4 h-4 rounded bg-emerald-500 flex items-center justify-center text-white text-[10px]">✓</span>
+                            <p id="live-camera-status-text" class="text-xs font-medium text-amber-900 truncate">Monitoring camera feed.</p>
                         </div>
                     </div>
                     {{-- X, Y, Size bars (dark gray card) --}}

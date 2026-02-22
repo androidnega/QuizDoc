@@ -309,7 +309,7 @@
                     if (heldMs >= STANDARD_HEADSHOT.stableHoldMs) {
                         if (!liveFaceValid) {
                             liveFaceValid = true;
-                            setFaceStatus('Perfect! Face centered and close enough. You can capture now.', 'ok');
+                            setFaceStatus('✅ Face well positioned. You can capture now.', 'ok');
                             console.log('Face validation: PASSED - Button should be enabled');
                         }
                     } else {
@@ -523,47 +523,50 @@
                 return;
             }
 
-            setFaceStatus('Face verified. Capturing photo...', 'ok');
+            setFaceStatus('✅ Face verified. Sending...', 'ok');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
-            stopCamera();
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85');
 
             fetch(config.storeUrl || '/student/proctoring/capture', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': config.csrfToken || (document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content) || '',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-                quiz_id: config.quizId,
-                index_number: config.indexNumber,
-                face_image: dataUrl,
-            }),
-        })
-            .then(function (r) {
-                if (!r.ok && r.headers.get('content-type') && r.headers.get('content-type').indexOf('json') === -1) {
-                    throw new Error('Server error. Please try again.');
-                }
-                return r.json();
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': config.csrfToken || (document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content) || '',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    quiz_id: config.quizId,
+                    index_number: config.indexNumber,
+                    face_image: dataUrl,
+                }),
             })
-            .then(function (data) {
-                if (data.success && data.redirect) {
-                    window.location.href = data.redirect;
-                } else {
-                    showError(data.message || 'Failed to start quiz. Please try again.');
+                .then(function (r) {
+                    if (!r.ok && r.headers.get('content-type') && r.headers.get('content-type').indexOf('json') === -1) {
+                        throw new Error('Server error. Please try again.');
+                    }
+                    return r.json();
+                })
+                .then(function (data) {
+                    if (data.success && data.redirect) {
+                        setFaceStatus('✅ Success! Redirecting...', 'ok');
+                        stopCamera();
+                        window.location.href = data.redirect;
+                    } else {
+                        showError(data.message || 'Failed to start quiz. Please try again.');
+                        captureBtn.disabled = false;
+                        setButtonText('Capture photo');
+                        startLiveFaceLoop();
+                    }
+                })
+                .catch(function (err) {
+                    showError(err && err.message ? err.message : 'Network error. Check your connection and try again.');
                     captureBtn.disabled = false;
                     setButtonText('Capture photo');
-                }
-            })
-            .catch(function (err) {
-                showError(err && err.message ? err.message : 'Network error. Check your connection and try again.');
-                captureBtn.disabled = false;
-                setButtonText('Capture photo');
-            });
+                    startLiveFaceLoop();
+                });
         });
     }
 

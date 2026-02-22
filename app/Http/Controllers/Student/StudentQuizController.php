@@ -570,7 +570,7 @@ class StudentQuizController extends Controller
             }
         }
 
-        // Head turn (left/right/up/down) is violation-only; never auto-submit.
+        // Head turn (left/right/up/down): violation-only, never auto-submit; logged in examiner session.
 
         // Normal warning threshold across configured warning-level proctoring events.
         if (!$autoSubmitted) {
@@ -880,7 +880,7 @@ class StudentQuizController extends Controller
         if ($session->ended_at === null) {
             $session->update(['ended_at' => now()]);
         }
-        $lockedIds = collect($session->assigned_question_ids ?? [])
+        $assignedIds = collect($session->assigned_question_ids ?? [])
             ->map(fn ($id) => (int) $id)
             ->filter(fn ($id) => $id > 0)
             ->unique()
@@ -891,35 +891,34 @@ class StudentQuizController extends Controller
             ->filter(fn ($id) => $id > 0)
             ->unique()
             ->values();
-        // Safety guard: if snapshots are incomplete but answers exist, score using the larger stable set.
-        if ($answeredIds->count() > $lockedIds->count()) {
-            $lockedIds = $answeredIds;
+        // Union: score every question the student was assigned or answered (so all questions are graded)
+        $lockedIds = $assignedIds->merge($answeredIds)->unique()->values();
+        if ($lockedIds->isEmpty()) {
+            $lockedIds = $assignedIds->isEmpty() ? $answeredIds : $assignedIds;
         }
         $lockedIdsArray = $lockedIds->all();
         $correctAnswersSnapshot = $session->assigned_correct_answers ?? [];
         $total = count($lockedIdsArray);
         $correct = 0;
-        
+
         if ($total > 0) {
             $answersByQuestion = $session->answers()->whereIn('question_id', $lockedIdsArray)->pluck('student_answer', 'question_id')->toArray();
-            
+
             foreach ($lockedIdsArray as $qid) {
-                // Try both integer and string keys
                 $correctAnswer = $correctAnswersSnapshot[$qid] ?? $correctAnswersSnapshot[(string) $qid] ?? null;
-                
-                if ($correctAnswer === null) {
-                    // Skip if no correct answer found for this question
+                $studentAnswer = $answersByQuestion[$qid] ?? $answersByQuestion[(string) $qid] ?? '';
+
+                // Unanswered = wrong
+                if (trim((string) $studentAnswer) === '') {
                     continue;
                 }
-                
-                $studentAnswer = $answersByQuestion[$qid] ?? $answersByQuestion[(string) $qid] ?? '';
-                
-                // Normalize both answers: trim whitespace, convert to string, uppercase for comparison
+                if ($correctAnswer === null) {
+                    continue;
+                }
+
                 $normalizedStudent = strtoupper(trim((string) $studentAnswer));
                 $normalizedCorrect = strtoupper(trim((string) $correctAnswer));
-                
-                // Only count as correct if they match exactly after normalization
-                if ($normalizedStudent === $normalizedCorrect && $normalizedStudent !== '') {
+                if ($normalizedStudent === $normalizedCorrect) {
                     $correct++;
                 }
             }

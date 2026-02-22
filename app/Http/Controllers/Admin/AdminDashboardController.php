@@ -29,12 +29,15 @@ class AdminDashboardController extends Controller
     /** Admin (Super Admin) dashboard: stats, courses, users, class groups, quizzes. */
     public function adminDashboard(): View
     {
+        // Sessions = results: only count sessions that have a result (excludes killed/incomplete)
+        $sessionsWithResult = QuizSession::whereNotNull('ended_at')->whereHas('result')->count();
         $overview = [
             'users' => User::whereIn('role', [User::ROLE_SUPER_ADMIN, User::ROLE_EXAMINER])->count(),
             'courses' => Course::count(),
             'class_groups' => ClassGroup::count(),
             'quizzes' => Quiz::count(),
-            'sessions' => QuizSession::count(),
+            'sessions' => $sessionsWithResult,
+            'results' => $sessionsWithResult,
         ];
         $cloudinary_configured = CloudinaryService::isConfigured();
         $update_mode = Setting::getValue(Setting::KEY_UPDATE_MODE, '0') === '1';

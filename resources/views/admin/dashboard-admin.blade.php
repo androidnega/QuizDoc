@@ -9,40 +9,34 @@
         <p class="text-sm sm:text-base text-gray-600">Courses, users, class groups (view only), and system settings</p>
     </div>
 
-    {{-- Update mode: slim, clean, no card animation --}}
-    <section class="rounded-md border px-3 py-2.5 min-w-0 {{ ($update_mode ?? false) ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50' }}">
+    {{-- Update mode: very slim height, clean, no animation; countdown mm:ss, no overflow --}}
+    <section class="rounded border px-2.5 py-1.5 min-w-0 overflow-hidden {{ ($update_mode ?? false) ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50' }}">
         <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-2">
-                    <h2 class="text-sm font-semibold {{ ($update_mode ?? false) ? 'text-green-900' : 'text-gray-900' }}">Update mode</h2>
-                    <span class="text-xs font-medium px-2 py-0.5 rounded {{ ($update_mode ?? false) ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700' }}">
-                        {{ ($update_mode ?? false) ? 'ON' : 'OFF' }}
-                    </span>
-                    @if(($update_mode ?? false) && ($update_estimated_end ?? null))
-                        <span class="text-xs text-green-900 font-semibold tabular-nums whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                            Time left: <span id="update-mode-countdown">--:--</span>
-                        </span>
-                    @endif
-                </div>
-                <p class="text-xs {{ ($update_mode ?? false) ? 'text-green-800' : 'text-gray-600' }} mt-0.5">Only Super Admins and Examiners can sign in at <code class="{{ ($update_mode ?? false) ? 'bg-green-100' : 'bg-gray-200' }} px-1 rounded">/login</code> while this is on.</p>
+            <div class="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
+                <h2 class="text-xs font-semibold {{ ($update_mode ?? false) ? 'text-green-900' : 'text-gray-900' }}">Update mode</h2>
+                <span class="text-xs font-medium px-1.5 py-0.5 rounded {{ ($update_mode ?? false) ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700' }}">{{ ($update_mode ?? false) ? 'ON' : 'OFF' }}</span>
+                @if(($update_mode ?? false) && ($update_estimated_end ?? null))
+                    <span class="text-xs text-green-900 font-semibold tabular-nums shrink-0 overflow-hidden" style="max-width:100%">Time left: <span id="update-mode-countdown">--:--</span></span>
+                @endif
+                <span class="text-xs {{ ($update_mode ?? false) ? 'text-green-800' : 'text-gray-600' }}">Only staff at <code class="px-0.5 rounded {{ ($update_mode ?? false) ? 'bg-green-100' : 'bg-gray-200' }}">/login</code></span>
             </div>
-            <form method="post" action="{{ route('dashboard.settings.update-mode') }}" class="flex items-center gap-2 flex-shrink-0">
-                @csrf
-                <button type="submit" class="relative inline-flex h-6 w-11 min-h-[36px] flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-offset-1 {{ ($update_mode ?? false) ? 'bg-green-500 focus:ring-green-400' : 'bg-gray-300 focus:ring-gray-400' }}" role="switch" aria-checked="{{ ($update_mode ?? false) ? 'true' : 'false' }}">
-                    <span class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow {{ ($update_mode ?? false) ? 'translate-x-5' : 'translate-x-0.5' }}"></span>
-                </button>
-            </form>
-        </div>
-        @if($update_mode ?? false)
-            <div class="mt-2 pt-2 border-t border-green-200">
-                <form method="post" action="{{ route('dashboard.settings.update-estimated-end') }}" class="flex flex-wrap items-end gap-2">
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+                @if($update_mode ?? false)
+                    <form method="post" action="{{ route('dashboard.settings.update-estimated-end') }}" class="flex items-center gap-1.5">
+                        @csrf
+                        <label class="sr-only">Estimated end</label>
+                        <input type="datetime-local" name="estimated_end" value="{{ $update_estimated_end ? \Carbon\Carbon::parse($update_estimated_end)->format('Y-m-d\TH:i') : '' }}" class="text-xs rounded border border-green-300 px-1.5 py-0.5 min-w-0 w-36" />
+                        <button type="submit" class="text-xs font-medium text-green-800 py-0.5">Save</button>
+                    </form>
+                @endif
+                <form method="post" action="{{ route('dashboard.settings.update-mode') }}" class="inline">
                     @csrf
-                    <label class="text-xs text-green-800">Estimated end:</label>
-                    <input type="datetime-local" name="estimated_end" value="{{ $update_estimated_end ? \Carbon\Carbon::parse($update_estimated_end)->format('Y-m-d\TH:i') : '' }}" class="text-xs rounded border border-green-300 px-2 py-1 min-w-0" />
-                    <button type="submit" class="text-xs font-semibold text-green-900 hover:text-green-700">Save</button>
+                    <button type="submit" class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent focus:outline-none focus:ring-1 focus:ring-offset-0 {{ ($update_mode ?? false) ? 'bg-green-500 focus:ring-green-400' : 'bg-gray-300 focus:ring-gray-400' }}" role="switch" aria-checked="{{ ($update_mode ?? false) ? 'true' : 'false' }}">
+                        <span class="pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow {{ ($update_mode ?? false) ? 'translate-x-4' : 'translate-x-0.5' }}"></span>
+                    </button>
                 </form>
             </div>
-        @endif
+        </div>
     </section>
 
     <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 min-w-0">

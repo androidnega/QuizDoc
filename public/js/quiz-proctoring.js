@@ -814,6 +814,8 @@
             if (remainingSeconds <= 0 || isUnloading) return;
             var invigilatorBadge = document.getElementById('ai-invigilator-badge');
             if (invigilatorBadge) invigilatorBadge.classList.remove('visible');
+            var panelBadge = document.getElementById('ai-invigilator-badge-panel');
+            if (panelBadge) panelBadge.classList.remove('visible');
             showCameraOffOverlay();
         }
 
@@ -848,6 +850,8 @@
             hideCameraOffOverlay();
             var invigilatorBadge = document.getElementById('ai-invigilator-badge');
             if (invigilatorBadge) invigilatorBadge.classList.add('visible');
+            var panelBadge = document.getElementById('ai-invigilator-badge-panel');
+            if (panelBadge) panelBadge.classList.add('visible');
             cameraStream = stream;
             const videoTrack = stream.getVideoTracks()[0];
             if (videoTrack) {
@@ -867,8 +871,12 @@
                 monitorVideo.height = 480;
                 var frameSlot = document.getElementById('live-camera-video-slot');
                 if (frameSlot) {
-                    frameSlot.innerHTML = '';
-                    frameSlot.appendChild(monitorVideo);
+                    var overlay = frameSlot.querySelector('#live-camera-guide-overlay');
+                    var kids = Array.prototype.slice.call(frameSlot.children);
+                    kids.forEach(function (el) {
+                        if (el.id !== 'live-camera-guide-overlay') el.remove();
+                    });
+                    frameSlot.insertBefore(monitorVideo, overlay || null);
                 } else {
                     document.body.appendChild(monitorVideo);
                 }
@@ -976,6 +984,8 @@
         window.addEventListener('beforeunload', function () {
             var invigilatorBadge = document.getElementById('ai-invigilator-badge');
             if (invigilatorBadge) invigilatorBadge.classList.remove('visible');
+            var panelBadge = document.getElementById('ai-invigilator-badge-panel');
+            if (panelBadge) panelBadge.classList.remove('visible');
             releaseWakeLock();
             stopCameraProtection();
             if (cameraCheckInterval) clearInterval(cameraCheckInterval);

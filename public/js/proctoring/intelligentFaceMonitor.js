@@ -37,9 +37,9 @@
 
     // Detection thresholds
     const HEAD_TURN_THRESHOLD = 0.25; // Bounding box center offset threshold for challenge
-    const HEAD_DIRECTION_THRESHOLD = 0.15; // 15% deviation from center for directional violation
+    const HEAD_DIRECTION_THRESHOLD = 0.22; // ~22% deviation from center (less aggressive)
     const HEAD_DIRECTION_LIMIT = 12;
-    const HEAD_DIRECTION_COOLDOWN_MS = 2000;
+    const HEAD_DIRECTION_COOLDOWN_MS = 3500;
     const MOTION_THRESHOLD = 0.01; // Minimum motion per frame to detect live face
     const FACE_PRESENCE_DURATION_MS = 3000; // 3 seconds of continuous face presence
     const CHALLENGE_TIMEOUT_MS = 5000; // 5 seconds to complete challenge
@@ -785,10 +785,6 @@
         lastHeadTurnMessage = 'Head turned ' + direction + ' - face the camera';
         lastHeadTurnMessageAt = now;
 
-        showProctoringModal(
-            'Head movement detected',
-            'Keep your head centered. Direction detected: ' + direction.toUpperCase() + ' (' + headDirectionViolationCount + '/' + HEAD_DIRECTION_LIMIT + ').'
-        );
         recordViolation('head_turn', 'minor', true, {
             direction: direction,
             head_turn_count: headDirectionViolationCount,
