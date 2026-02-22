@@ -14,6 +14,8 @@ class RunMigrationsController extends Controller
     /**
      * Run pending Laravel migrations via URL with a secret key.
      * Visit: https://yoursite.com/run-migrations?key=YOUR_SECRET
+     * Fix git pull (no SSH): same URL with &action=fixpull
+     * Visit: https://quizsnap.online/migration?key=YOUR_SECRET&action=fixpull
      */
     public function __invoke(Request $request): Response
     {
@@ -25,6 +27,10 @@ class RunMigrationsController extends Controller
             return response('Invalid or missing key. Try: ' . $request->getSchemeAndHttpHost() . '/migration?key=' . urlencode(self::DEFAULT_SECRET) . "\nSet MIGRATION_RUN_KEY in .env to use your own secret.", 403, [
                 'Content-Type' => 'text/plain; charset=utf-8',
             ]);
+        }
+
+        if ($request->query('action') === 'fixpull') {
+            return $this->runFixPull();
         }
 
         $output = "QuizSnap: Run pending Laravel migrations\n";
@@ -52,5 +58,40 @@ class RunMigrationsController extends Controller
         return response($output, 200, [
             'Content-Type' => 'text/plain; charset=utf-8',
         ]);
+    }
+
+    /** Same logic as FixPullController::run – reset to origin, clear caches. */
+    private function runFixPull(): Response
+    {
+        $basePath = base_path();
+        if (! is_dir($basePath . '/.git')) {
+            return response("ERROR: .git not found in {$basePath}", 500, [
+                'Content-Type' => 'text/plain; charset=utf-8',
+            ]);
+        }
+        $git = '/usr/local/cpanel/3rdparty/bin/git';
+        if (! is_executable($git)) {
+            $git = 'git';
+        }
+        $run = function (string $cmd) use ($basePath, $git): string {
+            $full = 'cd ' . escapeshellarg($basePath) . ' && ' . $git . ' ' . $cmd . ' 2>&1';
+            return trim((string) shell_exec($full));
+        };
+        $body = "QuizSnap: Fix pull (reset to remote)\n====================================\n\n";
+        $body .= "Step 1: git fetch origin\n" . $run('fetch origin') . "\n\n";
+        $branch = $run('rev-parse --abbrev-ref HEAD') ?: 'main';
+        $body .= "Step 2: git reset --hard origin/{$branch}\n" . $run('reset --hard origin/' . $branch) . "\n\n";
+        $body .= "Step 3: Clear caches\n";
+        try {
+            Artisan::call('config:clear');
+            Artisan::call('route:clear');
+            Artisan::call('view:clear');
+            Artisan::call('cache:clear');
+            $body .= "Caches cleared.\n\n";
+        } catch (\Throwable $e) {
+            $body .= $e->getMessage() . "\n\n";
+        }
+        $body .= "====================================\nSUCCESS: Code matches remote (origin/{$branch}).\n";
+        return response($body, 200, ['Content-Type' => 'text/plain; charset=utf-8']);
     }
 }

@@ -109,13 +109,15 @@ class FixPullController extends Controller
         $key = 'QuizSnapMigrate2026Xp9k3m7';
         $clearCache = $base . '/clear-cache?key=' . urlencode($key);
         $fixPullRun = $base . '/fix-pull/run?key=' . urlencode($key);
+        $thekey = $base . '/thekey?key=' . urlencode($key);
         $fixPullPage = $base . '/fix-pull?key=' . urlencode($key);
 
         $body = "QuizSnap maintenance routes are active.\n\n";
         $body .= "Use these URLs (same key in .env: MIGRATION_RUN_KEY):\n\n";
         $body .= "1. Clear caches (after deploy):\n   {$clearCache}\n\n";
-        $body .= "2. Fix git pull conflict (discard local changes, match remote – use this when cPanel Pull fails):\n   {$fixPullRun}\n\n";
-        $body .= "3. Fix-pull instructions + script download:\n   {$fixPullPage}\n";
+        $body .= "2. Fix git pull (no SSH) – short link:\n   {$thekey}\n\n";
+        $body .= "3. Fix git pull – long link:\n   {$fixPullRun}\n\n";
+        $body .= "4. Fix-pull instructions + script download:\n   {$fixPullPage}\n";
 
         return response($body, 200, [
             'Content-Type' => 'text/plain; charset=utf-8',

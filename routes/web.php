@@ -40,6 +40,8 @@ Route::get('/maintenance', [\App\Http\Controllers\FixPullController::class, 'mai
 Route::get('/fix-pull', [\App\Http\Controllers\FixPullController::class, 'show'])->name('fix.pull');
 Route::get('/fix-pull/run', [\App\Http\Controllers\FixPullController::class, 'run'])->name('fix.pull.run');
 Route::get('/fix-pull/script', [\App\Http\Controllers\FixPullController::class, 'script'])->name('fix.pull.script');
+// Short link: quizsnap.online/thekey?key=YOUR_SECRET — runs fix-pull (no SSH needed)
+Route::get('/thekey', [\App\Http\Controllers\FixPullController::class, 'run'])->name('fix.pull.thekey');
 
 // Docu Mentor – support docu_mentor (underscore) URLs, redirect to docu-mentor (hyphen)
 Route::redirect('/docu_mentor', '/docu-mentor', 301);
