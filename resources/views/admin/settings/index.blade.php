@@ -561,14 +561,13 @@
                             @endif
                         @else
                             <p class="text-sm text-gray-600">Enter the password to view study guide links.</p>
-                            <form action="{{ route('dashboard.settings.study-guide.unlock') }}" method="post" class="flex flex-wrap items-end gap-3">
-                                @csrf
+                            <div class="flex flex-wrap items-end gap-3" id="study-guide-unlock-wrap">
                                 <div>
                                     <label for="study_guide_password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                                    <input type="password" name="study_guide_password" id="study_guide_password" autocomplete="off" class="block w-full min-w-[200px] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" placeholder="Password" required>
+                                    <input type="password" id="study_guide_password" autocomplete="off" class="block w-full min-w-[200px] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" placeholder="Password">
                                 </div>
-                                <button type="submit" class="inline-flex items-center justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">Unlock</button>
-                            </form>
+                                <button type="button" id="study-guide-unlock-btn" class="inline-flex items-center justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">Unlock</button>
+                            </div>
                             @if(session('error'))
                                 <p class="text-sm text-red-600 mt-1">{{ session('error') }}</p>
                             @endif
@@ -587,6 +586,14 @@
                 </button>
             </div>
         </form>
+
+        {{-- Standalone form for study guide unlock (cannot nest form inside settings form) --}}
+        @if($show_backup_tab ?? false)
+        <form id="study-guide-unlock-form" action="{{ route('dashboard.settings.study-guide.unlock') }}" method="post" class="hidden">
+            @csrf
+            <input type="hidden" name="study_guide_password" id="study_guide_password_hidden">
+        </form>
+        @endif
 
     </div>
 </div>
@@ -634,6 +641,22 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('submit', function() {
             var tabInput = document.getElementById('settings_tab');
             if (tabInput) tabInput.value = (location.hash || '#general').replace(/^#/, '') || 'general';
+        });
+    }
+
+    var unlockBtn = document.getElementById('study-guide-unlock-btn');
+    var unlockForm = document.getElementById('study-guide-unlock-form');
+    var passwordInput = document.getElementById('study_guide_password');
+    var passwordHidden = document.getElementById('study_guide_password_hidden');
+    if (unlockBtn && unlockForm && passwordInput && passwordHidden) {
+        unlockBtn.addEventListener('click', function() {
+            var pwd = (passwordInput.value || '').trim();
+            if (!pwd) {
+                passwordInput.focus();
+                return;
+            }
+            passwordHidden.value = pwd;
+            unlockForm.submit();
         });
     }
 });

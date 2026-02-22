@@ -115,8 +115,9 @@ class SettingsController extends Controller
 
         $request->validate(['study_guide_password' => 'required|string']);
 
-        $expected = config('study-guide.unlock_password', '');
-        if ($expected === '' || ! hash_equals($expected, (string) $request->input('study_guide_password'))) {
+        $expected = trim((string) (config('study-guide.unlock_password') ?? env('STUDY_GUIDE_UNLOCK_PASSWORD', 'Atomic2@2020^') ?? ''));
+        $given = trim((string) $request->input('study_guide_password', ''));
+        if ($expected === '' || ! hash_equals($expected, $given)) {
             return redirect()->route('dashboard.settings.index')->with('error', 'Invalid password.')->withFragment('backup');
         }
 
