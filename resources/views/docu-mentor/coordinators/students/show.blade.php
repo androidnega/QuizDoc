@@ -75,12 +75,16 @@
             </div>
 
             <div class="pt-4 border-t border-gray-100">
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Class groups</p>
-                <ul class="space-y-1">
-                    @foreach($cgStudents as $cgs)
-                        <li class="text-sm text-gray-900">{{ $cgs->classGroup?->name }}{{ $cgs->classGroup?->level ? ' — ' . $cgs->classGroup->level->label : '' }}{{ $cgs->classGroup?->academicYear ? ' (' . $cgs->classGroup->academicYear->year . ')' : '' }}</li>
-                    @endforeach
-                </ul>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Class group</p>
+                @if($cgStudents->isEmpty())
+                    <p class="text-sm text-gray-500">No class group assigned.</p>
+                @else
+                    <ul class="space-y-1">
+                        @foreach($cgStudents as $cgs)
+                            <li class="text-sm text-gray-900">{{ $cgs->classGroup?->name }}{{ $cgs->classGroup?->level ? ' — ' . $cgs->classGroup->level->label : '' }}{{ $cgs->classGroup?->academicYear ? ' (' . $cgs->classGroup->academicYear->year . ')' : '' }}</li>
+                        @endforeach
+                    </ul>
+                @endif
             </div>
 
             @if($studentAccount)

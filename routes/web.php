@@ -259,6 +259,7 @@ Route::post('/password/reset', [\App\Http\Controllers\Admin\StaffPasswordResetCo
 // Staff dashboard and all staff pages under /dashboard (admin + examiner)
 Route::middleware('admin.auth')->group(function () {
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+    Route::get('/logout', [AdminAuthController::class, 'logout'])->name('logout.get');
     // GET /dashboard is handled by DashboardGatewayController (unified)
 
         Route::prefix('dashboard')->name('dashboard.')->middleware('block.superadmin.coordinator')->group(function () {
