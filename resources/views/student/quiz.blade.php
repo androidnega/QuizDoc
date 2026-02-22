@@ -173,11 +173,11 @@
         </div>
     </div>
 
-    {{-- Camera off overlay: block quiz until user allows camera --}}
+    {{-- Camera off overlay: block quiz until user clicks and allows camera (prompt shown on click) --}}
     <div id="camera-off-overlay" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-gray-900 px-4 pointer-events-auto" aria-hidden="true">
         <div class="bg-white border border-gray-200 rounded-lg p-4 max-w-md w-full border border-gray-200 text-center">
             <h4 class="font-semibold text-gray-800 mb-2">Camera is required</h4>
-            <p class="text-sm text-gray-600 mb-4">Your camera must stay on throughout the quiz. Please allow camera access to continue.</p>
+            <p class="text-sm text-gray-600 mb-4">Your camera must stay on throughout the quiz. Click the button below — your browser will ask for camera permission.</p>
             <button type="button" id="camera-off-allow-btn" class="btn btn-action py-2.5 px-5 text-sm font-semibold">Allow camera &amp; continue</button>
         </div>
     </div>

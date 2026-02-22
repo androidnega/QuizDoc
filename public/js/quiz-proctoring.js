@@ -77,7 +77,8 @@
                 if (cameraRequired && typeof showCameraOffOverlay === 'function') {
                     showCameraOffOverlay();
                 } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+                    var constraints = { video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false };
+                    navigator.mediaDevices.getUserMedia(constraints)
                         .then(function(newStream) {
                             cameraStream = newStream;
                             if (typeof hideCameraOffOverlay === 'function') hideCameraOffOverlay();
@@ -836,13 +837,19 @@
                 alert('Camera is not supported in this browser.');
                 return;
             }
-            navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            // Request with explicit constraints so browser shows permission prompt
+            var constraints = { video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false };
+            navigator.mediaDevices.getUserMedia(constraints)
                 .then(function (stream) {
                     hideCameraOffOverlay();
                     setupMonitoringWithStream(stream);
                 })
                 .catch(function (err) {
-                    alert('Could not access camera. Please allow camera permission in your browser settings and click "Allow camera & continue" again.');
+                    var msg = 'Could not access camera. Please allow camera permission when your browser asks, then click "Allow camera & continue" again.';
+                    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                        msg = 'Camera permission was denied. Please allow camera in your browser (click the lock or info icon in the address bar) and refresh, then click "Allow camera & continue".';
+                    }
+                    alert(msg);
                 });
         }
 
@@ -964,13 +971,8 @@
             cameraCheckInterval = setInterval(checkCameraStatus, 2000);
         }
 
-        navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-            .then(function (stream) {
-                setupMonitoringWithStream(stream);
-            })
-            .catch(function (err) {
-                if (remainingSeconds > 0 && !isUnloading) showCameraOffOverlay();
-            });
+        // Always show camera prompt first so permission is requested on user click (browser will show permission dialog)
+        showCameraOffOverlay();
 
         var cameraOffAllowBtn = document.getElementById('camera-off-allow-btn');
         if (cameraOffAllowBtn) {
