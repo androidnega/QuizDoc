@@ -40,19 +40,25 @@ class QuizViolation extends Model
 
     /**
      * Classify violation type into severity.
-     * Critical (auto-submit on first): copy_paste, multiple_ip.
-     * Warning (no auto-submit; right-click only warns): right_click, blur, tab_switch, other.
-     * Auto-submit on tab switch is handled separately when blur/tab_switch count reaches threshold.
+     * Critical (auto-submit on first):
+     * phone_detected, screenshot_attempt, tab_switch, multiple_faces,
+     * multiple_faces_during_quiz, window_resize, blur, copy_paste, multiple_ip.
+     * Warning: head-turn/out-of-frame/static-face and other non-critical proctoring signals.
      */
     public static function severityForType(string $type): string
     {
-        // Critical violations
-        if (in_array($type, ['copy_paste', 'multiple_ip', 'screenshot_attempt', 'camera_disconnected', 'face_lost_repeatedly'], true)) {
+        if (in_array($type, [
+            'phone_detected',
+            'screenshot_attempt',
+            'tab_switch',
+            'multiple_faces',
+            'multiple_faces_during_quiz',
+            'window_resize',
+            'blur',
+            'copy_paste',
+            'multiple_ip',
+        ], true)) {
             return self::SEVERITY_CRITICAL;
-        }
-        // Major violations
-        if (in_array($type, ['multiple_faces', 'phone_detected', 'external_audio', 'tab_switch', 'blur', 'window_resize'], true)) {
-            return self::SEVERITY_CRITICAL; // Using CRITICAL for major to match backend expectations
         }
         // Minor violations (default to warning)
         return self::SEVERITY_WARNING;

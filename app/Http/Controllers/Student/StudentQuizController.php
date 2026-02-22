@@ -528,47 +528,28 @@ class StudentQuizController extends Controller
         }
         QuizViolation::create($createPayload);
         $autoSubmitted = false;
-        // Zero-tolerance (copy_paste, screenshot_attempt, multiple_ip): auto-submit on first, no warning
-        if ($severity === QuizViolation::SEVERITY_CRITICAL) {
+        $criticalAutoSubmitTypes = [
+            'phone_detected',
+            'screenshot_attempt',
+            'tab_switch',
+            'multiple_faces',
+            'multiple_faces_during_quiz',
+            'window_resize',
+            'blur', // includes minimize/opening external window cases captured by browser focus change
+            'copy_paste',
+            'multiple_ip',
+        ];
+        // Critical violations: immediate auto-submit on first occurrence.
+        if (in_array($type, $criticalAutoSubmitTypes, true)) {
             $session->update([
                 'post_face_skipped_at' => now(),
                 'post_face_skipped_reason' => 'auto_submit',
                 'auto_submit_after' => null,
                 'auto_submitted' => true,
-                'submission_reason' => 'withheld_due_to_violations',
+                'submission_reason' => 'critical_violation_auto_submit',
             ]);
             $this->finalizeQuiz($session);
             $autoSubmitted = true;
-        }
-        // Major violations (blur, tab_switch, window_resize, camera_disconnected, no_face, multiple_faces, challenge_failed): max 1 warning per session, then auto-submit.
-        // multiple_faces_during_quiz has its own threshold (5) below.
-        $majorTypes = ['blur', 'tab_switch', 'window_resize', 'camera_disconnected', 'no_face', 'multiple_faces', 'challenge_failed'];
-        if (!$autoSubmitted && in_array($type, $majorTypes, true)) {
-            $majorCount = $session->violations()->whereIn('type', $majorTypes)->count();
-            if ($majorCount >= 2) {
-                $session->update([
-                    'post_face_skipped_at' => now(),
-                    'post_face_skipped_reason' => 'auto_submit',
-                    'auto_submit_after' => null,
-                ]);
-                $this->finalizeQuiz($session);
-                $autoSubmitted = true;
-            }
-        }
-        // Multiple faces during quiz: auto-submit only after 5 occurrences (critical).
-        if (!$autoSubmitted && $type === 'multiple_faces_during_quiz') {
-            $multipleFacesCount = $session->violations()->where('type', 'multiple_faces_during_quiz')->count();
-            if ($multipleFacesCount >= 5) {
-                $session->update([
-                    'post_face_skipped_at' => now(),
-                    'post_face_skipped_reason' => 'auto_submit',
-                    'auto_submit_after' => null,
-                    'auto_submitted' => true,
-                    'submission_reason' => 'critical_violation_auto_submit',
-                ]);
-                $this->finalizeQuiz($session);
-                $autoSubmitted = true;
-            }
         }
         // Out-of-frame: auto-submit only after 10 valid face_out_of_frame events.
         if (!$autoSubmitted && $type === 'face_out_of_frame') {
@@ -586,9 +567,9 @@ class StudentQuizController extends Controller
             }
         }
 
-        // Head turn (left/right/up/down) is violation-only; no auto-submit (critical violations auto-submit).
+        // Head turn (left/right/up/down) is violation-only; never auto-submit.
 
-        // Normal violation threshold across configured warning-level proctoring events.
+        // Normal warning threshold across configured warning-level proctoring events.
         if (!$autoSubmitted) {
             $normalViolationCount = $this->countNormalViolations($session);
             if ($normalViolationCount >= self::NORMAL_VIOLATION_LIMIT) {
@@ -608,9 +589,9 @@ class StudentQuizController extends Controller
         $this->checkAndMarkRiskySession($session);
 
         $response = ['success' => true, 'auto_submitted' => $autoSubmitted];
-        if (!$autoSubmitted && in_array($type, $majorTypes, true)) {
-            $majorCount = $session->violations()->whereIn('type', $majorTypes)->count();
-            $response['show_major_warning'] = $majorCount === 1;
+        $warningTypes = ['camera_disconnected', 'no_face', 'challenge_failed', 'face_out_of_frame', 'head_turn', 'static_face_detected', 'brief_face_loss'];
+        if (!$autoSubmitted && in_array($type, $warningTypes, true)) {
+            $response['show_major_warning'] = true;
         }
         if ($autoSubmitted) {
             $response['redirect'] = $this->quizCompleteUrl();
@@ -893,16 +874,33 @@ class StudentQuizController extends Controller
      */
     protected function finalizeQuiz(QuizSession $session): void
     {
-        $session->update(['ended_at' => now()]);
-        $lockedIds = $session->assigned_question_ids ?? [];
+        if ($session->ended_at === null) {
+            $session->update(['ended_at' => now()]);
+        }
+        $lockedIds = collect($session->assigned_question_ids ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+        $answeredIds = $session->answers()
+            ->pluck('question_id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+        // Safety guard: if snapshots are incomplete but answers exist, score using the larger stable set.
+        if ($answeredIds->count() > $lockedIds->count()) {
+            $lockedIds = $answeredIds;
+        }
+        $lockedIdsArray = $lockedIds->all();
         $correctAnswersSnapshot = $session->assigned_correct_answers ?? [];
-        $total = count($lockedIds);
+        $total = count($lockedIdsArray);
         $correct = 0;
         
         if ($total > 0) {
-            $answersByQuestion = $session->answers()->whereIn('question_id', $lockedIds)->pluck('student_answer', 'question_id')->toArray();
+            $answersByQuestion = $session->answers()->whereIn('question_id', $lockedIdsArray)->pluck('student_answer', 'question_id')->toArray();
             
-            foreach ($lockedIds as $qid) {
+            foreach ($lockedIdsArray as $qid) {
                 // Try both integer and string keys
                 $correctAnswer = $correctAnswersSnapshot[$qid] ?? $correctAnswersSnapshot[(string) $qid] ?? null;
                 
@@ -931,8 +929,9 @@ class StudentQuizController extends Controller
         $score = $total > 0 ? round(100 * $correct / $total, 2) : 0;
         $score = min($score, 100.00); // Cap at 100%
         
-        Result::create([
+        Result::updateOrCreate([
             'quiz_session_id' => $session->id,
+        ], [
             'score' => $score,
             'total_questions' => $total,
             'correct_count' => $correct,
@@ -1012,10 +1011,12 @@ class StudentQuizController extends Controller
             'copy_paste',
             'multiple_ip',
             'screenshot_attempt',
-            'camera_disconnected',
-            'face_lost_repeatedly',
             'phone_detected',
-            'external_audio',
+            'tab_switch',
+            'window_resize',
+            'multiple_faces',
+            'multiple_faces_during_quiz',
+            'blur',
         ] as $needle) {
             if (str_contains($normalized, $needle)) {
                 return true;
@@ -1065,7 +1066,7 @@ class StudentQuizController extends Controller
     private function countNormalViolations(QuizSession $session): int
     {
         return $session->violations()
-            ->whereIn('type', ['face_out_of_frame', 'head_turn', 'brief_face_loss', 'static_face_detected', 'no_blink'])
+            ->whereIn('type', ['face_out_of_frame'])
             ->count();
     }
 
@@ -1117,6 +1118,22 @@ class StudentQuizController extends Controller
         }
 
         $assignedCorrect = $session->assigned_correct_answers ?? [];
+        $assignedIds = collect($session->assigned_question_ids ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->values()
+            ->all();
+        $reviewQuestions = collect();
+        if (!empty($assignedIds)) {
+            $reviewQuestions = Question::whereIn('id', $assignedIds)->get()
+                ->sortBy(fn ($q) => array_search((int) $q->id, $assignedIds, true))
+                ->values();
+        } else {
+            $reviewQuestions = $session->answers
+                ->pluck('question')
+                ->filter()
+                ->values();
+        }
         $aiService = app(AiQuestionService::class);
         foreach ($session->answers as $answer) {
             $q = $answer->question;
@@ -1142,6 +1159,7 @@ class StudentQuizController extends Controller
         return view('student.result', [
             'session' => $session,
             'resultUrl' => $this->resultUrlWithToken($token),
+            'reviewQuestions' => $reviewQuestions,
         ]);
     }
 }

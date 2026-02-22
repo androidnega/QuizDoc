@@ -9,31 +9,37 @@
         <p class="text-sm sm:text-base text-gray-600">Courses, users, class groups (view only), and system settings</p>
     </div>
 
-    {{-- Update mode: when on, only staff can log in; others see maintenance page --}}
-    <section class="rounded-lg border p-3 sm:p-4 min-w-0 {{ ($update_mode ?? false) ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50' }}">
-        <div class="flex flex-wrap items-center justify-between gap-4">
+    {{-- Update mode: slim, clean, no card animation --}}
+    <section class="rounded-md border px-3 py-2.5 min-w-0 {{ ($update_mode ?? false) ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50' }}">
+        <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="min-w-0 flex-1">
-                <h2 class="text-sm font-semibold {{ ($update_mode ?? false) ? 'text-green-900' : 'text-gray-900' }}">Update mode</h2>
-                <p class="text-xs {{ ($update_mode ?? false) ? 'text-green-800' : 'text-gray-600' }} mt-0.5">When on, only Super Admins and Examiners can sign in at <code class="{{ ($update_mode ?? false) ? 'bg-green-100' : 'bg-gray-200' }} px-1 rounded">/login</code>. Everyone else sees a maintenance page.</p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-sm font-semibold {{ ($update_mode ?? false) ? 'text-green-900' : 'text-gray-900' }}">Update mode</h2>
+                    <span class="text-xs font-medium px-2 py-0.5 rounded {{ ($update_mode ?? false) ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700' }}">
+                        {{ ($update_mode ?? false) ? 'ON' : 'OFF' }}
+                    </span>
+                    @if(($update_mode ?? false) && ($update_estimated_end ?? null))
+                        <span class="text-xs text-green-900 font-semibold tabular-nums whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                            Time left: <span id="update-mode-countdown">--:--</span>
+                        </span>
+                    @endif
+                </div>
+                <p class="text-xs {{ ($update_mode ?? false) ? 'text-green-800' : 'text-gray-600' }} mt-0.5">Only Super Admins and Examiners can sign in at <code class="{{ ($update_mode ?? false) ? 'bg-green-100' : 'bg-gray-200' }} px-1 rounded">/login</code> while this is on.</p>
             </div>
-            <form method="post" action="{{ route('dashboard.settings.update-mode') }}" class="flex items-center gap-3 flex-shrink-0">
+            <form method="post" action="{{ route('dashboard.settings.update-mode') }}" class="flex items-center gap-2 flex-shrink-0">
                 @csrf
-                <span class="text-sm font-medium {{ ($update_mode ?? false) ? 'text-green-700' : 'text-gray-600' }}">{{ ($update_mode ?? false) ? 'On' : 'Off' }}</span>
-                <button type="submit" class="relative inline-flex h-7 w-12 min-h-[44px] flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 touch-manipulation {{ ($update_mode ?? false) ? 'bg-green-500 focus:ring-green-400' : 'bg-gray-300 focus:ring-gray-400' }}" role="switch" aria-checked="{{ ($update_mode ?? false) ? 'true' : 'false' }}">
-                    <span class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {{ ($update_mode ?? false) ? 'translate-x-5' : 'translate-x-1' }}" style="margin-top: 2px;"></span>
+                <button type="submit" class="relative inline-flex h-6 w-11 min-h-[36px] flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-offset-1 {{ ($update_mode ?? false) ? 'bg-green-500 focus:ring-green-400' : 'bg-gray-300 focus:ring-gray-400' }}" role="switch" aria-checked="{{ ($update_mode ?? false) ? 'true' : 'false' }}">
+                    <span class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow {{ ($update_mode ?? false) ? 'translate-x-5' : 'translate-x-0.5' }}"></span>
                 </button>
             </form>
         </div>
         @if($update_mode ?? false)
-            <div class="mt-4 pt-4 border-t {{ ($update_mode ?? false) ? 'border-green-200' : 'border-gray-200' }}">
-                @if($update_started_at ?? null)
-                    <p class="text-xs text-green-800 mb-2">Started: {{ \Carbon\Carbon::parse($update_started_at)->format('M j, Y g:i A') }}</p>
-                @endif
+            <div class="mt-2 pt-2 border-t border-green-200">
                 <form method="post" action="{{ route('dashboard.settings.update-estimated-end') }}" class="flex flex-wrap items-end gap-2">
                     @csrf
-                    <label class="text-xs text-green-800">Estimated end (optional):</label>
-                    <input type="datetime-local" name="estimated_end" value="{{ $update_estimated_end ? \Carbon\Carbon::parse($update_estimated_end)->format('Y-m-d\TH:i') : '' }}" class="text-sm rounded border border-green-300 px-2 py-1 min-w-0" />
-                    <button type="submit" class="text-sm font-medium text-green-900 hover:text-green-700">Save</button>
+                    <label class="text-xs text-green-800">Estimated end:</label>
+                    <input type="datetime-local" name="estimated_end" value="{{ $update_estimated_end ? \Carbon\Carbon::parse($update_estimated_end)->format('Y-m-d\TH:i') : '' }}" class="text-xs rounded border border-green-300 px-2 py-1 min-w-0" />
+                    <button type="submit" class="text-xs font-semibold text-green-900 hover:text-green-700">Save</button>
                 </form>
             </div>
         @endif
@@ -80,4 +86,36 @@
         </div>
     </section>
 </div>
+
+@if(($update_mode ?? false) && ($update_estimated_end ?? null))
+@push('scripts')
+<script>
+(function () {
+    var el = document.getElementById('update-mode-countdown');
+    if (!el) return;
+    var endMs = new Date("{{ \Carbon\Carbon::parse($update_estimated_end)->toIso8601String() }}").getTime();
+    if (!endMs || Number.isNaN(endMs)) return;
+    function formatLeft(totalSeconds) {
+        totalSeconds = Math.max(0, Math.floor(totalSeconds));
+        var h = Math.floor(totalSeconds / 3600);
+        var m = Math.floor((totalSeconds % 3600) / 60);
+        var s = totalSeconds % 60;
+        if (h > 0) {
+            return String(h) + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        }
+        return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+    function tick() {
+        var left = Math.max(0, Math.ceil((endMs - Date.now()) / 1000));
+        el.textContent = formatLeft(left);
+        if (left <= 0) {
+            clearInterval(timer);
+        }
+    }
+    tick();
+    var timer = setInterval(tick, 1000);
+})();
+</script>
+@endpush
+@endif
 @endsection

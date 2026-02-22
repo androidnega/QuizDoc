@@ -138,6 +138,42 @@
         return csrfToken || (document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content) || '';
     }
 
+    function captureCurrentMonitorFrame() {
+        var video = document.getElementById('face-monitor-video');
+        if (!video || video.readyState < 2 || video.videoWidth <= 0 || video.videoHeight <= 0) return null;
+        try {
+            var canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            var ctx = canvas.getContext('2d');
+            if (!ctx) return null;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.8);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function sendCriticalEvidenceSnapshot(type, metadata) {
+        if (!c.violationCaptureUrl || !c.sessionId) return;
+        var imageBase64 = captureCurrentMonitorFrame();
+        if (!imageBase64) return;
+        fetch(c.violationCaptureUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrf(),
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                session_id: c.sessionId,
+                violation_type: type,
+                image_base64: imageBase64,
+                metadata: metadata || {},
+            }),
+        }).catch(function () {});
+    }
+
     function formatTime(sec) {
         sec = Math.max(0, Math.floor(sec));
         const minutes = Math.floor(sec / 60);
@@ -339,6 +375,20 @@
     function recordViolation(type, metadata) {
         var body = { type: type };
         if (metadata) body.metadata = typeof metadata === 'string' ? metadata : JSON.stringify(metadata);
+        var criticalTypes = [
+            'phone_detected',
+            'screenshot_attempt',
+            'tab_switch',
+            'multiple_faces',
+            'multiple_faces_during_quiz',
+            'window_resize',
+            'blur',
+            'copy_paste',
+            'multiple_ip'
+        ];
+        if (criticalTypes.indexOf(type) !== -1) {
+            sendCriticalEvidenceSnapshot(type, metadata || {});
+        }
         fetch(violationUrl, {
             method: 'POST',
             headers: {
@@ -479,6 +529,8 @@
             });
             el.addEventListener('input', function () {
                 if (el.type === 'radio') return;
+                // Persist typed answers continuously so full scripts are not lost if submit/connection changes.
+                saveAnswer(questionId, getVal());
                 const sample = (el.value || '').trim();
                 if (sample !== '') lastUserInputSample = sample.slice(-300);
             });

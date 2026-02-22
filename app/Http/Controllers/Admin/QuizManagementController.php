@@ -513,7 +513,23 @@ class QuizManagementController extends Controller
             ]);
         }
         $session = $quizSession;
-        $session->load(['quiz', 'result', 'violations' => fn ($q) => $q->orderBy('occurred_at')]);
+        $session->load([
+            'quiz',
+            'result',
+            'answers.question',
+            'violations' => fn ($q) => $q->orderBy('occurred_at'),
+        ]);
+        $assignedIds = collect($session->assigned_question_ids ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->values()
+            ->all();
+        $assignedQuestions = collect();
+        if (!empty($assignedIds)) {
+            $assignedQuestions = Question::whereIn('id', $assignedIds)->get()
+                ->sortBy(fn ($q) => array_search((int) $q->id, $assignedIds, true))
+                ->values();
+        }
 
         $admin = $this->adminUser();
         if ($admin) {
@@ -536,7 +552,7 @@ class QuizManagementController extends Controller
             }
         }
 
-        return view('admin.sessions.show', compact('quiz', 'session'));
+        return view('admin.sessions.show', compact('quiz', 'session', 'assignedQuestions'));
     }
 
     /**
@@ -730,14 +746,30 @@ class QuizManagementController extends Controller
             return response()->json(['success' => true, 'message' => 'Session already ended.']);
         }
 
-        $quizSession->update(['ended_at' => now()]);
-        $lockedIds = $quizSession->assigned_question_ids ?? [];
+        if ($quizSession->ended_at === null) {
+            $quizSession->update(['ended_at' => now()]);
+        }
+        $lockedIds = collect($quizSession->assigned_question_ids ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+        $answeredIds = $quizSession->answers()
+            ->pluck('question_id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+        if ($answeredIds->count() > $lockedIds->count()) {
+            $lockedIds = $answeredIds;
+        }
+        $lockedIdsArray = $lockedIds->all();
         $correctAnswersSnapshot = $quizSession->assigned_correct_answers ?? [];
-        $total = count($lockedIds);
+        $total = count($lockedIdsArray);
         $correct = 0;
         if ($total > 0) {
-            $answersByQuestion = $quizSession->answers()->whereIn('question_id', $lockedIds)->pluck('student_answer', 'question_id')->toArray();
-            foreach ($lockedIds as $qid) {
+            $answersByQuestion = $quizSession->answers()->whereIn('question_id', $lockedIdsArray)->pluck('student_answer', 'question_id')->toArray();
+            foreach ($lockedIdsArray as $qid) {
                 $correctAnswer = $correctAnswersSnapshot[$qid] ?? $correctAnswersSnapshot[(string) $qid] ?? null;
                 if ($correctAnswer === null) continue;
                 $studentAnswer = $answersByQuestion[$qid] ?? $answersByQuestion[(string) $qid] ?? '';
@@ -752,8 +784,9 @@ class QuizManagementController extends Controller
         $score = $total > 0 ? round(100 * $correct / $total, 2) : 0;
         $score = min($score, 100.00);
         $violationsCount = $quizSession->violations()->count();
-        Result::create([
+        Result::updateOrCreate([
             'quiz_session_id' => $quizSession->id,
+        ], [
             'score' => $score,
             'total_questions' => $total,
             'correct_count' => $correct,

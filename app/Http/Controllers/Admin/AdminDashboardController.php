@@ -8,7 +8,6 @@ use App\Models\ClassGroup;
 use App\Models\Course;
 use App\Models\Quiz;
 use App\Models\QuizSession;
-use App\Models\Result;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\CloudinaryService;
@@ -94,10 +93,17 @@ class AdminDashboardController extends Controller
                 ->get()
             : collect();
         $quizIds = (clone $quizQuery)->pluck('id');
+        $sessionsWithResults = $quizIds->isEmpty()
+            ? 0
+            : QuizSession::whereIn('quiz_id', $quizIds)
+                ->whereNotNull('ended_at')
+                ->whereHas('result')
+                ->count();
         $stats = [
             'quizzes' => (clone $quizQuery)->count(),
-            'sessions' => $quizIds->isEmpty() ? 0 : QuizSession::whereIn('quiz_id', $quizIds)->count(),
-            'results' => $quizIds->isEmpty() ? 0 : Result::whereHas('quizSession', fn ($q) => $q->whereIn('quiz_id', $quizIds))->count(),
+            // Keep sessions/results in sync by counting only completed sessions with exactly one result snapshot.
+            'sessions' => $sessionsWithResults,
+            'results' => $sessionsWithResults,
         ];
         $recentSessions = $quizIds->isEmpty() ? collect() : QuizSession::with(['quiz', 'result'])->whereIn('quiz_id', $quizIds)->orderByDesc('start_time')->limit(20)->get();
         

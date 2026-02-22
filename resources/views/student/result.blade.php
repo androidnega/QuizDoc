@@ -164,8 +164,8 @@
             </div>
             @endif
 
-            {{-- View results button: links to /quiz/result#answer-review; only when full review is available --}}
-            @if($session->quiz->canShowFullReview() && $session->answers->isNotEmpty())
+            {{-- View results button: links to /quiz/result#answer-review; available when assigned questions exist --}}
+            @if($session->quiz->canShowFullReview() && ($reviewQuestions ?? collect())->isNotEmpty())
                 <div class="text-center mb-4">
                     <a href="{{ ($resultUrl ?? route('student.result')) }}#answer-review" class="btn btn-action text-sm py-2.5 px-5 inline-flex items-center gap-2">
                         View results
@@ -175,65 +175,69 @@
             @endif
 
             {{-- Review: only when quiz allows full review after end (and quiz window has ended) --}}
-            @if($session->quiz->canShowFullReview() && $session->answers->isNotEmpty())
+            @if($session->quiz->canShowFullReview() && ($reviewQuestions ?? collect())->isNotEmpty())
                 <div id="answer-review" class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 sm:p-8 mb-8 scroll-mt-4 min-w-0 max-w-full overflow-hidden">
                     <h2 class="text-sm font-semibold text-gray-900 mb-3">Review your answers</h2>
-                    <p class="text-xs text-gray-500 mb-4">Full review is available now that the quiz window has ended. See your answers, the correct answers, and why any were wrong.</p>
+                    <p class="text-xs text-gray-500 mb-4">Full review is available now that the quiz window has ended. Every assigned question is shown, including unanswered ones, with the correct answer and explanation.</p>
+                    @php
+                        $answersByQuestion = $session->answers->keyBy('question_id');
+                        $assignedCorrectMap = $session->assigned_correct_answers ?? [];
+                        $shuffledByQuestion = $session->shuffled_question_options ?? [];
+                    @endphp
                     <div class="space-y-4 min-w-0 max-w-full">
-                        @foreach($session->answers as $idx => $answer)
+                        @foreach(($reviewQuestions ?? collect()) as $idx => $question)
                             @php
-                                $question = $answer->question;
-                                $rawQText = $question ? trim((string)($question->text ?? '')) : '';
-                                if ($rawQText !== '') {
-                                    $questionText = $question->text;
-                                } else {
-                                    $correctKey = $question ? ($session->assigned_correct_answers[$answer->question_id] ?? $session->assigned_correct_answers[(string)$answer->question_id] ?? $question->correct_answer ?? '') : '';
-                                    $correctOpt = $question && is_array($question->options ?? null) ? collect($question->options)->firstWhere('key', $correctKey) : null;
-                                    $correctOptText = $correctOpt['text'] ?? '';
-                                    $questionText = $question && !empty($question->topic) ? 'Question about ' . $question->topic : 'Question (text not available)';
-                                    if ($correctOptText !== '') {
-                                        $questionText .= ' — Correct: ' . $correctOptText;
-                                    }
-                                }
-                                $sessionCorrect = $session->assigned_correct_answers[$answer->question_id] ?? $session->assigned_correct_answers[(string)$answer->question_id] ?? ($question->correct_answer ?? '');
-                                $correct = trim((string)$answer->student_answer) === trim((string)$sessionCorrect);
-                                $shuffledOpts = $session->shuffled_question_options[$answer->question_id] ?? $session->shuffled_question_options[(string)$answer->question_id] ?? null;
+                                $answer = $answersByQuestion->get((int) $question->id);
+                                $studentAnswerRaw = trim((string) ($answer->student_answer ?? ''));
+                                $sessionCorrect = $assignedCorrectMap[$question->id] ?? $assignedCorrectMap[(string)$question->id] ?? ($question->correct_answer ?? '');
+                                $isAnswered = $studentAnswerRaw !== '';
+                                $correct = $isAnswered && trim((string)$studentAnswerRaw) === trim((string)$sessionCorrect);
+                                $shuffledOpts = $shuffledByQuestion[$question->id] ?? $shuffledByQuestion[(string)$question->id] ?? null;
                                 $yourText = null;
                                 $correctText = null;
                                 if (is_array($shuffledOpts)) {
                                     foreach ($shuffledOpts as $o) {
                                         $k = $o['key'] ?? $o;
                                         $t = $o['text'] ?? $o;
-                                        if ((string)$k === trim((string)$answer->student_answer)) $yourText = $t;
+                                        if ((string)$k === trim((string)$studentAnswerRaw)) $yourText = $t;
                                         if ((string)$k === trim((string)$sessionCorrect)) $correctText = $t;
                                     }
                                 }
-                                if ($yourText === null && $question && is_array($question->options ?? null)) {
+                                if ($yourText === null && is_array($question->options ?? null)) {
                                     foreach ($question->options as $opt) {
-                                        if (is_array($opt) && (string)($opt['key'] ?? '') === trim((string)$answer->student_answer)) { $yourText = $opt['text'] ?? $opt['key'] ?? ''; break; }
+                                        if (is_array($opt) && (string)($opt['key'] ?? '') === trim((string)$studentAnswerRaw)) { $yourText = $opt['text'] ?? $opt['key'] ?? ''; break; }
                                     }
                                 }
-                                if ($correctText === null && $question && is_array($question->options ?? null)) {
+                                if ($correctText === null && is_array($question->options ?? null)) {
                                     foreach ($question->options as $opt) {
                                         if (is_array($opt) && (string)($opt['key'] ?? '') === trim((string)$sessionCorrect)) { $correctText = $opt['text'] ?? $opt['key'] ?? ''; break; }
                                     }
                                 }
+                                $whyWrong = null;
+                                if (!$isAnswered) {
+                                    $whyWrong = 'This question was not answered.';
+                                } elseif (!$correct) {
+                                    $whyWrong = (trim((string)($question->explanation_wrong ?? '')) !== '') ? $question->explanation_wrong : ($answer->explanation_wrong ?? null);
+                                }
                             @endphp
                             <div class="border border-gray-200 rounded-lg p-3 min-w-0 max-w-full {{ $correct ? 'bg-success-50/50 border-success-200' : 'bg-danger-50/50 border-danger-200' }}">
-                                    <p class="text-sm font-medium text-gray-900 mb-1 break-words">{{ $idx + 1 }}. {{ $questionText }}</p>
+                                    <p class="text-sm font-medium text-gray-900 mb-1 break-words">{{ $idx + 1 }}. {{ $question->text }}</p>
                                     <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs mt-2 min-w-0">
-                                        <span class="text-gray-600 break-words min-w-0">Your answer: <strong>{{ $yourText !== null ? $answer->student_answer . '. ' . $yourText : ($answer->student_answer ?: '—') }}</strong></span>
+                                        <span class="text-gray-600 break-words min-w-0">Your answer:
+                                            <strong>
+                                                @if($isAnswered)
+                                                    {{ $yourText !== null ? $studentAnswerRaw . '. ' . $yourText : $studentAnswerRaw }}
+                                                @else
+                                                    Not answered
+                                                @endif
+                                            </strong>
+                                        </span>
                                         <span class="text-success-700 break-words min-w-0">Correct: <strong>{{ $correctText !== null ? $sessionCorrect . '. ' . $correctText : $sessionCorrect }}</strong></span>
                                     </div>
-                                    @if(!$correct)
-                                        @php
-                                            $whyWrong = ($question && trim((string)($question->explanation_wrong ?? '')) !== '') ? $question->explanation_wrong : ($answer->explanation_wrong ?? null);
-                                        @endphp
-                                        @if(!empty($whyWrong))
-                                            <div class="mt-3 pt-3 border-t border-gray-200 text-xs break-words min-w-0">
-                                                <p class="text-danger-700"><strong>Reason:</strong> {{ $whyWrong }}</p>
-                                            </div>
-                                        @endif
+                                    @if(!$correct && !empty($whyWrong))
+                                        <div class="mt-3 pt-3 border-t border-gray-200 text-xs break-words min-w-0">
+                                            <p class="text-danger-700"><strong>Reason:</strong> {{ $whyWrong }}</p>
+                                        </div>
                                     @endif
                                 </div>
                         @endforeach
@@ -257,10 +261,10 @@
         @endif
 
         <div class="text-center mt-10 flex flex-wrap justify-center gap-4">
-            @if($session->result && !$isWithheld && $session->quiz->canShowFullReview() && $session->answers->isNotEmpty())
+            @if($session->result && !$isWithheld && $session->quiz->canShowFullReview() && ($reviewQuestions ?? collect())->isNotEmpty())
                 <a href="{{ ($resultUrl ?? route('student.result')) }}#answer-review" class="btn btn-action text-sm py-2.5 px-5">View results</a>
             @endif
-            <a href="{{ route('student.landing') }}" class="btn {{ ($session->result && !$isWithheld && $session->quiz->canShowFullReview() && $session->answers->isNotEmpty()) ? 'btn-secondary' : 'btn-action' }} text-sm py-2.5 px-5">Back to Home</a>
+            <a href="{{ route('student.landing') }}" class="btn {{ ($session->result && !$isWithheld && $session->quiz->canShowFullReview() && ($reviewQuestions ?? collect())->isNotEmpty()) ? 'btn-secondary' : 'btn-action' }} text-sm py-2.5 px-5">Back to Home</a>
         </div>
     </div>
 </div>

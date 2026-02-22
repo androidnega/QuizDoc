@@ -782,7 +782,6 @@
         lastHeadDirection = direction;
         lastHeadDirectionViolationAt = now;
         headDirectionViolationCount++;
-        incrementNormalViolationCount();
         lastHeadTurnMessage = 'Head turned ' + direction + ' - face the camera';
         lastHeadTurnMessageAt = now;
 

@@ -153,6 +153,7 @@
                                         'blur' => 'Window lost focus',
                                         'tab_switch' => 'Switched to another tab',
                                         'window_resize' => 'Window resized or minimized',
+                                        'phone_detected' => 'Phone detected',
                                         'copy_paste' => 'Copy or paste attempted',
                                         'right_click' => 'Right-click / context menu',
                                         'screenshot_attempt' => 'Screenshot key pressed',
@@ -161,6 +162,9 @@
                                         'no_face_during_quiz' => 'No face during quiz',
                                         'face_out_of_frame' => 'Face out of frame',
                                         'multiple_faces_during_quiz' => 'Multiple faces during quiz',
+                                        'multiple_faces' => 'Multiple faces detected',
+                                        'head_turn' => 'Head turned away',
+                                        'static_face_detected' => 'Static face detected',
                                         'other' => 'Other',
                                     ];
                                     $label = $typeLabels[$v->type] ?? ucfirst(str_replace('_', ' ', $v->type));
@@ -236,10 +240,78 @@
                         </tbody>
                     </table>
                 </div>
-                <p class="mt-2 text-xs text-gray-500">Critical violations (copy/paste, screenshot, different IP) trigger immediate auto-submit. Multiple major violations (blur, tab switch, resize) may also trigger auto-submit.</p>
+                <p class="mt-2 text-xs text-gray-500">Critical violations trigger immediate auto-submit: phone detected, screenshot attempt, tab switch/minimize, multiple faces, resize/fullscreen exit, opening another window/app, copy/paste, and multiple IP.</p>
             @endif
         </section>
     </div>
+
+    {{-- Question-by-question review (lecturer view mirrors student review) --}}
+    <section class="bg-white rounded-lg border border-gray-200 p-3">
+        <h2 class="text-sm font-semibold text-gray-900 mb-2">Question Review</h2>
+        @php
+            $assignedQuestions = $assignedQuestions ?? collect();
+            $answersByQuestion = $session->answers->keyBy('question_id');
+            $assignedCorrect = $session->assigned_correct_answers ?? [];
+            $shuffledByQuestion = $session->shuffled_question_options ?? [];
+        @endphp
+        @if($assignedQuestions->isEmpty())
+            <p class="text-xs text-gray-500">No assigned question snapshot found for this session.</p>
+        @else
+            <div class="space-y-2">
+                @foreach($assignedQuestions as $idx => $question)
+                    @php
+                        $answer = $answersByQuestion->get((int) $question->id);
+                        $studentAnswerRaw = trim((string) ($answer->student_answer ?? ''));
+                        $sessionCorrect = $assignedCorrect[$question->id] ?? $assignedCorrect[(string) $question->id] ?? ($question->correct_answer ?? '');
+                        $isAnswered = $studentAnswerRaw !== '';
+                        $isCorrect = $isAnswered && strtoupper($studentAnswerRaw) === strtoupper(trim((string) $sessionCorrect));
+                        $opts = $shuffledByQuestion[$question->id] ?? $shuffledByQuestion[(string) $question->id] ?? ($question->options ?? []);
+                        $studentAnswerText = null;
+                        $correctText = null;
+                        if (is_array($opts)) {
+                            foreach ($opts as $opt) {
+                                $k = is_array($opt) ? (string) ($opt['key'] ?? '') : (string) $opt;
+                                $t = is_array($opt) ? (string) ($opt['text'] ?? $k) : (string) $opt;
+                                if ($k === $studentAnswerRaw) $studentAnswerText = $t;
+                                if ($k === trim((string) $sessionCorrect)) $correctText = $t;
+                            }
+                        }
+                        $reason = null;
+                        if (!$isAnswered) {
+                            $reason = 'Not answered by student.';
+                        } elseif (!$isCorrect) {
+                            $reason = trim((string) ($question->explanation_wrong ?? '')) !== '' ? $question->explanation_wrong : ($answer->explanation_wrong ?? null);
+                        }
+                    @endphp
+                    <div class="rounded border p-2 {{ $isCorrect ? 'border-green-200 bg-green-50/50' : 'border-red-200 bg-red-50/50' }}">
+                        <p class="text-xs font-semibold text-gray-900">{{ $idx + 1 }}. {{ $question->text }}</p>
+                        <div class="mt-1 text-xs text-gray-700 space-y-0.5">
+                            <p>
+                                <span class="font-medium">Student:</span>
+                                @if($isAnswered)
+                                    {{ $studentAnswerRaw }}@if($studentAnswerText !== null). {{ $studentAnswerText }}@endif
+                                @else
+                                    <span class="text-red-700 font-medium">Not answered</span>
+                                @endif
+                            </p>
+                            <p><span class="font-medium text-green-700">Correct:</span> {{ $sessionCorrect }}@if($correctText !== null). {{ $correctText }}@endif</p>
+                            <p>
+                                <span class="font-medium">Status:</span>
+                                @if($isCorrect)
+                                    <span class="text-green-700 font-semibold">Correct</span>
+                                @else
+                                    <span class="text-red-700 font-semibold">Wrong</span>
+                                @endif
+                            </p>
+                            @if($reason)
+                                <p><span class="font-medium text-red-700">Reason:</span> {{ $reason }}</p>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </section>
 
     <div>
         <a href="{{ route('dashboard.quizzes.show', $quiz) }}" class="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">← Back to Quiz</a>
