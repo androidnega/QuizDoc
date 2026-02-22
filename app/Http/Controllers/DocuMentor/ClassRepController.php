@@ -100,14 +100,14 @@ class ClassRepController extends Controller
     public function previewPdf(Quiz $quiz): Response
     {
         [$user, ] = $this->ensureClassRepAndQuizInClass($quiz);
-        $quiz->load(['classGroup', 'course', 'academicClass']);
+        $quiz->load(['classGroup.level', 'course', 'academicClass']);
         $sessions = $quiz->sessions()
             ->with(['result', 'violations'])
             ->whereNotNull('ended_at')
             ->orderBy('student_index')
             ->get();
         $courseName = $this->courseNameForQuiz($quiz);
-        $classGroupName = $quiz->classGroup?->name ?? ($quiz->academicClass?->display_label ?? '—');
+        $classGroupName = $this->classGroupNameWithLevelForQuiz($quiz);
         $examTypeLabel = $quiz->getExamTypeLabel();
         $reportDate = $quiz->ends_at ? $quiz->ends_at->format('F j, Y') : now()->format('F j, Y');
         [$institutionName, $institutionLogoPath] = $this->institutionBranding();
@@ -121,6 +121,7 @@ class ClassRepController extends Controller
             'reportDate' => $reportDate,
             'institutionName' => $institutionName,
             'institutionLogoPath' => $institutionLogoPath,
+            'forClassRep' => true,
         ])->setPaper('a4', 'portrait')->setWarnings(false);
         return $pdf->stream($this->pdfFilename($quiz));
     }
@@ -131,14 +132,14 @@ class ClassRepController extends Controller
     public function downloadPdf(Quiz $quiz): Response
     {
         [$user, ] = $this->ensureClassRepAndQuizInClass($quiz);
-        $quiz->load(['classGroup', 'course', 'academicClass']);
+        $quiz->load(['classGroup.level', 'course', 'academicClass']);
         $sessions = $quiz->sessions()
             ->with(['result', 'violations'])
             ->whereNotNull('ended_at')
             ->orderBy('student_index')
             ->get();
         $courseName = $this->courseNameForQuiz($quiz);
-        $classGroupName = $quiz->classGroup?->name ?? ($quiz->academicClass?->display_label ?? '—');
+        $classGroupName = $this->classGroupNameWithLevelForQuiz($quiz);
         $examTypeLabel = $quiz->getExamTypeLabel();
         $reportDate = $quiz->ends_at ? $quiz->ends_at->format('F j, Y') : now()->format('F j, Y');
         [$institutionName, $institutionLogoPath] = $this->institutionBranding();
@@ -152,6 +153,7 @@ class ClassRepController extends Controller
             'reportDate' => $reportDate,
             'institutionName' => $institutionName,
             'institutionLogoPath' => $institutionLogoPath,
+            'forClassRep' => true,
         ])->setPaper('a4', 'portrait')->setWarnings(false);
         return $pdf->download($this->pdfFilename($quiz));
     }
@@ -217,6 +219,21 @@ class ClassRepController extends Controller
         $code = trim($quiz->course->code ?? '');
         $name = trim($quiz->course->name ?? '');
         return $code && $name ? $code . ' – ' . $name : ($name ?: $code ?: '—');
+    }
+
+    /** Class group name with level (e.g. "Group A - Level 100") for class-rep PDF only. */
+    private function classGroupNameWithLevelForQuiz(Quiz $quiz): string
+    {
+        $cg = $quiz->classGroup;
+        if ($cg && $cg->relationLoaded('level') && $cg->level) {
+            $name = trim($cg->name ?? '');
+            $levelLabel = $cg->level->label ?? (($cg->level->value ?? '') !== '' ? 'Level ' . $cg->level->value : '');
+            return $levelLabel !== '' ? $name . ' - ' . $levelLabel : ($name ?: '—');
+        }
+        if ($cg) {
+            return trim($cg->name ?? '') ?: '—';
+        }
+        return $quiz->academicClass?->display_label ?? '—';
     }
 
     private function institutionBranding(): array

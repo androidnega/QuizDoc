@@ -415,6 +415,7 @@ Route::middleware('admin.auth')->group(function () {
             // More specific routes first so download is matched before projects/{project}
             Route::get('projects/{project}/proposals/{proposal}/download', [\App\Http\Controllers\DocuMentor\SupervisorFileController::class, 'downloadProposal'])->name('projects.proposals.download');
             Route::post('projects/{project}/proposals/{proposal}/comment', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'commentProposal'])->name('projects.proposals.comment');
+            Route::post('projects/{project}/supervisors', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'addSupervisor'])->name('projects.supervisors.store');
             Route::get('projects/{project}', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'show'])->name('projects.show');
             Route::put('projects/{project}', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'update'])->name('projects.update');
             Route::delete('projects/{project}', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'destroy'])->name('projects.destroy');

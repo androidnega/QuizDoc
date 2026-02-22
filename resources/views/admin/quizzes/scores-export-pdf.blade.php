@@ -35,7 +35,7 @@
             @if(!empty($institutionName))
                 <p class="institution">{{ $institutionName }}</p>
             @endif
-            <p class="report-title">Score report — ERT - {{ $classGroupName ?? $quiz->classGroup?->name ?? $quiz->academicClass?->name ?? '—' }}</p>
+            <p class="report-title">Score report — {{ !empty($forClassRep) ? 'Class rep' : 'ERT' }} - {{ $classGroupName ?? $quiz->classGroup?->name ?? $quiz->academicClass?->name ?? '—' }}</p>
         </div>
     </div>
 
@@ -64,7 +64,15 @@
                 <td>{{ $session->student_index }}</td>
                 <td class="num">
                     @if($session->result)
-                        {{ number_format((float) $session->result->score, 1) }}% ({{ $session->result->correct_count }}/{{ $session->result->total_questions }}){{ $session->isResultWithheld() ? ' - Result on hold' : '' }}
+                        @if(!empty($forClassRep))
+                            @if($session->isResultWithheld())
+                                On hold – see lecturer
+                            @else
+                                {{ $session->result->correct_count }}/{{ $session->result->total_questions }}
+                            @endif
+                        @else
+                            {{ number_format((float) $session->result->score, 1) }}% ({{ $session->result->correct_count }}/{{ $session->result->total_questions }}){{ $session->isResultWithheld() ? ' - Result on hold' : '' }}
+                        @endif
                     @else
                         —
                     @endif

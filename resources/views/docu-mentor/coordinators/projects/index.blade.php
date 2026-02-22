@@ -69,12 +69,35 @@
                                             data-quicklook-id="quicklook-{{ $project->id }}">
                                         <i class="fas fa-eye text-xs"></i>
                                     </button>
-                                    {{-- Manage / supervisor assignment --}}
-                                    <a href="{{ route('dashboard.coordinators.projects.show', $project) }}#assign-supervisors"
-                                       class="inline-flex items-center justify-center rounded-full p-1.5 text-primary-600 hover:text-primary-800 hover:bg-primary-50"
-                                       title="Assign supervisors & manage project">
-                                        <i class="fas fa-user-tie text-xs"></i>
-                                    </a>
+                                    {{-- Assign supervisor dropdown --}}
+                                    <div class="relative inline-block group/dd">
+                                        <button type="button" class="inline-flex items-center justify-center rounded-full p-1.5 text-primary-600 hover:text-primary-800 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                                title="Assign supervisor"
+                                                aria-haspopup="true" aria-expanded="false"
+                                                data-dropdown-toggle="assign-dd-{{ $project->id }}">
+                                            <i class="fas fa-user-tie text-xs"></i>
+                                            <i class="fas fa-caret-down text-[10px] ml-0.5 opacity-70"></i>
+                                        </button>
+                                        <div id="assign-dd-{{ $project->id }}" class="hidden absolute right-0 top-full mt-1 z-20 min-w-[180px] rounded-lg border border-gray-200 bg-white shadow-lg py-1 text-left">
+                                            <a href="{{ route('dashboard.coordinators.projects.show', $project) }}#assign-supervisors" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap">
+                                                Manage supervisors →
+                                            </a>
+                                            <div class="border-t border-gray-100 my-1"></div>
+                                            <p class="px-3 py-1 text-xs font-medium text-gray-500 uppercase">Add supervisor</p>
+                                            @php $availableSupervisors = ($supervisors ?? collect())->filter(fn($s) => !$project->supervisors->contains('id', $s->id)); @endphp
+                                            @forelse($availableSupervisors as $sup)
+                                                <form action="{{ route('dashboard.coordinators.projects.supervisors.store', $project) }}" method="post" class="block">
+                                                    @csrf
+                                                    <input type="hidden" name="supervisor_id" value="{{ $sup->id }}">
+                                                    <button type="submit" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                                        {{ $sup->name ?? $sup->username }}
+                                                    </button>
+                                                </form>
+                                            @empty
+                                                <p class="px-3 py-2 text-xs text-gray-500">No more supervisors to add</p>
+                                            @endforelse
+                                        </div>
+                                    </div>
 
                                     {{-- Open full project page --}}
                                     <a href="{{ route('dashboard.coordinators.projects.show', $project) }}"
@@ -288,6 +311,25 @@
     });
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && !quicklookOverlay.classList.contains('hidden')) closeQuicklook();
+    });
+})();
+
+(function () {
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-dropdown-toggle]');
+        var targetId = btn ? btn.getAttribute('data-dropdown-toggle') : null;
+        if (targetId) {
+            e.preventDefault();
+            e.stopPropagation();
+            var dd = document.getElementById(targetId);
+            var open = dd && !dd.classList.contains('hidden');
+            document.querySelectorAll('[id^="assign-dd-"]').forEach(function (el) { el.classList.add('hidden'); });
+            if (dd && !open) dd.classList.remove('hidden');
+            return;
+        }
+        if (!e.target.closest('[id^="assign-dd-"]')) {
+            document.querySelectorAll('[id^="assign-dd-"]').forEach(function (el) { el.classList.add('hidden'); });
+        }
     });
 })();
 </script>

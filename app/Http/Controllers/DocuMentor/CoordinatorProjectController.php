@@ -25,6 +25,7 @@ class CoordinatorProjectController extends Controller
     public function index(Request $request): View
     {
         $academicYears = \App\Models\DocuMentor\AcademicYear::orderByDesc('year')->get();
+        $supervisors = User::where('role', User::ROLE_EXAMINER)->orderBy('name')->get(['id', 'name', 'username']);
         // Eager-load proposals and supervisors for list view and quick look modal.
         $query = Project::with(['group', 'category', 'academicYear', 'proposals', 'supervisors']);
         if ($request->filled('academic_year_id')) {
@@ -32,7 +33,7 @@ class CoordinatorProjectController extends Controller
         }
         $projects = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
 
-        return view('docu-mentor.coordinators.projects.index', compact('projects', 'academicYears'));
+        return view('docu-mentor.coordinators.projects.index', compact('projects', 'academicYears', 'supervisors'));
     }
 
     public function show(Project $project): View
@@ -88,6 +89,41 @@ class CoordinatorProjectController extends Controller
         $project->update(['submission_deadline' => $request->submission_deadline ?: $project->submission_deadline]);
 
         return back()->with('success', 'Project updated.');
+    }
+
+    /**
+     * Add a single supervisor to the project from the projects index (dropdown). Syncs existing + new.
+     */
+    public function addSupervisor(Request $request, Project $project): RedirectResponse
+    {
+        $this->authorize('update', $project);
+        $request->validate(['supervisor_id' => 'required|exists:users,id']);
+        $supervisorId = (int) $request->supervisor_id;
+        $user = User::find($supervisorId);
+        if (!$user || $user->role !== User::ROLE_EXAMINER) {
+            return back()->with('error', 'Invalid supervisor.');
+        }
+        $currentIds = $project->supervisors()->pluck('users.id')->all();
+        if (in_array($supervisorId, $currentIds, true)) {
+            return back()->with('info', 'That supervisor is already assigned.');
+        }
+        $hadNoSupervisors = empty($currentIds);
+        $project->supervisors()->sync(array_merge($currentIds, [$supervisorId]));
+        if ($hadNoSupervisors) {
+            $project->update([
+                'approved' => true,
+                'approval_date' => now(),
+                'status' => Project::STATUS_APPROVED,
+                'approved_by_id' => request()->attributes->get('dm_user')->id,
+                'submission_deadline' => $project->submission_deadline ?? $project->academicYear?->effective_deadline,
+            ]);
+            $this->ensureSixChapters($project);
+        }
+        \App\Models\DocuMentor\SupervisorProjectApproval::firstOrCreate(
+            ['project_id' => $project->id, 'user_id' => $supervisorId],
+            ['approved' => false, 'approved_at' => null]
+        );
+        return back()->with('success', ($user->name ?: $user->username) . ' added as supervisor.');
     }
 
     public function storeChapter(Request $request, Project $project): RedirectResponse

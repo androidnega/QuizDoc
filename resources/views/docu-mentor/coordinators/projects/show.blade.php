@@ -64,7 +64,17 @@
         @if($project->description)
             <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5 sm:col-span-2">
                 <dt class="text-xs font-medium text-slate-600 uppercase tracking-wide">Description</dt>
-                <dd class="mt-1 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{{ $project->description }}</dd>
+                <dd class="mt-1 text-sm text-gray-700 leading-relaxed">
+                    <div id="project-description-wrap" class="relative">
+                        <div id="project-description-text" class="whitespace-pre-wrap {{ strlen($project->description) > 320 ? 'max-h-24 overflow-hidden' : '' }}">{{ $project->description }}</div>
+                        @if(strlen($project->description) > 320)
+                        <button type="button" id="project-description-toggle" class="mt-1 text-primary-600 hover:text-primary-800 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 rounded">
+                            <span id="project-description-more">Click to read more</span>
+                            <span id="project-description-less" class="hidden">Click to show less</span>
+                        </button>
+                        @endif
+                    </div>
+                </dd>
             </div>
         @endif
     </div>
@@ -371,6 +381,25 @@
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') closeModal();
     });
+
+    (function() {
+        var toggle = document.getElementById('project-description-toggle');
+        var textEl = document.getElementById('project-description-text');
+        var moreLabel = document.getElementById('project-description-more');
+        var lessLabel = document.getElementById('project-description-less');
+        if (!toggle || !textEl) return;
+        toggle.addEventListener('click', function() {
+            if (textEl.classList.contains('max-h-24')) {
+                textEl.classList.remove('max-h-24', 'overflow-hidden');
+                moreLabel.classList.add('hidden');
+                lessLabel.classList.remove('hidden');
+            } else {
+                textEl.classList.add('max-h-24', 'overflow-hidden');
+                moreLabel.classList.remove('hidden');
+                lessLabel.classList.add('hidden');
+            }
+        });
+    })();
 })();
 </script>
 @endpush
