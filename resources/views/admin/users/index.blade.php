@@ -203,9 +203,9 @@ function openSmsModal(userId, username, currentAllocation, currentUsed) {
     document.getElementById('smsUserId').value = userId;
     document.getElementById('smsUsername').textContent = username;
     document.getElementById('smsAllocationDisplay').textContent = currentAllocation;
-    var remaining = Math.max(0, currentAllocation - currentUsed);
-    document.getElementById('smsRemaining').textContent = remaining;
-    document.getElementById('smsRemainingWrap').style.display = currentUsed > 0 ? '' : 'none';
+    // In this modal, remaining = allocation (the value in the field); saving resets used so remaining equals allocation
+    document.getElementById('smsRemaining').textContent = currentAllocation;
+    document.getElementById('smsRemainingWrap').style.display = '';
     document.getElementById('smsAllocationInput').value = currentAllocation;
     document.getElementById('smsError').classList.add('hidden');
     document.getElementById('smsError').textContent = '';
