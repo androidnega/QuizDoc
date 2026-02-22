@@ -414,6 +414,7 @@ Route::middleware('admin.auth')->group(function () {
             Route::post('projects/{project}/alert', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'alertProject'])->name('projects.alert');
             Route::post('projects/{project}/chapters', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'storeChapter'])->name('projects.chapters.store');
             Route::post('projects/{project}/proposals/{proposal}/comment', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'commentProposal'])->name('projects.proposals.comment');
+            Route::get('projects/{project}/proposals/{proposal}/download', [\App\Http\Controllers\DocuMentor\SupervisorFileController::class, 'downloadProposal'])->name('projects.proposals.download');
             Route::get('workload', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'workload'])->name('workload');
             Route::get('export-report', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'exportReportPage'])->name('export-report');
             Route::get('export-report/download', [\App\Http\Controllers\DocuMentor\CoordinatorProjectController::class, 'exportReport'])->name('export-report.download');

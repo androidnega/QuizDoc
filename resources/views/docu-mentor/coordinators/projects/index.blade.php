@@ -63,6 +63,12 @@
                             </td>
                             <td class="px-3 py-2 text-right">
                                 <div class="inline-flex items-center gap-2 justify-end">
+                                    {{-- Quick look modal: group, year, budget, supervisors, proposals --}}
+                                    <button type="button" class="quicklook-btn inline-flex items-center justify-center rounded-full p-1.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                                            title="Quick look"
+                                            data-quicklook-id="quicklook-{{ $project->id }}">
+                                        <i class="fas fa-eye text-xs"></i>
+                                    </button>
                                     {{-- Manage / supervisor assignment --}}
                                     <a href="{{ route('dashboard.coordinators.projects.show', $project) }}#assign-supervisors"
                                        class="inline-flex items-center justify-center rounded-full p-1.5 text-primary-600 hover:text-primary-800 hover:bg-primary-50"
@@ -106,14 +112,75 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-3 py-8 text-center text-gray-500">No projects yet.</td>
+                            <td colspan="7" class="px-3 py-8 text-center text-gray-500">No projects yet.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </div>
+
+    {{-- Hidden quick look content per project (used by modal) --}}
+    @foreach($projects as $project)
+    <div id="quicklook-{{ $project->id }}" class="hidden quicklook-content">
+        <div class="space-y-4 text-left">
+            <h3 class="text-sm font-semibold text-gray-900 border-b border-gray-100 pb-2">{{ Str::limit($project->title, 50) }}</h3>
+            <div class="grid grid-cols-2 gap-3">
+                <div><span class="text-xs font-medium text-gray-500 uppercase">Group</span><p class="text-sm font-medium text-gray-900 mt-0.5">{{ $project->group?->name ?? '—' }}</p></div>
+                <div><span class="text-xs font-medium text-gray-500 uppercase">Year</span><p class="text-sm font-medium text-gray-900 mt-0.5">{{ $project->academicYear?->year ?? '—' }}</p></div>
+                <div><span class="text-xs font-medium text-gray-500 uppercase">Budget</span><p class="text-sm font-medium text-gray-900 mt-0.5">{{ $project->budget !== null ? number_format($project->budget, 2) : '—' }}</p></div>
+                <div><span class="text-xs font-medium text-gray-500 uppercase">Status</span><p class="text-sm mt-0.5"><span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full {{ $project->approved ? 'bg-success-100 text-success-800' : 'bg-amber-100 text-amber-800' }}">{{ $project->approved ? 'Approved' : 'Pending' }}</span></p></div>
+            </div>
+            <div>
+                <span class="text-xs font-medium text-gray-500 uppercase">Supervisors</span>
+                @if($project->supervisors && $project->supervisors->isNotEmpty())
+                    <ul class="text-sm text-gray-900 mt-1 space-y-0.5">
+                        @foreach($project->supervisors as $sup)
+                            <li>{{ $sup->name ?? $sup->username }}</li>
+                        @endforeach
+                    </ul>
+                @else
+                    <p class="text-sm text-gray-500 mt-1">None assigned</p>
+                @endif
+            </div>
+            <div>
+                <span class="text-xs font-medium text-gray-500 uppercase">Proposals</span>
+                @if($project->proposals && $project->proposals->isNotEmpty())
+                    <ul class="text-sm text-gray-900 mt-1 space-y-1">
+                        @foreach($project->proposals->sortByDesc('uploaded_at') as $proposal)
+                            <li class="flex items-center justify-between gap-2">
+                                <span>Version {{ $proposal->version_number }} — {{ $proposal->uploaded_at?->format('M j, Y') }}</span>
+                                <a href="{{ route('dashboard.coordinators.projects.proposals.download', [$project, $proposal]) }}" class="text-primary-600 hover:text-primary-800 text-xs font-medium shrink-0">Download</a>
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <p class="text-sm text-gray-500 mt-1">No proposals yet</p>
+                @endif
+            </div>
+            <div class="pt-2 border-t border-gray-100 flex justify-end">
+                <a href="{{ route('dashboard.coordinators.projects.show', $project) }}" class="text-sm font-medium text-primary-600 hover:text-primary-800">Open full details →</a>
+            </div>
+        </div>
+    </div>
+    @endforeach
+
     <div class="mt-4">{{ $projects->links() }}</div>
+</div>
+
+{{-- Quick look modal --}}
+<div id="quicklook-modal-overlay" class="fixed inset-0 z-50 bg-black/40 hidden flex items-center justify-center px-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+            <h2 class="text-sm font-semibold text-gray-900">Quick look</h2>
+            <button type="button" id="quicklook-modal-close" class="rounded-full p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+                <i class="fas fa-times text-sm"></i>
+            </button>
+        </div>
+        <div id="quicklook-modal-body" class="p-5 overflow-y-auto flex-1">
+            {{-- Filled by JS --}}
+        </div>
+    </div>
 </div>
 
 {{-- Modal for coordinator comments on latest proposal --}}
@@ -190,7 +257,37 @@
         }
     });
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeModal();
+        if (e.key === 'Escape' && overlay && !overlay.classList.contains('hidden')) closeModal();
+    });
+})();
+
+(function () {
+    var quicklookOverlay = document.getElementById('quicklook-modal-overlay');
+    var quicklookBody = document.getElementById('quicklook-modal-body');
+    var quicklookClose = document.getElementById('quicklook-modal-close');
+    if (!quicklookOverlay || !quicklookBody) return;
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.quicklook-btn');
+        if (!btn) return;
+        e.preventDefault();
+        var id = btn.getAttribute('data-quicklook-id');
+        if (!id) return;
+        var source = document.getElementById(id);
+        if (!source) return;
+        quicklookBody.innerHTML = source.innerHTML;
+        quicklookOverlay.classList.remove('hidden');
+    });
+
+    function closeQuicklook() {
+        quicklookOverlay.classList.add('hidden');
+    }
+    if (quicklookClose) quicklookClose.addEventListener('click', closeQuicklook);
+    quicklookOverlay.addEventListener('click', function (e) {
+        if (e.target === quicklookOverlay) closeQuicklook();
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !quicklookOverlay.classList.contains('hidden')) closeQuicklook();
     });
 })();
 </script>

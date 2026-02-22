@@ -25,8 +25,8 @@ class CoordinatorProjectController extends Controller
     public function index(Request $request): View
     {
         $academicYears = \App\Models\DocuMentor\AcademicYear::orderByDesc('year')->get();
-        // Eager-load proposals so we can comment from the list view (latest proposal per project).
-        $query = Project::with(['group', 'category', 'academicYear', 'proposals']);
+        // Eager-load proposals and supervisors for list view and quick look modal.
+        $query = Project::with(['group', 'category', 'academicYear', 'proposals', 'supervisors']);
         if ($request->filled('academic_year_id')) {
             $query->where('academic_year_id', $request->academic_year_id);
         }

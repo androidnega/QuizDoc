@@ -176,6 +176,16 @@
         @if($project->proposals->isEmpty())
             <p class="text-sm text-slate-500 mb-4">No proposals yet. Upload one below.</p>
         @else
+            @php $latestProposal = $project->proposals->sortByDesc('uploaded_at')->first(); @endphp
+            @if($latestProposal)
+            <div class="mb-4 rounded-lg border border-primary-200 bg-primary-50/60 px-4 py-3">
+                <p class="text-xs font-medium text-primary-800 uppercase tracking-wide mb-1">Latest proposal (current version)</p>
+                <a href="{{ route('dashboard.projects.proposals.download', [$project, $latestProposal]) }}" class="inline-flex items-center gap-2 text-sm font-semibold text-primary-700 hover:text-primary-900">
+                    <i class="fas fa-file-pdf text-red-500"></i>
+                    Download latest proposal — Version {{ $latestProposal->version_number }} ({{ $latestProposal->uploaded_at?->format('M j, Y') }})
+                </a>
+            </div>
+            @endif
             <ul class="space-y-2 mb-4 divide-y divide-slate-100">
                 @foreach($project->proposals as $p)
                     <li class="py-3 first:pt-0">
