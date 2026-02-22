@@ -4,12 +4,13 @@
 
 @section('content')
 @php
-    $heroUrl = !empty(trim($loginHeroImage ?? '')) ? trim($loginHeroImage) : asset('assets/hero-section.jpg');
+    $defaultHero = 'https://img.freepik.com/premium-photo/black-students-using-tablet-class-working-online-presentation-together_622301-7401.jpg';
+    $heroUrl = !empty(trim($loginHeroImage ?? '')) ? trim($loginHeroImage) : $defaultHero;
 @endphp
 <div class="min-h-screen flex items-center justify-center px-4 py-10" style="background-color: #eef1f4;">
-    <div class="w-full max-w-[420px] bg-white rounded-xl shadow-lg overflow-hidden">
+    <div class="w-full max-w-[460px] bg-white rounded-xl shadow-lg overflow-hidden">
         {{-- Hero section inside card: image + overlay + SIGN IN --}}
-        <div class="relative h-40 sm:h-48 overflow-hidden">
+        <div class="relative h-32 sm:h-36 overflow-hidden">
             <img
                 src="{{ $heroUrl }}"
                 alt=""
@@ -24,8 +25,8 @@
         </div>
 
         {{-- Form section --}}
-        <div class="px-6 sm:px-8 py-6 sm:py-8">
-            <form action="{{ route('login.post') }}" method="post" class="space-y-5">
+        <div class="px-6 sm:px-8 py-4 sm:py-5">
+            <form action="{{ route('login.post') }}" method="post" class="space-y-4">
                 @csrf
                 <div>
                     <label for="username" class="block text-sm font-medium text-gray-600 mb-1">Username</label>
