@@ -102,7 +102,7 @@
             captureBtn.disabled = false;
             captureBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'text-white', 'border-green-600');
             captureBtn.classList.add('btn-action');
-            setButtonText('Starting camera...');
+            setButtonText('Allow camera & continue');
             return;
         }
         if (!videoReady) {
@@ -399,8 +399,12 @@
                 }
             })
             .catch(function (err) {
-                showError('Camera access denied or not available. Allow camera access and try again, or use a different browser.');
-                setButtonText('Try again');
+                if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+                    showError('Camera permission denied. Click "Allow camera & continue" and allow permission in the browser prompt.');
+                } else {
+                    showError('Camera access denied or not available. Allow camera access and try again, or use a different browser.');
+                }
+                setButtonText('Allow camera & continue');
                 if (captureBtn) captureBtn.disabled = false;
                 if (cameraLoading) cameraLoading.style.display = 'none';
             });
@@ -528,7 +532,7 @@
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.85');
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
             fetch(config.storeUrl || '/student/proctoring/capture', {
                 method: 'POST',
@@ -590,11 +594,11 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             initFaceDetector();
-            startCamera();
+            updateCaptureButton();
         });
     } else {
         initFaceDetector();
-        startCamera();
+        updateCaptureButton();
     }
     
     window.addEventListener('beforeunload', function () {
