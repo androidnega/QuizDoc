@@ -20,13 +20,13 @@
             <h2 class="text-xs font-semibold text-gray-800 mb-2">{{ $user->isDocuMentorCoordinator() ? 'Your info' : 'Lecturer info' }}</h2>
             <dl class="grid grid-cols-1 gap-1.5 sm:grid-cols-2 text-xs">
                 <div><dt class="text-gray-500">Username</dt><dd class="font-medium text-gray-900">{{ $user->username ?? '—' }}</dd></div>
-                <div><dt class="text-gray-500">Name</dt><dd class="font-medium text-gray-900">{{ $user->name ?? '—' }}</dd></div>
+                <div><dt class="text-gray-500">Name</dt><dd class="font-medium text-gray-900 uppercase">{{ $user->name ? Str::upper($user->name) : '—' }}</dd></div>
                 <div><dt class="text-gray-500">Role</dt><dd class="font-medium text-gray-900">{{ $user->role ? ucfirst(str_replace('_', ' ', $user->role)) : '—' }}</dd></div>
-                <div><dt class="text-gray-500">Institution</dt><dd class="font-medium text-gray-900">{{ $user->institution?->display_name ?? $user->institution?->name ?? '—' }}</dd></div>
-                <div><dt class="text-gray-500">Faculty</dt><dd class="font-medium text-gray-900">{{ $user->faculty?->name ?? '—' }}</dd></div>
-                <div><dt class="text-gray-500">Department</dt><dd class="font-medium text-gray-900">{{ $user->department?->name ?? '—' }}</dd></div>
+                <div><dt class="text-gray-500">Institution</dt><dd class="font-medium text-gray-900 uppercase">{{ ($user->institution?->display_name ?? $user->institution?->name) ? Str::upper($user->institution?->display_name ?? $user->institution?->name) : '—' }}</dd></div>
+                <div><dt class="text-gray-500">Faculty</dt><dd class="font-medium text-gray-900 uppercase">{{ $user->faculty?->name ? Str::upper($user->faculty->name) : '—' }}</dd></div>
+                <div><dt class="text-gray-500">Department</dt><dd class="font-medium text-gray-900 uppercase">{{ $user->department?->name ? Str::upper($user->department->name) : '—' }}</dd></div>
                 @if(isset($user->course) && $user->course)
-                <div><dt class="text-gray-500">Course</dt><dd class="font-medium text-gray-900">{{ $user->course->name }}</dd></div>
+                <div><dt class="text-gray-500">Course</dt><dd class="font-medium text-gray-900 uppercase">{{ Str::upper($user->course->name) }}</dd></div>
                 @endif
             </dl>
             @if($user->isExaminer())

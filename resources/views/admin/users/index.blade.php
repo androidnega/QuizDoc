@@ -84,7 +84,7 @@
                         @forelse($users as $u)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-3 py-2 text-sm font-medium text-gray-900 break-words" title="{{ $u->username }}">{{ $u->username }}</td>
-                                <td class="px-3 py-2 text-sm text-gray-600 break-words" title="{{ $u->name ?? '-' }}">{{ $u->name ?? '—' }}</td>
+                                <td class="px-3 py-2 text-sm text-gray-600 break-words uppercase" title="{{ $u->name ?? '-' }}">{{ $u->name ? Str::upper($u->name) : '—' }}</td>
                                 <td class="px-3 py-2">
                                     @php
                                         $roleLabels = [
@@ -98,13 +98,13 @@
                                     @endphp
                                     <span class="inline-block w-fit px-2 py-1 text-xs font-semibold rounded-md whitespace-nowrap {{ $r['class'] }}">{{ $r['label'] }}</span>
                                 </td>
-                                <td class="px-3 py-2 text-sm text-gray-600 break-words" title="{{ $u->institution?->name ?? '—' }}">{{ $u->institution?->name ?? '—' }}</td>
+                                <td class="px-3 py-2 text-sm text-gray-600 break-words uppercase" title="{{ $u->institution?->name ?? '—' }}">{{ $u->institution?->name ? Str::upper($u->institution->name) : '—' }}</td>
                                 <td class="px-3 py-2 text-sm text-gray-600">
                                     <div class="flex flex-wrap gap-1.5 min-w-0">
                                         @if($u->courses->isNotEmpty())
                                             @foreach($u->courses->take(3) as $course)
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 truncate max-w-[140px]" title="{{ $course->name }}">
-                                                    {{ $course->name }}
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 truncate max-w-[140px] uppercase" title="{{ $course->name }}">
+                                                    {{ Str::upper($course->name) }}
                                                 </span>
                                             @endforeach
                                             @if($u->courses->count() > 3)
@@ -119,13 +119,13 @@
                                 </td>
                                 @if(isset($isSuperAdmin) && $isSuperAdmin)
                                 <td class="px-3 py-2 text-sm">
-                                    @if($u->role === 'examiner')
+                                    @if($u->role === 'examiner' || $u->role === \App\Models\User::DM_ROLE_COORDINATOR)
                                     <div class="flex flex-col gap-0.5">
                                         <div class="flex items-center gap-2">
                                             <span class="text-gray-600" id="sms-display-{{ $u->id }}">
-                                                SMS: {{ $u->sms_allocation ?? 0 }}@if(($u->sms_used ?? 0) > 0)<span class="text-xs text-gray-500"> ({{ $u->sms_remaining ?? 0 }} left)</span>@endif
+                                                SMS: {{ $u->sms_allocation ?? 0 }} <span class="text-xs text-gray-500">({{ $u->sms_remaining ?? 0 }} left)</span>
                                             </span>
-                                            <button type="button" onclick="openSmsModal({{ $u->id }}, '{{ $u->username }}', {{ $u->sms_allocation ?? 0 }}, {{ $u->sms_used ?? 0 }})" class="inline-flex p-1 rounded text-gray-500 hover:text-primary-600 hover:bg-primary-50 transition-colors" title="Set SMS allocation">
+                                            <button type="button" onclick="openSmsModal({{ $u->id }}, '{{ $u->username }}', {{ $u->sms_allocation ?? 0 }}, {{ $u->sms_used ?? 0 }})" class="inline-flex p-1 rounded text-gray-500 hover:text-primary-600 hover:bg-primary-50 transition-colors" title="Add SMS credits">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
                                         </button>
                                         </div>
@@ -257,7 +257,7 @@ document.getElementById('smsForm').addEventListener('submit', async function(e) 
         
         if (data.success) {
             const display = document.getElementById('sms-display-' + userId);
-            display.innerHTML = 'SMS: ' + data.allocation + (data.used > 0 ? '<span class="text-xs text-gray-500"> (' + data.remaining + ' left)</span>' : '');
+            display.innerHTML = 'SMS: ' + data.allocation + ' <span class="text-xs text-gray-500">(' + data.remaining + ' left)</span>';
             closeSmsModal();
             
             // Show success message (you could add a toast notification here)

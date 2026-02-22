@@ -25,14 +25,14 @@
                     @php $user = auth()->user(); $inst = $user?->institution; @endphp
                     @if($isCoordinatorOnly)
                         @if($inst && $inst->logo_url)
-                            <img src="{{ $inst->logo_url }}" alt="{{ $inst->name }}" class="h-10 w-10 flex-shrink-0 object-contain rounded-lg border border-gray-200 bg-white">
+                            <img src="{{ $inst->logo_url }}" alt="{{ Str::upper($inst->name ?? '') }}" class="h-10 w-10 flex-shrink-0 object-contain rounded-lg border border-gray-200 bg-white">
                         @else
                             <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary-600 text-white font-bold text-lg shadow-sm">C</span>
                         @endif
                         <span class="examiner-sidebar-brand-text truncate text-lg font-bold">Coordinator</span>
                     @else
                         @if($inst && $inst->logo_url)
-                            <img src="{{ $inst->logo_url }}" alt="{{ $inst->name }}" class="h-10 w-10 flex-shrink-0 object-contain rounded-lg border border-gray-200 bg-white">
+                            <img src="{{ $inst->logo_url }}" alt="{{ Str::upper($inst->name ?? '') }}" class="h-10 w-10 flex-shrink-0 object-contain rounded-lg border border-gray-200 bg-white">
                         @else
                             <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary-600 text-white font-bold text-lg shadow-sm">Q</span>
                         @endif
@@ -181,6 +181,9 @@
                 @php
                     $examiner = auth()->user();
                     $showSmsInHeader = $examiner && ($examiner->isExaminer() || $examiner->role === \App\Models\User::DM_ROLE_COORDINATOR);
+                    if ($showSmsInHeader) {
+                        $examiner->refresh();
+                    }
                     $smsRemaining = $showSmsInHeader ? $examiner->sms_remaining : 0;
                     $smsAllocation = $showSmsInHeader ? ($examiner->sms_allocation ?? 0) : 0;
                     $smsColorClass = $smsRemaining >= 100 ? 'text-green-600' : 'text-red-600';
