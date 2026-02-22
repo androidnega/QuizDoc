@@ -194,18 +194,21 @@
 
 @push('scripts')
 <script>
-// SMS Allocation Modal: allocation is new total; remaining = allocation - used (e.g. had 20 left, set 2020 → remaining 40)
+// SMS Allocation Modal: input is credits to add; new remaining = current remaining + credits added
 function openSmsModal(userId, username, currentAllocation, currentUsed) {
     const modal = document.getElementById('smsModal');
     const inputEl = document.getElementById('smsAllocationInput');
     document.getElementById('smsUserId').value = userId;
     document.getElementById('smsUsername').textContent = username;
+    modal.dataset.currentAllocation = currentAllocation;
     modal.dataset.currentUsed = currentUsed;
+    var currentRemaining = Math.max(0, (currentAllocation || 0) - (currentUsed || 0));
+    modal.dataset.currentRemaining = currentRemaining;
     document.getElementById('smsAllocationDisplay').textContent = currentAllocation;
-    var remaining = Math.max(0, (currentAllocation || 0) - (currentUsed || 0));
-    document.getElementById('smsRemaining').textContent = remaining;
+    document.getElementById('smsRemaining').textContent = currentRemaining;
     document.getElementById('smsRemainingWrap').style.display = '';
-    inputEl.value = currentAllocation;
+    inputEl.value = '';
+    inputEl.placeholder = 'e.g. 20, 50, 100';
     document.getElementById('smsError').classList.add('hidden');
     document.getElementById('smsError').textContent = '';
     modal.classList.remove('hidden');
@@ -217,9 +220,9 @@ function openSmsModal(userId, username, currentAllocation, currentUsed) {
 function updateSmsRemainingDisplay() {
     var modal = document.getElementById('smsModal');
     var inputEl = document.getElementById('smsAllocationInput');
-    var used = parseInt(modal.dataset.currentUsed, 10) || 0;
-    var alloc = parseInt(inputEl.value, 10) || 0;
-    document.getElementById('smsRemaining').textContent = Math.max(0, alloc - used);
+    var currentRemaining = parseInt(modal.dataset.currentRemaining, 10) || 0;
+    var creditsToAdd = parseInt(inputEl.value, 10) || 0;
+    document.getElementById('smsRemaining').textContent = currentRemaining + creditsToAdd;
 }
 
 function closeSmsModal() {
@@ -232,7 +235,7 @@ function closeSmsModal() {
 document.getElementById('smsForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const userId = document.getElementById('smsUserId').value;
-    const allocation = parseInt(document.getElementById('smsAllocationInput').value) || 0;
+    const creditsToAdd = parseInt(document.getElementById('smsAllocationInput').value) || 0;
     const errorEl = document.getElementById('smsError');
     const submitBtn = document.getElementById('smsSubmitBtn');
     
@@ -247,13 +250,12 @@ document.getElementById('smsForm').addEventListener('submit', async function(e) 
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
-            body: JSON.stringify({ user_id: userId, sms_allocation: allocation })
+            body: JSON.stringify({ user_id: userId, sms_allocation: creditsToAdd })
         });
         
         const data = await response.json();
         
         if (data.success) {
-            // Update display: show allocation (exactly what admin set), not deduction
             const display = document.getElementById('sms-display-' + userId);
             display.innerHTML = 'SMS: ' + data.allocation + (data.used > 0 ? '<span class="text-xs text-gray-500"> (' + data.remaining + ' left)</span>' : '');
             closeSmsModal();
@@ -303,7 +305,7 @@ document.getElementById('smsModal').addEventListener('click', function(e) {
 <div id="smsModal" class="fixed inset-0 bg-black/40 z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-xl shadow-lg w-full max-w-md">
         <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 class="text-lg font-bold text-gray-900">Set SMS Allocation</h2>
+            <h2 class="text-lg font-bold text-gray-900">Add SMS Credits</h2>
             <button type="button" onclick="closeSmsModal()" class="text-gray-400 hover:text-gray-600">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -317,9 +319,9 @@ document.getElementById('smsModal').addEventListener('click', function(e) {
                 </p>
             </div>
             <div>
-                <label for="smsAllocationInput" class="block text-sm font-medium text-gray-700 mb-1">SMS Allocation</label>
+                <label for="smsAllocationInput" class="block text-sm font-medium text-gray-700 mb-1">Credits to add</label>
                 <input type="number" id="smsAllocationInput" name="sms_allocation" min="0" step="1" required class="input w-full" placeholder="e.g. 20, 50, 100">
-                <p class="mt-1 text-xs text-gray-500">Number of SMS credits this examiner can use to send login tokens.</p>
+                <p class="mt-1 text-xs text-gray-500">Number of SMS credits to add to this examiner’s balance (used for login tokens).</p>
             </div>
             <div id="smsError" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800"></div>
             <div class="flex gap-3 pt-2">

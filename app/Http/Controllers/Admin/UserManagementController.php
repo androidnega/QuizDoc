@@ -638,9 +638,8 @@ class UserManagementController extends Controller
             ], 422);
         }
 
-        $allocation = max(0, (int) $request->sms_allocation);
-        $user->sms_allocation = $allocation;
-        // Do not reset sms_used: remaining = allocation - used (e.g. had 20 left, set allocation to 2020 → remaining 40)
+        $creditsToAdd = max(0, (int) $request->sms_allocation);
+        $user->sms_allocation = ($user->sms_allocation ?? 0) + $creditsToAdd;
         $user->save();
 
         return response()->json([
