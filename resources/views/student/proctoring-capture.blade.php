@@ -25,7 +25,7 @@
                         <div class="w-32 h-40 border-2 border-primary-400 rounded-full opacity-30"></div>
                     </div>
                 </div>
-                <div id="camera-loading" class="absolute inset-0 flex items-center justify-center bg-gray-900">
+                <div id="camera-loading" class="absolute inset-0 hidden items-center justify-center bg-gray-900">
                     <div class="text-center">
                         <svg class="animate-spin h-8 w-8 text-white mx-auto mb-2" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

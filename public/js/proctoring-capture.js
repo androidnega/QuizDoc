@@ -24,6 +24,8 @@
     let readySinceMs = null;
     let wakeLock = null;
     let cameraProtectionInterval = null;
+    let cameraRequestId = 0;
+    let cameraRequestTimeout = null;
 
     const STANDARD_HEADSHOT = {
         minFaceWidth: 0.24,
@@ -103,6 +105,7 @@
             captureBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'text-white', 'border-green-600');
             captureBtn.classList.add('btn-action');
             setButtonText('Allow camera & continue');
+            if (cameraLoading) cameraLoading.style.display = 'none';
             return;
         }
         if (!videoReady) {
@@ -366,17 +369,49 @@
             if (captureBtn) captureBtn.disabled = true;
             return;
         }
+        cameraRequestId += 1;
+        const requestId = cameraRequestId;
+        if (cameraRequestTimeout) {
+            clearTimeout(cameraRequestTimeout);
+            cameraRequestTimeout = null;
+        }
         hideError();
         videoReady = false;
         if (captureBtn) captureBtn.disabled = true;
         setButtonText('Starting camera...');
         if (cameraLoading) cameraLoading.style.display = 'flex';
 
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } })
+        cameraRequestTimeout = setTimeout(function () {
+            if (requestId !== cameraRequestId) return;
+            showError('Camera request is taking too long. If no browser prompt appeared, click the camera/lock icon in the address bar and allow camera, then try again.');
+            setButtonText('Allow camera & continue');
+            if (captureBtn) captureBtn.disabled = false;
+            if (cameraLoading) cameraLoading.style.display = 'none';
+        }, 12000);
+
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false })
+            .catch(function (err) {
+                if (err && (err.name === 'OverconstrainedError' || err.name === 'NotFoundError')) {
+                    return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                }
+                throw err;
+            })
             .then(function (s) {
+                if (requestId !== cameraRequestId) {
+                    s.getTracks().forEach(function (t) { t.stop(); });
+                    return;
+                }
+                if (cameraRequestTimeout) {
+                    clearTimeout(cameraRequestTimeout);
+                    cameraRequestTimeout = null;
+                }
                 stream = s;
                 if (video) {
                     video.srcObject = s;
+                    var playPromise = video.play();
+                    if (playPromise && typeof playPromise.catch === 'function') {
+                        playPromise.catch(function () {});
+                    }
                     function onReady() {
                         videoReady = video.videoWidth > 0 && video.videoHeight > 0;
                         if (cameraLoading) cameraLoading.style.display = 'none';
@@ -399,6 +434,11 @@
                 }
             })
             .catch(function (err) {
+                if (requestId !== cameraRequestId) return;
+                if (cameraRequestTimeout) {
+                    clearTimeout(cameraRequestTimeout);
+                    cameraRequestTimeout = null;
+                }
                 if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
                     showError('Camera permission denied. Click "Allow camera & continue" and allow permission in the browser prompt.');
                 } else {
@@ -411,6 +451,11 @@
     }
 
     function stopCamera() {
+        cameraRequestId += 1;
+        if (cameraRequestTimeout) {
+            clearTimeout(cameraRequestTimeout);
+            cameraRequestTimeout = null;
+        }
         if (stream) {
             stream.getTracks().forEach(function (t) { t.stop(); });
             stream = null;
