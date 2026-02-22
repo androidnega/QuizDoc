@@ -19,7 +19,7 @@
 
         <div class="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
             <p class="text-xs text-primary-600 font-medium mb-2">Align face in frame</p>
-            <div id="video-container" class="relative bg-gray-900 rounded-lg overflow-hidden border-2 border-gray-200 mx-auto transition-all duration-300" style="max-width: 280px; aspect-ratio: 4/3;">
+            <div id="video-container" class="relative bg-gray-900 rounded-lg overflow-hidden border-2 border-gray-200 mx-auto transition-all duration-300" style="max-width: 280px; aspect-ratio: 4/3; min-height: 200px;">
                 <video 
                     id="camera-video" 
                     autoplay 

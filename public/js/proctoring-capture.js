@@ -56,6 +56,20 @@
         }
     }
 
+    function showLoading() {
+        if (cameraLoading) {
+            cameraLoading.classList.remove('hidden');
+            cameraLoading.style.display = 'flex';
+        }
+    }
+
+    function hideLoading() {
+        if (cameraLoading) {
+            cameraLoading.style.display = 'none';
+            cameraLoading.classList.add('hidden');
+        }
+    }
+
     function setFaceStatus(message, type) {
         if (faceStatusTextEl) faceStatusTextEl.textContent = message || '';
         if (!faceStatusEl) return;
@@ -105,7 +119,7 @@
             captureBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'text-white', 'border-green-600');
             captureBtn.classList.add('btn-action');
             setButtonText('Allow camera & continue');
-            if (cameraLoading) cameraLoading.style.display = 'none';
+            hideLoading();
             return;
         }
         if (!videoReady) {
@@ -393,123 +407,113 @@
             return;
         }
         
-        // Check permission state first
-        checkCameraPermission().then(function(state) {
-            console.log('Starting camera with permission state:', state);
-            if (state === 'denied') {
-                showError('Camera permission was previously denied. Please click the camera/lock icon in your browser\'s address bar and allow camera access, then refresh the page.');
-                setButtonText('Permission denied');
-                if (captureBtn) captureBtn.disabled = false;
-                if (cameraLoading) cameraLoading.style.display = 'none';
-            }
-        });
-        
-        cameraRequestId += 1;
-        const requestId = cameraRequestId;
-        if (cameraRequestTimeout) {
-            clearTimeout(cameraRequestTimeout);
-            cameraRequestTimeout = null;
-        }
         hideError();
         videoReady = false;
         if (captureBtn) captureBtn.disabled = true;
         setButtonText('Starting camera...');
-        if (cameraLoading) cameraLoading.style.display = 'flex';
+        showLoading();
 
-        cameraRequestTimeout = setTimeout(function () {
-            if (requestId !== cameraRequestId) return;
-            showError('Camera request is taking too long. Please click "Allow" in the browser prompt to enable your camera. If no prompt appeared, click the camera/lock icon in the address bar and allow camera access.');
-            setButtonText('Allow camera & continue');
-            if (captureBtn) captureBtn.disabled = false;
-            if (cameraLoading) cameraLoading.style.display = 'none';
-        }, 15000);
-
-        console.log('Requesting camera access...');
-        
-        // Try to get camera permission with specific constraints first
-        const constraints = { 
-            video: { 
-                facingMode: 'user', 
-                width: { ideal: 640 }, 
-                height: { ideal: 480 } 
-            }, 
-            audio: false 
-        };
-        
-        console.log('Camera constraints:', constraints);
-        
-        navigator.mediaDevices.getUserMedia(constraints)
-            .catch(function (err) {
-                console.warn('Initial camera request failed:', err.name, err.message);
-                // If specific constraints fail, try with basic video
-                if (err && (err.name === 'OverconstrainedError' || err.name === 'NotFoundError')) {
-                    console.log('Retrying with basic video constraints...');
-                    return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                }
-                throw err;
-            })
-            .then(function (s) {
-                if (requestId !== cameraRequestId) {
-                    console.log('Camera request cancelled (newer request in progress)');
-                    s.getTracks().forEach(function (t) { t.stop(); });
-                    return;
-                }
-                if (cameraRequestTimeout) {
-                    clearTimeout(cameraRequestTimeout);
-                    cameraRequestTimeout = null;
-                }
-                console.log('Camera access granted successfully');
-                stream = s;
-                if (video) {
-                    video.srcObject = s;
-                    console.log('Video stream attached to video element');
-                    var playPromise = video.play();
-                    if (playPromise && typeof playPromise.catch === 'function') {
-                        playPromise.catch(function (playErr) {
-                            console.warn('Video play failed:', playErr);
-                        });
-                    }
-                    function onReady() {
-                        videoReady = video.videoWidth > 0 && video.videoHeight > 0;
-                        if (cameraLoading) cameraLoading.style.display = 'none';
-                        startLiveFaceLoop();
-                        startCameraProtection();
-                        requestWakeLock();
-                        updateCaptureButton();
-                    }
-                    if (video.videoWidth > 0 && video.videoHeight > 0) {
-                        onReady();
-                    } else {
-                        video.addEventListener('loadedmetadata', onReady, { once: true });
-                        video.addEventListener('loadeddata', onReady, { once: true });
-                        video.addEventListener('canplay', onReady, { once: true });
-                        setTimeout(onReady, 2000);
-                    }
-                } else {
-                    if (cameraLoading) cameraLoading.style.display = 'none';
-                    updateCaptureButton();
-                }
-            })
-            .catch(function (err) {
-                if (requestId !== cameraRequestId) return;
-                if (cameraRequestTimeout) {
-                    clearTimeout(cameraRequestTimeout);
-                    cameraRequestTimeout = null;
-                }
-                console.error('Camera access error:', err);
-                if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
-                    showError('Camera permission denied. Please click "Allow camera & continue" below and then click "Allow" in the browser prompt that appears.');
-                } else if (err && err.name === 'NotFoundError') {
-                    showError('No camera found. Please connect a camera and try again.');
-                } else if (err && err.name === 'NotReadableError') {
-                    showError('Camera is already in use by another application. Please close other apps using the camera and try again.');
-                } else {
-                    showError('Camera access denied or not available. Please allow camera access when prompted, or check your browser settings.');
-                }
+        // Check permission first; only request stream if not already denied
+        checkCameraPermission().then(function (state) {
+            console.log('Starting camera with permission state:', state);
+            if (state === 'denied') {
+                showError('Camera permission was previously denied. Please click the camera/lock icon in your browser address bar, allow camera access, then refresh and try again.');
                 setButtonText('Allow camera & continue');
                 if (captureBtn) captureBtn.disabled = false;
-                if (cameraLoading) cameraLoading.style.display = 'none';
-            });
+                hideLoading();
+                return;
+            }
+
+            cameraRequestId += 1;
+            var requestId = cameraRequestId;
+            if (cameraRequestTimeout) {
+                clearTimeout(cameraRequestTimeout);
+                cameraRequestTimeout = null;
+            }
+
+            cameraRequestTimeout = setTimeout(function () {
+                if (requestId !== cameraRequestId) return;
+                showError('Camera request is taking too long. Click "Allow" in the browser prompt, or the camera icon in the address bar, then try again.');
+                setButtonText('Allow camera & continue');
+                if (captureBtn) captureBtn.disabled = false;
+                hideLoading();
+            }, 15000);
+
+            console.log('Requesting camera access...');
+            var constraints = {
+                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                audio: false
+            };
+
+            navigator.mediaDevices.getUserMedia(constraints)
+                .catch(function (err) {
+                    if (err && (err.name === 'OverconstrainedError' || err.name === 'NotFoundError')) {
+                        return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    }
+                    throw err;
+                })
+                .then(function (s) {
+                    if (requestId !== cameraRequestId) {
+                        s.getTracks().forEach(function (t) { t.stop(); });
+                        return;
+                    }
+                    if (cameraRequestTimeout) {
+                        clearTimeout(cameraRequestTimeout);
+                        cameraRequestTimeout = null;
+                    }
+                    console.log('Camera access granted successfully');
+                    stream = s;
+                    if (video) {
+                        video.setAttribute('playsinline', '');
+                        video.setAttribute('muted', 'true');
+                        video.style.display = 'block';
+                        video.srcObject = s;
+                        var playPromise = video.play();
+                        if (playPromise && typeof playPromise.catch === 'function') {
+                            playPromise.catch(function (playErr) { console.warn('Video play failed:', playErr); });
+                        }
+                        function onReady() {
+                            videoReady = video.videoWidth > 0 && video.videoHeight > 0;
+                            hideLoading();
+                            startLiveFaceLoop();
+                            startCameraProtection();
+                            requestWakeLock();
+                            updateCaptureButton();
+                        }
+                        if (video.videoWidth > 0 && video.videoHeight > 0) {
+                            onReady();
+                        } else {
+                            video.addEventListener('loadedmetadata', onReady, { once: true });
+                            video.addEventListener('loadeddata', onReady, { once: true });
+                            video.addEventListener('canplay', onReady, { once: true });
+                            setTimeout(onReady, 2500);
+                        }
+                    } else {
+                        hideLoading();
+                        updateCaptureButton();
+                    }
+                })
+                .catch(function (err) {
+                    if (requestId !== cameraRequestId) return;
+                    if (cameraRequestTimeout) {
+                        clearTimeout(cameraRequestTimeout);
+                        cameraRequestTimeout = null;
+                    }
+                    console.error('Camera access error:', err);
+                    if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+                        showError('Camera permission denied. Click "Allow camera & continue" again, then click "Allow" in the browser prompt.');
+                    } else if (err && err.name === 'NotFoundError') {
+                        showError('No camera found. Please connect a camera and try again.');
+                    } else if (err && err.name === 'NotReadableError') {
+                        showError('Camera is in use by another app. Close it and try again.');
+                    } else {
+                        showError('Camera access failed. Allow camera when prompted or check browser settings.');
+                    }
+                    setButtonText('Allow camera & continue');
+                    if (captureBtn) captureBtn.disabled = false;
+                    hideLoading();
+                });
+        });
     }
 
     function stopCamera() {
