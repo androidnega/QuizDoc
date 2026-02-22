@@ -311,6 +311,7 @@ Route::middleware('admin.auth')->group(function () {
         Route::delete('/quizzes/{quizId}/sessions/{quizSession}/kill', [QuizManagementController::class, 'killSession'])->name('quizzes.sessions.kill');
         Route::get('/quizzes/live-proctor-all', [QuizManagementController::class, 'liveProctorAll'])->name('quizzes.live-proctor-all');
         Route::get('/quizzes/live-proctor-all/sessions', [QuizManagementController::class, 'liveProctorAllSessions'])->name('quizzes.live-proctor-all.sessions');
+        Route::post('/quizzes/live-proctor-voice', [QuizManagementController::class, 'broadcastExaminerVoice'])->name('quizzes.live-proctor-voice');
         Route::get('/quizzes/{quiz}/live-proctor', [QuizManagementController::class, 'liveProctor'])->name('quizzes.live-proctor');
         Route::get('/quizzes/{quiz}/live-sessions', [QuizManagementController::class, 'liveSessions'])->name('quizzes.live-sessions');
         Route::get('/quizzes/{quiz}/sessions/{quizSession}/proctor-frame', [QuizManagementController::class, 'proctorFrame'])->name('quizzes.sessions.proctor-frame');

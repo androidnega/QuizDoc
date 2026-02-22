@@ -6,6 +6,21 @@
 @section('dashboard_content')
 <div class="w-full min-w-0 space-y-4">
     <p class="text-sm text-gray-600">All your live sessions in one view. Sessions with recent activity (heartbeat in the last 2 minutes or started in the last 5 minutes) are shown. Click a feed to enlarge; you may end a student’s quiz if they violate rules.</p>
+    <div class="bg-white rounded-lg border border-gray-200 p-2 flex items-center gap-3 flex-wrap">
+        <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Live mic</span>
+        <button type="button" id="live-proctor-mic-btn" class="inline-flex items-center justify-center w-10 h-10 rounded-full border-2 border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1" aria-label="Microphone off" title="Click to start speaking; click again to stop. Students must allow audio to hear you.">
+            <svg id="live-proctor-mic-icon-off" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0V8a5 5 0 0110 0v3z"/></svg>
+            <svg id="live-proctor-mic-icon-on" class="w-5 h-5 hidden text-red-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
+        </button>
+        <div class="flex items-center gap-2">
+            <label for="live-proctor-mic-target" class="text-sm text-gray-600">To</label>
+            <select id="live-proctor-mic-target" class="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                <option value="all">All students</option>
+                <option value="selected">Selected student</option>
+            </select>
+        </div>
+        <span id="live-proctor-mic-status" class="text-xs text-gray-500">Off</span>
+    </div>
     <div class="bg-white rounded-lg border border-gray-200 p-4">
         <div id="live-proctor-all-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 min-w-0">
             {{-- Populated by JS --}}
@@ -43,9 +58,11 @@
 <script>
 (function() {
     var sessionsUrl = "{{ route('dashboard.quizzes.live-proctor-all.sessions') }}";
+    var voiceUrl = "{{ route('dashboard.quizzes.live-proctor-voice') }}";
     var frameUrlTemplate = "{{ route('dashboard.quizzes.sessions.proctor-frame', ['quiz' => '__QID__', 'quizSession' => '__SID__']) }}";
     var endSessionUrlTemplate = "{{ route('dashboard.quizzes.sessions.end-by-examiner', ['quiz' => '__QID__', 'quizSession' => '__SID__']) }}";
     var grid = document.getElementById('live-proctor-all-grid');
+    var currentSessions = [];
     var emptyEl = document.getElementById('live-proctor-all-empty');
     var loadingEl = document.getElementById('live-proctor-all-loading');
     var modal = document.getElementById('live-proctor-all-modal');
@@ -126,6 +143,7 @@
 
     function renderSessions(sessions) {
         if (loadingEl) loadingEl.classList.add('hidden');
+        currentSessions = sessions && Array.isArray(sessions) ? sessions : [];
         if (!sessions || sessions.length === 0) {
             if (emptyEl) emptyEl.classList.remove('hidden');
             if (grid) grid.innerHTML = '';
@@ -205,6 +223,123 @@
         refreshGridImagesStaggered();
         refreshModalImage();
     }, frameRefreshIntervalMs);
+
+    /* Live mic: examiner speaks to all or selected student */
+    var micBtn = document.getElementById('live-proctor-mic-btn');
+    var micIconOff = document.getElementById('live-proctor-mic-icon-off');
+    var micIconOn = document.getElementById('live-proctor-mic-icon-on');
+    var micTarget = document.getElementById('live-proctor-mic-target');
+    var micStatus = document.getElementById('live-proctor-mic-status');
+    var micStream = null;
+    var mediaRecorder = null;
+    var sendChunkInterval = null;
+    var micChunks = [];
+
+    function getTargetSessionIds() {
+        var target = micTarget && micTarget.value ? micTarget.value : 'all';
+        if (target === 'selected') {
+            var sid = endQuizBtn && endQuizBtn.dataset.sessionId ? endQuizBtn.dataset.sessionId : null;
+            if (!sid || modal.classList.contains('hidden')) return [];
+            return [parseInt(sid, 10)];
+        }
+        return currentSessions.map(function(s) { return s.id; });
+    }
+
+    function sendVoiceChunk(base64) {
+        var sessionIds = getTargetSessionIds();
+        if (sessionIds.length === 0) return;
+        fetch(voiceUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken || '',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ session_ids: sessionIds, chunk: base64 })
+        }).catch(function() {});
+    }
+
+    function stopMic() {
+        if (sendChunkInterval) {
+            clearInterval(sendChunkInterval);
+            sendChunkInterval = null;
+        }
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            try { mediaRecorder.stop(); } catch (e) {}
+            mediaRecorder = null;
+        }
+        if (micStream) {
+            micStream.getTracks().forEach(function(t) { t.stop(); });
+            micStream = null;
+        }
+        micChunks = [];
+        if (micIconOff) micIconOff.classList.remove('hidden');
+        if (micIconOn) micIconOn.classList.add('hidden');
+        if (micStatus) micStatus.textContent = 'Off';
+        if (micBtn) {
+            micBtn.setAttribute('aria-label', 'Microphone off – click to speak to students');
+            micBtn.classList.remove('bg-red-50', 'border-red-400');
+        }
+    }
+
+    function startMic() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert('Microphone access is not supported in this browser.');
+            return;
+        }
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(function(stream) {
+                micStream = stream;
+                try {
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 64000 });
+                } catch (e) {
+                    mediaRecorder = new MediaRecorder(stream);
+                }
+                micChunks = [];
+                mediaRecorder.ondataavailable = function(e) {
+                    if (e.data && e.data.size > 0) micChunks.push(e.data);
+                };
+                mediaRecorder.start(250);
+                sendChunkInterval = setInterval(function() {
+                    if (mediaRecorder && mediaRecorder.state === 'recording' && micChunks.length > 0) {
+                        var blob = new Blob(micChunks.splice(0, micChunks.length), { type: 'audio/webm' });
+                        var reader = new FileReader();
+                        reader.onloadend = function() {
+                            var b64 = reader.result.split(',')[1];
+                            if (b64) sendVoiceChunk(b64);
+                        };
+                        reader.readAsDataURL(blob);
+                    }
+                }, 280);
+                if (micIconOff) micIconOff.classList.add('hidden');
+                if (micIconOn) micIconOn.classList.remove('hidden');
+                if (micStatus) micStatus.textContent = 'On – students can hear you';
+                if (micBtn) {
+                    micBtn.setAttribute('aria-label', 'Microphone on – click to stop');
+                    micBtn.classList.add('bg-red-50', 'border-red-400');
+                }
+            })
+            .catch(function(err) {
+                alert('Could not access microphone. Please allow microphone permission and try again.');
+                stopMic();
+            });
+    }
+
+    if (micBtn) {
+        micBtn.addEventListener('click', function() {
+            if (micStream) {
+                stopMic();
+            } else {
+                var ids = getTargetSessionIds();
+                if (micTarget && micTarget.value === 'selected' && ids.length === 0) {
+                    alert('Select a student (click a feed) to speak to them only.');
+                    return;
+                }
+                startMic();
+            }
+        });
+    }
 })();
 </script>
 @endpush

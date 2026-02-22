@@ -199,6 +199,11 @@
                 <span class="pulse-dot w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true"></span>
                 <span>AI Invigilator Watching</span>
             </div>
+            {{-- Small mic/speaker hint: examiner can speak to students; allow audio to hear --}}
+            <div id="examiner-voice-hint" class="hidden lg:flex items-center gap-1.5 py-1.5 px-2 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-medium" aria-hidden="true">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+                <span>Allow audio to hear examiner</span>
+            </div>
             <div class="rounded-xl overflow-hidden shadow-sm bg-amber-50 border border-amber-200 min-w-0">
                 <div class="p-3">
                     <h2 class="text-xs font-semibold text-amber-900 mb-2">LIVE CAMERA FEED</h2>
@@ -537,6 +542,71 @@ document.addEventListener('DOMContentLoaded', function() {
         else if (count >= 1) el.classList.add('warn-1');
     }
     setInterval(updateViolationCounter, 500);
+
+    // Examiner voice: subscribe to live-proctor-voice.{sessionId} and play received audio
+    (function() {
+        var sessionId = window.QuizSnapQuiz && window.QuizSnapQuiz.sessionId;
+        if (!sessionId) return;
+        var c = window.REVERB_CONFIG;
+        if (!c || !c.key) return;
+        function init() {
+            if (typeof Pusher === 'undefined') return;
+            try {
+                var pusher = new Pusher(c.key, {
+                    wsHost: c.host,
+                    wsPort: parseInt(c.port, 10) || 8080,
+                    wssPort: 443,
+                    forceTLS: (c.scheme || 'http') === 'https',
+                    disableStats: true,
+                    enabledTransports: ['ws', 'wss'],
+                    cluster: 'mt1'
+                });
+                var channel = pusher.subscribe('live-proctor-voice.' + sessionId);
+                var audioQueue = [];
+                var playing = false;
+                function playNext() {
+                    if (playing || audioQueue.length === 0) return;
+                    var chunk = audioQueue.shift();
+                    if (!chunk) { playing = false; return; }
+                    try {
+                        var binary = atob(chunk);
+                        var bytes = new Uint8Array(binary.length);
+                        for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                        var blob = new Blob([bytes], { type: 'audio/webm' });
+                        var url = URL.createObjectURL(blob);
+                        var audio = new Audio();
+                        playing = true;
+                        audio.addEventListener('ended', function() {
+                            URL.revokeObjectURL(url);
+                            playing = false;
+                            playNext();
+                        });
+                        audio.addEventListener('error', function() {
+                            URL.revokeObjectURL(url);
+                            playing = false;
+                            playNext();
+                        });
+                        audio.src = url;
+                        audio.play().catch(function() {
+                            URL.revokeObjectURL(url);
+                            playing = false;
+                            playNext();
+                        });
+                    } catch (e) {
+                        playing = false;
+                        playNext();
+                    }
+                }
+                channel.bind('ExaminerVoice', function(data) {
+                    if (data && data.chunk) {
+                        audioQueue.push(data.chunk);
+                        playNext();
+                    }
+                });
+            } catch (e) { console.warn('Examiner voice:', e); }
+        }
+        if (typeof Pusher !== 'undefined') init(); else window.addEventListener('load', init);
+    })();
 });
 </script>
 @endpush

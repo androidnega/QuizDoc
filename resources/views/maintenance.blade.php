@@ -31,8 +31,32 @@
         @endif
         @if($update_estimated_end ?? null)
             <p class="text-sm text-gray-600">Expected end: {{ $update_estimated_end->format('M j, Y g:i A') }}</p>
+            <p class="text-base font-semibold text-gray-900 mt-2 tabular-nums" aria-live="polite">Time left: <span id="maintenance-countdown">--:--</span></p>
         @endif
         <p class="mt-3"><a href="{{ url('/login') }}">Staff sign in</a></p>
     </div>
+    @if($update_estimated_end ?? null)
+    <script>
+    (function() {
+        var el = document.getElementById('maintenance-countdown');
+        if (!el) return;
+        var endMs = new Date("{{ $update_estimated_end->toIso8601String() }}").getTime();
+        if (!endMs || isNaN(endMs)) return;
+        function fmt(totalSeconds) {
+            totalSeconds = Math.max(0, Math.floor(totalSeconds));
+            var m = Math.floor(totalSeconds / 60);
+            var s = totalSeconds % 60;
+            return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        }
+        function tick() {
+            var left = Math.max(0, Math.ceil((endMs - Date.now()) / 1000));
+            el.textContent = fmt(left);
+            if (left <= 0) clearInterval(timer);
+        }
+        tick();
+        var timer = setInterval(tick, 1000);
+    })();
+    </script>
+    @endif
 </body>
 </html>

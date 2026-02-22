@@ -26,6 +26,7 @@ use App\Services\CloudinaryService;
 use App\Services\QuizBackupService;
 use App\Services\DocumentTextExtractor;
 use App\Events\DataUpdated;
+use App\Events\ExaminerVoice;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -644,6 +645,50 @@ class QuizManagementController extends Controller
             ];
         }
         return response()->json(['sessions' => $out]);
+    }
+
+    /**
+     * API: broadcast examiner voice to one or more live proctor sessions (examiner mic).
+     */
+    public function broadcastExaminerVoice(Request $request): \Illuminate\Http\JsonResponse
+    {
+        if (Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') !== '1') {
+            return response()->json(['success' => false, 'message' => 'Live proctor disabled'], 403);
+        }
+        $user = $this->adminUser();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        $request->validate([
+            'session_ids' => 'required|array',
+            'session_ids.*' => 'integer|min:1',
+            'chunk' => 'required|string|max:200000',
+        ]);
+        $sessionIds = array_values(array_unique(array_map('intval', $request->input('session_ids', []))));
+        if (empty($sessionIds)) {
+            return response()->json(['success' => false, 'message' => 'No sessions'], 422);
+        }
+        $quizQuery = Quiz::query()->where('is_published', true);
+        if ($user->isSuperAdmin()) {
+            // all quizzes
+        } elseif ($user->isExaminer()) {
+            $quizQuery->where('examiner_id', $user->id);
+        } else {
+            $quizQuery->whereIn('class_group_id', $user->classGroupIds());
+        }
+        $allowedQuizIds = $quizQuery->pluck('id')->all();
+        $allowedSessionIds = QuizSession::query()
+            ->whereIn('id', $sessionIds)
+            ->whereIn('quiz_id', $allowedQuizIds)
+            ->whereNotNull('start_time')
+            ->whereNull('ended_at')
+            ->pluck('id')
+            ->all();
+        if (empty($allowedSessionIds)) {
+            return response()->json(['success' => false, 'message' => 'No allowed sessions'], 422);
+        }
+        broadcast(new ExaminerVoice($allowedSessionIds, $request->input('chunk')));
+        return response()->json(['success' => true]);
     }
 
     /**
