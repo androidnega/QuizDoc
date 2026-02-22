@@ -165,15 +165,9 @@ class StudentLoginController extends Controller
             ]);
         }
 
-        // Examiner (from class group, quiz, or class_group_course lecturers) must have SMS balance
+        // Examiner (from class group, quiz, or class_group_course lecturers) with SMS balance — used for deducting SMS; if none, we still send OTP so students can log in
         $quiz->load(['classGroup.examiner', 'examiner']);
         $examiner = $this->examinerWithSmsBalanceForQuiz($quiz);
-        if (!$examiner) {
-            return response()->json([
-                'success' => false,
-                'message' => 'We\'re unable to send your login code right now. Please contact your lecturer or course administrator for assistance.',
-            ], 422);
-        }
 
         // STEP 1 — Check last OTP for this index (type = student_login)
         $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
@@ -193,7 +187,7 @@ class StudentLoginController extends Controller
             ]);
         }
 
-        // CASE B — No OTP or older than 14 days: generate new OTP, save, send, replace old one
+        // CASE B — No OTP or older than 14 days: generate new OTP, save, send (even if no examiner with balance — so students can log in)
         $code = (string) random_int(100000, 999999);
         Otp::create([
             'index_number_hash' => $indexHash,
@@ -210,7 +204,9 @@ class StudentLoginController extends Controller
             }
             return response()->json(['success' => false, 'message' => $msg], 422);
         }
-        $examiner->increment('sms_used');
+        if ($examiner) {
+            $examiner->increment('sms_used');
+        }
         return response()->json([
             'success' => true,
             'step' => 'otp',

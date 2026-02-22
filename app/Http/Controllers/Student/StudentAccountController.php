@@ -90,14 +90,8 @@ class StudentAccountController extends Controller
             ]);
         }
 
-        // Check examiner SMS balance: student must be linked to an examiner with remaining SMS
+        // Examiner with SMS balance (for deducting); if none, we still send OTP so students can log in
         $examiner = $this->examinerWithSmsBalanceForIndex($cgStudent->index_number);
-        if (!$examiner) {
-            return response()->json([
-                'success' => false,
-                'message' => 'We\'re unable to send your login code right now. Please contact your lecturer or course administrator for assistance.',
-            ], 422);
-        }
 
         // STEP 1 — Check last OTP for this index (type = student_login)
         $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
@@ -117,7 +111,7 @@ class StudentAccountController extends Controller
             ]);
         }
 
-        // CASE B — No OTP or older than 14 days: generate new OTP, save, send, replace old one
+        // CASE B — No OTP or older than 14 days: generate new OTP, save, send (even if no examiner with balance)
         $code = (string) random_int(100000, 999999);
         Otp::create([
             'index_number_hash' => $indexHash,
@@ -134,7 +128,9 @@ class StudentAccountController extends Controller
             }
             return response()->json(['success' => false, 'message' => $msg], 422);
         }
-        $examiner->increment('sms_used');
+        if ($examiner) {
+            $examiner->increment('sms_used');
+        }
         return response()->json([
             'success' => true,
             'step' => 'otp',
@@ -193,14 +189,8 @@ class StudentAccountController extends Controller
             ], 422);
         }
 
-        // Examiner must have SMS balance
+        // Examiner with SMS balance (for deducting); if none, we still send OTP so students can log in
         $examiner = $this->examinerWithSmsBalanceForIndex($student->index_number);
-        if (!$examiner) {
-            return response()->json([
-                'success' => false,
-                'message' => 'We\'re unable to send your login code right now. Please contact your lecturer or course administrator for assistance.',
-            ], 422);
-        }
 
         $indexHash = $student->index_number_hash;
 
@@ -238,7 +228,9 @@ class StudentAccountController extends Controller
             }
             return response()->json(['success' => false, 'message' => $msg], 422);
         }
-        $examiner->increment('sms_used');
+        if ($examiner) {
+            $examiner->increment('sms_used');
+        }
         return response()->json([
             'success' => true,
             'step' => 'otp',
