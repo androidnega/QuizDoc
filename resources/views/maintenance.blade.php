@@ -6,13 +6,17 @@
     <title>Site Under Update</title>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #fafaf9; color: #374151; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
-        .box { max-width: 28rem; width: 100%; text-align: center; background: #fff; border: 1px solid #e5e7eb; border-radius: 1rem; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
-        .icon { width: 4rem; height: 4rem; margin: 0 auto 1.25rem; border-radius: 50%; background: #f3f4f6; display: flex; align-items: center; justify-content: center; }
-        .icon svg { width: 2rem; height: 2rem; color: #6b7280; }
-        h1 { font-size: 1.25rem; font-weight: 700; color: #111827; margin: 0 0 0.5rem; }
-        p { font-size: 0.9375rem; color: #6b7280; margin: 0 0 1.5rem; line-height: 1.5; }
-        a { color: #2563eb; font-weight: 500; text-decoration: none; }
+        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+        .box { max-width: 28rem; width: 100%; text-align: center; background: rgba(255,255,255,.06); border: 1px solid rgba(148,163,184,.2); border-radius: 1.25rem; padding: 2.5rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,.4); }
+        .icon { width: 4rem; height: 4rem; margin: 0 auto 1.25rem; border-radius: 50%; background: rgba(59,130,246,.2); display: flex; align-items: center; justify-content: center; }
+        .icon svg { width: 2rem; height: 2rem; color: #93c5fd; }
+        h1 { font-size: 1.35rem; font-weight: 700; color: #f8fafc; margin: 0 0 0.5rem; }
+        .sub { font-size: 0.9375rem; color: #94a3b8; margin: 0 0 1.75rem; line-height: 1.5; }
+        .countdown-wrap { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 1.5rem 0; }
+        .countdown-box { background: linear-gradient(145deg, #3b82f6, #2563eb); color: #fff; font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.05em; padding: 0.75rem 1.25rem; border-radius: 0.75rem; box-shadow: 0 4px 14px rgba(59,130,246,.45), inset 0 1px 0 rgba(255,255,255,.2); min-width: 5rem; }
+        .countdown-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.15em; color: #94a3b8; margin-top: 0.35rem; }
+        .countdown-sep { color: #64748b; font-size: 1.5rem; font-weight: 700; }
+        a { color: #93c5fd; font-weight: 500; text-decoration: none; }
         a:hover { text-decoration: underline; }
     </style>
 </head>
@@ -25,32 +29,36 @@
             </svg>
         </div>
         <h1>Site under update</h1>
-        <p>We're performing scheduled maintenance. Please try again shortly.</p>
-        @if($update_started_at ?? null)
-            <p class="text-sm text-gray-600 mt-2">Started: {{ $update_started_at->format('M j, Y g:i A') }}</p>
-        @endif
+        <p class="sub">We're performing scheduled maintenance. Please try again shortly.</p>
         @if($update_estimated_end ?? null)
-            <p class="text-sm text-gray-600">Expected end: {{ $update_estimated_end->format('M j, Y g:i A') }}</p>
-            <p class="text-base font-semibold text-gray-900 mt-2 tabular-nums" aria-live="polite">Time left: <span id="maintenance-countdown">--:--</span></p>
+            <div class="countdown-wrap" aria-live="polite">
+                <div>
+                    <span id="maintenance-countdown-min" class="countdown-box">--</span>
+                    <div class="countdown-label">Minutes</div>
+                </div>
+                <span class="countdown-sep">:</span>
+                <div>
+                    <span id="maintenance-countdown-sec" class="countdown-box">--</span>
+                    <div class="countdown-label">Seconds</div>
+                </div>
+            </div>
         @endif
         <p class="mt-3"><a href="{{ url('/login') }}">Staff sign in</a></p>
     </div>
     @if($update_estimated_end ?? null)
     <script>
     (function() {
-        var el = document.getElementById('maintenance-countdown');
-        if (!el) return;
+        var minEl = document.getElementById('maintenance-countdown-min');
+        var secEl = document.getElementById('maintenance-countdown-sec');
+        if (!minEl || !secEl) return;
         var endMs = new Date("{{ $update_estimated_end->toIso8601String() }}").getTime();
         if (!endMs || isNaN(endMs)) return;
-        function fmt(totalSeconds) {
-            totalSeconds = Math.max(0, Math.floor(totalSeconds));
-            var m = Math.floor(totalSeconds / 60);
-            var s = totalSeconds % 60;
-            return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-        }
         function tick() {
             var left = Math.max(0, Math.ceil((endMs - Date.now()) / 1000));
-            el.textContent = fmt(left);
+            var m = Math.floor(left / 60);
+            var s = left % 60;
+            minEl.textContent = String(m).padStart(2, '0');
+            secEl.textContent = String(s).padStart(2, '0');
             if (left <= 0) clearInterval(timer);
         }
         tick();
