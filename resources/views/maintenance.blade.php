@@ -6,17 +6,19 @@
     <title>Site Under Update</title>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
-        .box { max-width: 28rem; width: 100%; text-align: center; background: rgba(255,255,255,.06); border: 1px solid rgba(148,163,184,.2); border-radius: 1.25rem; padding: 2.5rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,.4); }
-        .icon { width: 4rem; height: 4rem; margin: 0 auto 1.25rem; border-radius: 50%; background: rgba(59,130,246,.2); display: flex; align-items: center; justify-content: center; }
-        .icon svg { width: 2rem; height: 2rem; color: #93c5fd; }
-        h1 { font-size: 1.35rem; font-weight: 700; color: #f8fafc; margin: 0 0 0.5rem; }
-        .sub { font-size: 0.9375rem; color: #94a3b8; margin: 0 0 1.75rem; line-height: 1.5; }
-        .countdown-wrap { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 1.5rem 0; }
-        .countdown-box { background: linear-gradient(145deg, #3b82f6, #2563eb); color: #fff; font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.05em; padding: 0.75rem 1.25rem; border-radius: 0.75rem; box-shadow: 0 4px 14px rgba(59,130,246,.45), inset 0 1px 0 rgba(255,255,255,.2); min-width: 5rem; }
-        .countdown-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.15em; color: #94a3b8; margin-top: 0.35rem; }
-        .countdown-sep { color: #64748b; font-size: 1.5rem; font-weight: 700; }
-        a { color: #93c5fd; font-weight: 500; text-decoration: none; }
+        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #fff; color: #374151; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .box { max-width: 22rem; width: 100%; text-align: center; background: #f0f9ff; border: 1px solid #e0f2fe; border-radius: 1rem; padding: 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+        .icon { width: 3.5rem; height: 3.5rem; margin: 0 auto 1rem; border-radius: 50%; background: #e0f2fe; display: flex; align-items: center; justify-content: center; }
+        .icon svg { width: 1.75rem; height: 1.75rem; color: #0284c7; }
+        h1 { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0 0 0.5rem; }
+        .sub { font-size: 0.875rem; color: #64748b; margin: 0 0 1.25rem; line-height: 1.5; }
+        .countdown-wrap { display: flex; align-items: center; justify-content: center; gap: 0.35rem; margin: 1.25rem 0; flex-wrap: wrap; min-width: 0; max-width: 100%; }
+        .countdown-item { flex: 0 1 auto; min-width: 0; }
+        .countdown-box { display: block; background: #0284c7; color: #fff; font-size: clamp(1.25rem, 5vw, 1.75rem); font-weight: 700; font-variant-numeric: tabular-nums; padding: 0.5rem 0.65rem; border-radius: 0.5rem; min-width: 0; width: 100%; max-width: 4.5rem; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; }
+        .countdown-label { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-top: 0.25rem; }
+        .countdown-sep { color: #94a3b8; font-size: clamp(1rem, 4vw, 1.25rem); font-weight: 700; flex-shrink: 0; }
+        .mt-3 { margin-top: 1rem; }
+        a { color: #0284c7; font-weight: 500; text-decoration: none; font-size: 0.875rem; }
         a:hover { text-decoration: underline; }
     </style>
 </head>
@@ -32,12 +34,12 @@
         <p class="sub">We're performing scheduled maintenance. Please try again shortly.</p>
         @if($update_estimated_end ?? null)
             <div class="countdown-wrap" aria-live="polite">
-                <div>
+                <div class="countdown-item">
                     <span id="maintenance-countdown-min" class="countdown-box">--</span>
                     <div class="countdown-label">Minutes</div>
                 </div>
                 <span class="countdown-sep">:</span>
-                <div>
+                <div class="countdown-item">
                     <span id="maintenance-countdown-sec" class="countdown-box">--</span>
                     <div class="countdown-label">Seconds</div>
                 </div>
