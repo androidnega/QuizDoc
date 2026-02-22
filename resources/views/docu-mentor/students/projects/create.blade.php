@@ -60,8 +60,9 @@
                     @error('title')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div>
-                    <label for="description" class="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-1">Description (optional)</label>
-                    <textarea name="description" id="description" rows="4" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400" placeholder="Detailed explanation">{{ old('description') }}</textarea>
+                    <label for="description" class="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-1">Description (optional, max 700 characters)</label>
+                    <textarea name="description" id="description" rows="4" maxlength="700" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400" placeholder="Detailed explanation">{{ old('description') }}</textarea>
+                    <p class="mt-1 text-xs text-slate-500">Max 700 characters.</p>
                     @error('description')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div>

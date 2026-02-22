@@ -75,7 +75,7 @@ class StudentProjectController extends Controller
         $request->validate([
             'group_id' => 'required|exists:groups,id',
             'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
+            'description' => 'nullable|string|max:700',
             'category_id' => 'nullable|exists:categories,id',
             'parent_project_id' => 'nullable|exists:projects,id',
             'proposal_file' => ['nullable', 'file', 'mimes:pdf', 'max:1024'],
@@ -211,7 +211,7 @@ class StudentProjectController extends Controller
 
         $data = $request->validate([
             'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
+            'description' => 'nullable|string|max:700',
             'category_id' => 'nullable|exists:categories,id',
             'budget' => 'nullable|numeric|min:0',
         ]);

@@ -16,7 +16,7 @@ class AdminAuthController extends Controller
      */
     public function showLoginForm(): View|RedirectResponse
     {
-        // Prevent login if already authenticated
+        // Prevent login if already authenticated as staff
         if (session('admin_authenticated', false)) {
             $user = \App\Models\User::find(session('admin_user_id'));
             if ($user && $user->role === User::DM_ROLE_COORDINATOR) {
@@ -24,13 +24,7 @@ class AdminAuthController extends Controller
             }
             return redirect()->intended(route('dashboard'));
         }
-        
-        // Prevent login if student is already logged in
-        if (session('student_id')) {
-            return redirect()->route('dashboard')
-                ->with('info', 'You are already logged in as a student. Please logout first to login as staff.');
-        }
-        
+
         return view('admin.login');
     }
 
@@ -44,13 +38,7 @@ class AdminAuthController extends Controller
             return redirect()->route('dashboard')
                 ->with('info', 'You are already logged in.');
         }
-        
-        // Prevent login if student is already logged in
-        if (session('student_id')) {
-            return redirect()->route('dashboard')
-                ->with('info', 'You are already logged in as a student. Please logout first to login as staff.');
-        }
-        
+
         $request->validate([
             'username' => 'required|string',
             'password' => 'required|string',
@@ -75,6 +63,8 @@ class AdminAuthController extends Controller
         $storedHash = $user ? $user->getRawOriginal('password') : null;
         if ($user && $storedHash && Hash::check($request->password, $storedHash)) {
             $request->session()->regenerate();
+            // Clear student session so staff session is primary; user is now logged in as staff
+            $request->session()->forget('student_id');
             session([
                 'admin_authenticated' => true,
                 'admin_user_id' => $user->id,

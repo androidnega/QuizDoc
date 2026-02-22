@@ -87,8 +87,8 @@
                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400">
             </div>
             <div>
-                <label for="edit_description" class="block text-xs font-medium text-slate-600 mb-1 uppercase tracking-wide">Description</label>
-                <textarea id="edit_description" name="description" rows="4"
+                <label for="edit_description" class="block text-xs font-medium text-slate-600 mb-1 uppercase tracking-wide">Description (max 700 characters)</label>
+                <textarea id="edit_description" name="description" rows="4" maxlength="700"
                           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400"
                           placeholder="Detailed explanation">{{ old('description', $project->description) }}</textarea>
             </div>

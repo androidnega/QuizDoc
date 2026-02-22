@@ -60,7 +60,14 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($users as $u)
                         <tr class="assign-leader-row hover:bg-gray-50" data-search="{{ strtolower(trim(($u->name ?? '') . ' ' . ($u->username ?? '') . ' ' . ($u->index_number ?? '') . ' ' . ($u->phone ?? ''))) }}">
-                            <td class="px-3 py-2 text-sm font-medium text-gray-900">{{ $u->name ?? $u->username }}</td>
+                            <td class="px-3 py-2 text-sm font-medium text-gray-900">
+                                <span class="inline-flex items-center gap-2">
+                                    {{ $u->name ?? $u->username }}
+                                    @if($u->group_leader ?? false)
+                                    <span class="inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800" title="Group leader / Class rep">rep</span>
+                                    @endif
+                                </span>
+                            </td>
                             <td class="px-3 py-2 text-sm text-gray-600">{{ $u->username }} · {{ $u->index_number ?? '—' }} · {{ $u->phone ?? '—' }}</td>
                             <td class="px-3 py-2 text-sm">{{ ($u->group_leader ?? false) ? 'Yes' : 'No' }}</td>
                             <td class="px-3 py-2 text-right">
