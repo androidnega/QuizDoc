@@ -254,21 +254,82 @@
         }
     }
 
+    async function checkCameraPermission() {
+        if (navigator.permissions && navigator.permissions.query) {
+            try {
+                const result = await navigator.permissions.query({ name: 'camera' });
+                console.log('Camera permission state:', result.state);
+                return result.state;
+            } catch (err) {
+                console.warn('Could not query camera permission:', err);
+                return 'prompt';
+            }
+        }
+        return 'prompt';
+    }
+
     function startCamera() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            showError('Camera not supported in this browser.');
+        // Check if page is loaded over HTTPS or localhost (required for camera access)
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            showError('Camera access requires HTTPS. Please access this page using https:// or contact your administrator.');
+            setButtonLabel('HTTPS Required');
+            if (captureBtn) captureBtn.disabled = true;
             return;
         }
+        
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showError('Camera not supported in this browser. Please use a modern browser like Chrome, Firefox, or Safari.');
+            setButtonLabel('Browser not supported');
+            if (captureBtn) captureBtn.disabled = true;
+            return;
+        }
+        
+        // Check permission state first
+        checkCameraPermission().then(function(state) {
+            console.log('Starting camera with permission state:', state);
+            if (state === 'denied') {
+                showError('Camera permission was previously denied. Please click the camera/lock icon in your browser\'s address bar and allow camera access, then refresh the page.');
+                setButtonLabel('Permission denied');
+                if (captureBtn) captureBtn.disabled = false;
+                if (cameraLoading) cameraLoading.style.display = 'none';
+                if (cameraOffPlaceholder) cameraOffPlaceholder.style.display = 'flex';
+            }
+        });
+        
         if (captureBtn) captureBtn.disabled = true;
         setButtonLabel('Starting camera...');
         if (cameraLoading) cameraLoading.style.display = 'flex';
         if (cameraOffPlaceholder) cameraOffPlaceholder.style.display = 'none';
         hideError();
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } })
+        console.log('Requesting camera access...');
+        
+        const constraints = { 
+            video: { 
+                facingMode: 'user', 
+                width: { ideal: 640 }, 
+                height: { ideal: 480 } 
+            }, 
+            audio: false 
+        };
+        
+        console.log('Camera constraints:', constraints);
+        
+        navigator.mediaDevices.getUserMedia(constraints)
+            .catch(function (err) {
+                console.warn('Initial camera request failed:', err.name, err.message);
+                // If specific constraints fail, try with basic video
+                if (err && (err.name === 'OverconstrainedError' || err.name === 'NotFoundError')) {
+                    console.log('Retrying with basic video constraints...');
+                    return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                }
+                throw err;
+            })
             .then(function (s) {
+                console.log('Camera access granted successfully');
                 stream = s;
                 if (video) {
                     video.srcObject = s;
+                    console.log('Video stream attached to video element');
                     function onReady() {
                         cameraStarted = true;
                         if (cameraLoading) cameraLoading.style.display = 'none';
@@ -291,8 +352,17 @@
                 }
             })
             .catch(function (err) {
-                showError('Camera access denied or not available. Allow camera access and try again, or use a different browser.');
-                setButtonLabel('Try again');
+                console.error('Camera access error:', err);
+                if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+                    showError('Camera permission denied. Please click "Start camera" again and then click "Allow" in the browser prompt that appears.');
+                } else if (err && err.name === 'NotFoundError') {
+                    showError('No camera found. Please connect a camera and try again.');
+                } else if (err && err.name === 'NotReadableError') {
+                    showError('Camera is already in use by another application. Please close other apps using the camera and try again.');
+                } else {
+                    showError('Camera access denied or not available. Please allow camera access when prompted, or check your browser settings.');
+                }
+                setButtonLabel('Start camera');
                 if (captureBtn) captureBtn.disabled = false;
                 if (cameraLoading) cameraLoading.style.display = 'none';
                 if (cameraOffPlaceholder) cameraOffPlaceholder.style.display = 'flex';

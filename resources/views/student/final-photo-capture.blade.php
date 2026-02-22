@@ -7,7 +7,15 @@
 <div class="min-h-[100dvh] min-h-screen px-4 py-6 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
     <div class="max-w-md mx-auto w-full">
         <h1 class="text-lg font-bold text-gray-800 mb-1">Final photo capture</h1>
-        <p class="text-gray-600 text-xs mb-4">Align your face in the frame, then capture. Your quiz will be submitted after this.</p>
+        <p class="text-gray-600 text-xs mb-2">Align your face in the frame, then capture. Your quiz will be submitted after this.</p>
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <p class="text-xs text-blue-800">
+                <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                <strong>Important:</strong> When your browser asks for camera permission, please click "Allow" to continue.
+            </p>
+        </div>
 
         <div class="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
             <p class="text-xs text-primary-600 font-medium mb-2">Align face in frame</p>
