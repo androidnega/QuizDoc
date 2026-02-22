@@ -115,13 +115,20 @@ class QuizRulesController extends Controller
                     && (!$quiz->semester_id || (int) $student->semester_id === (int) $quiz->semester_id);
             }
             if ($allowed) {
-                // Check if this student_index has already completed this quiz
-                // Allow retake if student was removed and re-added (no active session)
+                // Reuse/lock attempt per student+quiz across tabs.
                 $existingSession = QuizSession::where('quiz_id', $quiz->id)
                     ->whereRaw('UPPER(TRIM(student_index)) = ?', [strtoupper($student->index_number)])
-                    ->whereNotNull('ended_at')
-                    ->exists();
-                
+                    ->latest('id')
+                    ->first();
+
+                if ($existingSession && $existingSession->ended_at !== null) {
+                    session(['quiz_session_token' => $existingSession->session_token]);
+                    return response()->json([
+                        'success' => true,
+                        'redirect' => route('student.result', ['token' => $existingSession->session_token]),
+                    ]);
+                }
+
                 if ($existingSession && $this->isIpDeviceRestrictionEnabled()) {
                     // Check IP hasn't been used for this quiz by a different student (ignore reset sessions)
                     $ip = $request->ip();
@@ -157,11 +164,16 @@ class QuizRulesController extends Controller
                     'index_number' => $student->index_number,
                     'rules_accepted' => true,
                 ]);
+                if ($existingSession) {
+                    session(['quiz_session_token' => $existingSession->session_token]);
+                }
                 session()->forget('eligible_courses');
-                
+
                 return response()->json([
                     'success' => true,
-                    'redirect' => route('student.proctoring.capture'),
+                    'redirect' => $existingSession
+                        ? ($existingSession->start_time !== null ? route('student.quiz.show') : route('student.quiz.ready'))
+                        : route('student.proctoring.capture'),
                 ]);
             } else {
                 return response()->json([

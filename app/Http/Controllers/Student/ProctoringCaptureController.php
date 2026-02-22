@@ -23,7 +23,7 @@ class ProctoringCaptureController extends Controller
     /**
      * Show face capture screen (ProctoringCapture). Quiz and index from session.
      */
-    public function show(Request $request): View|\Illuminate\Http\RedirectResponse|JsonResponse
+    public function show(Request $request): View|\Illuminate\Http\RedirectResponse|JsonResponse|\Illuminate\Http\Response
     {
         $quizId = session('quiz_id');
         $indexNumber = session('index_number');
@@ -63,22 +63,28 @@ class ProctoringCaptureController extends Controller
             }
         }
 
+        // Enforce one attempt flow per student+quiz across tabs:
+        // - if ended, do not allow a new attempt
+        // - if active/in-progress, resume existing session instead of creating another
+        $existingSession = QuizSession::where('quiz_id', $quiz->id)
+            ->whereRaw('UPPER(TRIM(student_index)) = ?', [$studentIndex])
+            ->latest('id')
+            ->first();
+        if ($existingSession) {
+            session(['quiz_session_token' => $existingSession->session_token]);
+            if ($existingSession->ended_at !== null) {
+                return redirect()
+                    ->route('student.result', ['token' => $existingSession->session_token])
+                    ->with('info', 'You already completed this quiz attempt.');
+            }
+            if ($existingSession->start_time !== null) {
+                return redirect()->route('student.quiz.show');
+            }
+            return redirect()->route('student.quiz.ready');
+        }
+
         // Camera optional mode: skip capture page and bootstrap/resume session directly.
         if (!$this->isProctoringCameraRequired()) {
-            $existingSession = QuizSession::where('quiz_id', $quiz->id)
-                ->whereRaw('UPPER(TRIM(student_index)) = ?', [$studentIndex])
-                ->whereNull('ended_at')
-                ->latest('id')
-                ->first();
-
-            if ($existingSession) {
-                session(['quiz_session_token' => $existingSession->session_token]);
-                if ($existingSession->start_time !== null) {
-                    return redirect()->route('student.quiz.show');
-                }
-                return redirect()->route('student.quiz.ready');
-            }
-
             try {
                 $assignment = $this->assignmentService->assignQuestions($quiz);
             } catch (\Throwable $e) {
@@ -112,10 +118,13 @@ class ProctoringCaptureController extends Controller
 
             return redirect()->route('student.quiz.ready');
         }
-        return view('student.proctoring-capture', [
-            'quiz' => $quiz,
-            'indexNumber' => $indexNumber,
-        ]);
+        return response()
+            ->view('student.proctoring-capture', [
+                'quiz' => $quiz,
+                'indexNumber' => $indexNumber,
+            ])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache');
     }
 
     /**
@@ -134,6 +143,29 @@ class ProctoringCaptureController extends Controller
         }
         $ip = $request->ip();
         $studentIndex = strtoupper(trim((string) $request->index_number));
+
+        // Guard against second-tab/session duplication.
+        $existingSession = QuizSession::where('quiz_id', $quiz->id)
+            ->whereRaw('UPPER(TRIM(student_index)) = ?', [$studentIndex])
+            ->latest('id')
+            ->first();
+        if ($existingSession) {
+            session(['quiz_session_token' => $existingSession->session_token]);
+            if ($existingSession->ended_at !== null) {
+                return response()->json([
+                    'success' => true,
+                    'redirect' => route('student.result', ['token' => $existingSession->session_token]),
+                    'message' => 'You already completed this quiz attempt.',
+                ]);
+            }
+            return response()->json([
+                'success' => true,
+                'redirect' => $existingSession->start_time !== null
+                    ? route('student.quiz.show')
+                    : route('student.quiz.ready'),
+                'message' => 'Resuming your existing quiz session.',
+            ]);
+        }
 
         if ($this->isIpDeviceRestrictionEnabled()) {
             $ipUsedByOther = QuizSession::where('quiz_id', $quiz->id)

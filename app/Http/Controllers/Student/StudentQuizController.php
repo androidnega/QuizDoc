@@ -28,7 +28,7 @@ class StudentQuizController extends Controller
     /**
      * System readiness screen after pre-quiz face capture.
      */
-    public function ready(Request $request): View|\Illuminate\Http\RedirectResponse
+    public function ready(Request $request): View|\Illuminate\Http\RedirectResponse|\Illuminate\Http\Response
     {
         $token = session('quiz_session_token');
         if (!$token) {
@@ -44,12 +44,15 @@ class StudentQuizController extends Controller
         $questionCount = is_array($session->assigned_question_ids)
             ? count($session->assigned_question_ids)
             : 0;
-        return view('student.quiz-ready', [
-            'session' => $session,
-            'courseName' => $session->quiz->course?->name ?? $session->quiz->title ?? 'Quiz',
-            'durationMinutes' => (int) ($session->quiz->duration_minutes ?? 0),
-            'questionCount' => $questionCount,
-        ]);
+        return response()
+            ->view('student.quiz-ready', [
+                'session' => $session,
+                'courseName' => $session->quiz->course?->name ?? $session->quiz->title ?? 'Quiz',
+                'durationMinutes' => (int) ($session->quiz->duration_minutes ?? 0),
+                'questionCount' => $questionCount,
+            ])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache');
     }
 
     /**
