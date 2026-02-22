@@ -82,6 +82,12 @@
     let normalViolationCount = 0;
     let noFaceStartedAt = null;
     let outOfFrameEventCapturedForCurrentAbsence = false;
+    let lastHeadTurnMessage = '';
+    let lastHeadTurnMessageAt = 0;
+    const HEAD_TURN_BANNER_MS = 3000;
+    let darknessFrameCount = 0;
+    const DARKNESS_THRESHOLD = 0.12;
+    const DARKNESS_FRAMES_REQUIRED = 15;
 
     /**
      * Get CSRF token
@@ -131,6 +137,34 @@
         } catch (err) {
             console.warn('Frame capture failed:', err);
             return null;
+        }
+    }
+
+    /**
+     * Get average frame brightness (0–1). Used for darkness detection.
+     */
+    function getFrameBrightness() {
+        const videoEl = config.videoElement || videoElement;
+        if (!videoEl || !canvas || !ctx || videoEl.readyState < 2 || videoEl.videoWidth <= 0) return 1;
+        try {
+            const w = videoEl.videoWidth;
+            const h = videoEl.videoHeight;
+            if (canvas.width !== w || canvas.height !== h) {
+                canvas.width = w;
+                canvas.height = h;
+            }
+            ctx.drawImage(videoEl, 0, 0, w, h);
+            const data = ctx.getImageData(0, 0, Math.min(w, 160), Math.min(h, 120));
+            const pixels = data.data;
+            let sum = 0;
+            const step = 4 * 2;
+            for (let i = 0; i < pixels.length; i += step) {
+                sum += (pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114) / 255;
+            }
+            const count = Math.floor(pixels.length / step);
+            return count > 0 ? sum / count : 1;
+        } catch (err) {
+            return 1;
         }
     }
 
@@ -219,6 +253,12 @@
         const pillEl = document.getElementById('live-camera-pill');
         const bannerIconEl = document.getElementById('live-camera-banner-icon');
         const positionLabelEl = document.getElementById('live-camera-position-label');
+        const guideCircleEl = document.getElementById('live-camera-guide-circle');
+        const lineV = document.querySelector('.guide-line-v');
+        const lineH = document.querySelector('.guide-line-h');
+        const now = Date.now();
+        const showHeadTurnBanner = lastHeadTurnMessage && (now - lastHeadTurnMessageAt) < HEAD_TURN_BANNER_MS;
+        const displayHeadline = showHeadTurnBanner ? lastHeadTurnMessage : (headline || 'Monitoring camera feed.');
         if (frameEl) {
             frameEl.classList.remove('border-emerald-500', 'border-amber-400', 'border-red-500');
             if (state === 'red') {
@@ -229,13 +269,35 @@
                 frameEl.classList.add('border-emerald-500');
             }
         }
+        if (guideCircleEl) {
+            guideCircleEl.classList.remove('border-emerald-500', 'border-amber-400', 'border-red-500');
+            if (state === 'red') {
+                guideCircleEl.classList.add('border-red-500');
+            } else if (state === 'yellow') {
+                guideCircleEl.classList.add('border-amber-400');
+            } else {
+                guideCircleEl.classList.add('border-emerald-500');
+            }
+        }
+        if (lineV) {
+            lineV.classList.remove('bg-emerald-400/60', 'bg-amber-400/60', 'bg-red-400/60');
+            if (state === 'red') lineV.classList.add('bg-red-400/60');
+            else if (state === 'yellow') lineV.classList.add('bg-amber-400/60');
+            else lineV.classList.add('bg-emerald-400/60');
+        }
+        if (lineH) {
+            lineH.classList.remove('bg-emerald-400/60', 'bg-amber-400/60', 'bg-red-400/60');
+            if (state === 'red') lineH.classList.add('bg-red-400/60');
+            else if (state === 'yellow') lineH.classList.add('bg-amber-400/60');
+            else lineH.classList.add('bg-emerald-400/60');
+        }
         if (textEl) {
-            textEl.textContent = headline || 'Monitoring camera feed.';
+            textEl.textContent = displayHeadline;
         }
         if (pillEl) {
             pillEl.textContent = 'FACE DETECTED';
             pillEl.classList.remove('bg-emerald-500', 'bg-amber-400', 'bg-red-500');
-            if (state === 'green') {
+            if (state === 'green' && !showHeadTurnBanner) {
                 pillEl.classList.remove('hidden');
                 pillEl.classList.add('bg-emerald-500');
             } else {
@@ -256,7 +318,7 @@
             }
         }
         if (positionLabelEl) {
-            positionLabelEl.textContent = state === 'green' ? 'Position: Good' : 'Position: Adjust';
+            positionLabelEl.textContent = state === 'green' && !showHeadTurnBanner ? 'Position: Good' : 'Position: Adjust';
         }
     }
 
@@ -513,6 +575,19 @@
             return;
         }
 
+        // Darkness detection: ask user to go to a well-lit place
+        const brightness = getFrameBrightness();
+        if (brightness < DARKNESS_THRESHOLD) {
+            darknessFrameCount++;
+            if (darknessFrameCount >= DARKNESS_FRAMES_REQUIRED) {
+                setLiveFrameState('yellow', 'Please go to a well-lit place', '');
+                updateLiveFramePosition(primaryBox);
+                return;
+            }
+        } else {
+            darknessFrameCount = 0;
+        }
+
         // Multiple face detection: require consecutive frames to avoid false positives (e.g. BlazeFace glitches, reflections)
         const effectiveMultiple = getEffectiveMultipleFaceCount(boundingBoxes);
         if (effectiveMultiple > 1) {
@@ -708,6 +783,8 @@
         lastHeadDirectionViolationAt = now;
         headDirectionViolationCount++;
         incrementNormalViolationCount();
+        lastHeadTurnMessage = 'Head turned ' + direction + ' - face the camera';
+        lastHeadTurnMessageAt = now;
 
         showProctoringModal(
             'Head movement detected',
@@ -721,6 +798,7 @@
             normal_violation_limit: NORMAL_VIOLATION_LIMIT,
             student_index: config.studentIndex || null,
         });
+        setLiveFrameState('yellow', lastHeadTurnMessage, '');
         // Head turn is violation-only; no auto-submit (critical violations auto-submit).
     }
 

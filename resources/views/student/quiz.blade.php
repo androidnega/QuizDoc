@@ -201,13 +201,13 @@
                         <div id="live-camera-pill" class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 px-3 py-1 rounded-full text-xs font-bold uppercase text-white bg-emerald-500 hidden">Face detected</div>
                         <div id="live-camera-video-slot" class="aspect-video bg-gray-900 flex items-center justify-center min-h-[120px] relative">
                             <span class="text-gray-500 text-sm">Camera feed</span>
-                            {{-- Guide overlay: dashed circle + faint crosshairs + green center dot --}}
+                            {{-- Guide: green dotted circle (reacts green/yellow/red) + vertical/horizontal center lines + face dot --}}
                             <div id="live-camera-guide-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center z-10" aria-hidden="true">
                                 <div class="absolute inset-0 flex items-center justify-center">
-                                    <div class="w-[55%] h-[70%] max-w-[180px] max-h-[160px] rounded-[50%] border-2 border-dashed border-gray-400/40" style="box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);" title="Keep your head inside this frame"></div>
+                                    <div id="live-camera-guide-circle" class="w-[52%] min-w-[120px] max-w-[200px] aspect-square rounded-full border-2 border-dashed border-emerald-500 transition-colors duration-300" style="box-shadow: 0 0 0 1px rgba(0,0,0,0.2);" title="Keep your head inside this circle"></div>
                                 </div>
-                                <div class="absolute top-0 bottom-0 left-1/2 w-px -translate-x-px bg-white/25" style="width: 1px;"></div>
-                                <div class="absolute left-0 right-0 top-1/2 h-px -translate-y-px bg-white/25" style="height: 1px;"></div>
+                                <div class="absolute top-0 bottom-0 left-1/2 w-0.5 -translate-x-px bg-emerald-400/60 transition-colors duration-300 guide-line-v" style="width: 2px;"></div>
+                                <div class="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-px bg-emerald-400/60 transition-colors duration-300 guide-line-h" style="height: 2px;"></div>
                                 <div id="live-camera-face-dot" class="absolute w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-lg z-10 hidden" style="left:50%;top:50%;transform:translate(-50%,-50%);"></div>
                             </div>
                         </div>

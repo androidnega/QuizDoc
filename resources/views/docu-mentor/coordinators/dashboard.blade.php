@@ -69,8 +69,6 @@
                     <span class="text-violet-300" aria-hidden="true">·</span>
                     <a href="{{ route('dashboard.coordinators.assign-group-leaders.index') }}" class="text-violet-800 hover:text-violet-900 hover:underline">Group Leaders</a>
                     <span class="text-violet-300" aria-hidden="true">·</span>
-                    <a href="{{ route('dashboard.coordinators.course-reps.index') }}" class="text-violet-800 hover:text-violet-900 hover:underline">Course Reps</a>
-                    <span class="text-violet-300" aria-hidden="true">·</span>
                     <a href="{{ route('dashboard.coordinators.workload') }}" class="text-violet-800 hover:text-violet-900 hover:underline">Workload</a>
                 </div>
             </div>
