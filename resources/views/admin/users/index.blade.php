@@ -202,7 +202,10 @@ function openSmsModal(userId, username, currentAllocation, currentUsed) {
     
     document.getElementById('smsUserId').value = userId;
     document.getElementById('smsUsername').textContent = username;
-    document.getElementById('smsRemaining').textContent = Math.max(0, currentAllocation - currentUsed);
+    document.getElementById('smsAllocationDisplay').textContent = currentAllocation;
+    var remaining = Math.max(0, currentAllocation - currentUsed);
+    document.getElementById('smsRemaining').textContent = remaining;
+    document.getElementById('smsRemainingWrap').style.display = currentUsed > 0 ? '' : 'none';
     document.getElementById('smsAllocationInput').value = currentAllocation;
     document.getElementById('smsError').classList.add('hidden');
     document.getElementById('smsError').textContent = '';
@@ -295,7 +298,7 @@ document.getElementById('smsModal').addEventListener('click', function(e) {
             <div>
                 <p class="text-sm text-gray-600 mb-4">
                     Examiner: <strong id="smsUsername"></strong><br>
-                    SMS: <span id="smsRemaining" class="font-semibold text-green-600">0</span>
+                    Current allocation: <span id="smsAllocationDisplay" class="font-semibold text-green-600">0</span><span id="smsRemainingWrap"> (<span id="smsRemaining">0</span> remaining)</span>
                 </p>
             </div>
             <div>
