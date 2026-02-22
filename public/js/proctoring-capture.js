@@ -636,15 +636,15 @@
         });
     }
     
-    // Initialize on page load
+    // Initialize on page load - start camera immediately so browser shows permission prompt
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             initFaceDetector();
-            updateCaptureButton();
+            startCamera();
         });
     } else {
         initFaceDetector();
-        updateCaptureButton();
+        startCamera();
     }
     
     window.addEventListener('beforeunload', function () {
