@@ -197,7 +197,7 @@
             <div class="rounded-xl overflow-hidden shadow-sm bg-amber-50 border border-amber-200 min-w-0">
                 <div class="p-3">
                     <h2 class="text-xs font-semibold text-amber-900 mb-2">LIVE CAMERA FEED</h2>
-                    <div id="live-camera-frame" class="bg-amber-100 border-2 border-emerald-500 rounded-xl overflow-visible min-w-0 flex flex-col transition-all duration-200 relative">
+                    <div id="live-camera-frame" class="bg-amber-100 border-2 border-emerald-500 rounded-xl overflow-hidden min-w-0 flex flex-col transition-all duration-200 relative">
                         <div id="live-camera-video-slot" class="aspect-video bg-gray-900 rounded-t-lg flex items-center justify-center min-h-[100px] relative overflow-hidden">
                             <span class="text-gray-500 text-xs">Camera feed</span>
                             {{-- Guide: oval/circle (reacts green/yellow/red) + center lines + face dot; preserved when video is injected --}}
