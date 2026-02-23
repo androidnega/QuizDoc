@@ -123,6 +123,14 @@
                 </div>
                 <div>
                     <label for="supervisor_ids" class="block text-xs font-medium text-gray-600 mb-1">Supervisors</label>
+                    @if($project->supervisors->isNotEmpty())
+                        <p class="text-sm mb-1">
+                            Assigned:
+                            @foreach($project->supervisors as $s)
+                                <span class="font-medium" style="color: #ca8a04;">{{ $s->name ?? $s->username }}</span>@if(!$loop->last), @endif
+                            @endforeach
+                        </p>
+                    @endif
                     <select
                         name="supervisor_ids[]"
                         id="supervisor_ids"
@@ -130,7 +138,8 @@
                         class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none min-h-[2.5rem]"
                     >
                         @foreach($supervisors as $s)
-                            <option value="{{ $s->id }}" {{ $project->supervisors->contains($s) ? 'selected' : '' }}>
+                            @php $isAssigned = $project->supervisors->contains($s); @endphp
+                            <option value="{{ $s->id }}" {{ $isAssigned ? 'selected' : '' }} @if($isAssigned) style="color: #ca8a04;" @endif>
                                 {{ $s->name ?? $s->username }}
                             </option>
                         @endforeach

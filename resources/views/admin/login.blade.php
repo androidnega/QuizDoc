@@ -70,8 +70,8 @@
 
                 <button
                     type="submit"
-                    class="w-full py-3 rounded-full text-white font-semibold uppercase tracking-wide text-sm shadow-sm hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-opacity"
-                    style="background-color: #6bc334;"
+                    class="w-full py-3 rounded-full text-gray-900 font-semibold uppercase tracking-wide text-sm shadow-sm hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-opacity"
+                    style="background-color: #eab308;"
                 >
                     Login
                 </button>
