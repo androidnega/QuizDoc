@@ -4,8 +4,8 @@
 
 @section('content')
 @php
-    $defaultHero = 'https://img.freepik.com/premium-photo/black-students-using-tablet-class-working-online-presentation-together_622301-7401.jpg';
-    $heroUrl = !empty(trim($loginHeroImage ?? '')) ? trim($loginHeroImage) : $defaultHero;
+    // Use Super Admin Settings → Login page hero image; fallback to public asset (same default as in Settings)
+    $heroUrl = !empty(trim($loginHeroImage ?? '')) ? trim($loginHeroImage) : asset('assets/hero-section.jpg');
 @endphp
 <div class="min-h-screen flex items-center justify-center px-4 py-10" style="background-color: #eef1f4;">
     <div class="w-full max-w-[520px] bg-white rounded-xl shadow-lg overflow-hidden">
