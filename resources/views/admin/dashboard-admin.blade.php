@@ -40,21 +40,21 @@
     </section>
 
     <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 min-w-0">
-        <div class="rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm min-w-0">
-            <p class="text-xs sm:text-sm font-medium text-gray-500 truncate">Staff users</p>
-            <p class="mt-1 text-xl sm:text-2xl font-bold tabular-nums text-gray-900">{{ $overview['users'] ?? 0 }}</p>
+        <div class="rounded-lg bg-sky-700 p-3 sm:p-4 shadow-sm min-w-0">
+            <p class="text-xs sm:text-sm font-medium text-sky-100 truncate">Staff users</p>
+            <p class="mt-1 text-xl sm:text-2xl font-bold tabular-nums text-white">{{ $overview['users'] ?? 0 }}</p>
         </div>
-        <div class="rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm min-w-0">
-            <p class="text-xs sm:text-sm font-medium text-gray-500 truncate">Courses</p>
-            <p class="mt-1 text-xl sm:text-2xl font-bold tabular-nums text-gray-900">{{ $overview['courses'] ?? 0 }}</p>
+        <div class="rounded-lg bg-emerald-700 p-3 sm:p-4 shadow-sm min-w-0">
+            <p class="text-xs sm:text-sm font-medium text-emerald-100 truncate">Courses</p>
+            <p class="mt-1 text-xl sm:text-2xl font-bold tabular-nums text-white">{{ $overview['courses'] ?? 0 }}</p>
         </div>
-        <div class="rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm min-w-0">
-            <p class="text-xs sm:text-sm font-medium text-gray-500 truncate">Class groups</p>
-            <p class="mt-1 text-xl sm:text-2xl font-bold tabular-nums text-gray-900">{{ $overview['class_groups'] ?? 0 }}</p>
+        <div class="rounded-lg bg-violet-700 p-3 sm:p-4 shadow-sm min-w-0">
+            <p class="text-xs sm:text-sm font-medium text-violet-100 truncate">Class groups</p>
+            <p class="mt-1 text-xl sm:text-2xl font-bold tabular-nums text-white">{{ $overview['class_groups'] ?? 0 }}</p>
         </div>
-        <div class="rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm min-w-0">
-            <p class="text-xs sm:text-sm font-medium text-gray-500 truncate">Quiz sessions</p>
-            <p class="mt-1 text-xl sm:text-2xl font-bold tabular-nums text-gray-900">{{ $overview['sessions'] ?? 0 }}</p>
+        <div class="rounded-lg bg-amber-700 p-3 sm:p-4 shadow-sm min-w-0">
+            <p class="text-xs sm:text-sm font-medium text-amber-100 truncate">Students</p>
+            <p class="mt-1 text-xl sm:text-2xl font-bold tabular-nums text-white">{{ $overview['students'] ?? 0 }}</p>
         </div>
     </div>
 

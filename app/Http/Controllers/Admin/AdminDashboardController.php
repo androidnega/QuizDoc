@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\Quiz;
 use App\Models\QuizSession;
 use App\Models\Setting;
+use App\Models\Student;
 use App\Models\User;
 use App\Services\CloudinaryService;
 use Illuminate\View\View;
@@ -35,6 +36,7 @@ class AdminDashboardController extends Controller
             'users' => User::whereIn('role', [User::ROLE_SUPER_ADMIN, User::ROLE_EXAMINER])->count(),
             'courses' => Course::count(),
             'class_groups' => ClassGroup::count(),
+            'students' => Student::count(),
             'quizzes' => Quiz::count(),
             'sessions' => $sessionsWithResult,
             'results' => $sessionsWithResult,
