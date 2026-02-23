@@ -6,35 +6,35 @@
 @section('dashboard_content')
 <div class="w-full space-y-6">
     <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <a href="{{ route('dashboard.coordinators.projects.index') }}" class="rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-sm hover:bg-blue-100 transition-colors">
-            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600 mb-2"><i class="fas fa-folder-open"></i></span>
-            <p class="text-sm font-medium text-blue-700">Projects</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-blue-900">{{ $overview['projects'] ?? 0 }}</p>
+        <a href="{{ route('dashboard.coordinators.projects.index') }}" class="rounded-lg bg-blue-700 p-4 shadow-sm hover:bg-blue-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-400">
+            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600/20 text-white mb-2"><i class="fas fa-folder-open"></i></span>
+            <p class="text-sm font-medium text-blue-100">Projects</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-white">{{ $overview['projects'] ?? 0 }}</p>
         </a>
-        <a href="{{ route('dashboard.coordinators.projects.index') }}" class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm hover:bg-emerald-100 transition-colors">
-            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 mb-2"><i class="fas fa-check-circle"></i></span>
-            <p class="text-sm font-medium text-emerald-700">Approved</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-emerald-900">{{ $overview['projects_approved'] ?? 0 }}</p>
+        <a href="{{ route('dashboard.coordinators.projects.index') }}" class="rounded-lg bg-emerald-700 p-4 shadow-sm hover:bg-emerald-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-emerald-400">
+            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600/20 text-white mb-2"><i class="fas fa-check-circle"></i></span>
+            <p class="text-sm font-medium text-emerald-100">Approved</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-white">{{ $overview['projects_approved'] ?? 0 }}</p>
         </a>
-        <a href="{{ route('dashboard.coordinators.categories.index') }}" class="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm hover:bg-amber-100 transition-colors">
-            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600 mb-2"><i class="fas fa-tags"></i></span>
-            <p class="text-sm font-medium text-amber-700">Categories</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-amber-900">{{ $overview['categories'] ?? 0 }}</p>
+        <a href="{{ route('dashboard.coordinators.categories.index') }}" class="rounded-lg bg-amber-700 p-4 shadow-sm hover:bg-amber-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-amber-400">
+            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-600/20 text-white mb-2"><i class="fas fa-tags"></i></span>
+            <p class="text-sm font-medium text-amber-100">Categories</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-white">{{ $overview['categories'] ?? 0 }}</p>
         </a>
-        <a href="{{ route('dashboard.coordinators.groups.index') }}" class="rounded-lg border border-violet-200 bg-violet-50 p-4 shadow-sm hover:bg-violet-100 transition-colors">
-            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-100 text-violet-600 mb-2"><i class="fas fa-users"></i></span>
-            <p class="text-sm font-medium text-violet-700">Project groups</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-violet-900">{{ $overview['groups'] ?? 0 }}</p>
+        <a href="{{ route('dashboard.coordinators.groups.index') }}" class="rounded-lg bg-violet-700 p-4 shadow-sm hover:bg-violet-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-violet-400">
+            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-600/20 text-white mb-2"><i class="fas fa-users"></i></span>
+            <p class="text-sm font-medium text-violet-100">Project groups</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-white">{{ $overview['groups'] ?? 0 }}</p>
         </a>
-        <a href="{{ route('dashboard.coordinators.assign-group-leaders.index') }}" class="rounded-lg border border-rose-200 bg-rose-50 p-4 shadow-sm hover:bg-rose-100 transition-colors">
-            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-100 text-rose-600 mb-2"><i class="fas fa-user-tie"></i></span>
-            <p class="text-sm font-medium text-rose-700">Group leaders</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-rose-900">{{ $overview['group_leaders'] ?? 0 }}</p>
+        <a href="{{ route('dashboard.coordinators.assign-group-leaders.index') }}" class="rounded-lg bg-rose-700 p-4 shadow-sm hover:bg-rose-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-rose-400">
+            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-600/20 text-white mb-2"><i class="fas fa-user-tie"></i></span>
+            <p class="text-sm font-medium text-rose-100">Group leaders</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-white">{{ $overview['group_leaders'] ?? 0 }}</p>
         </a>
-        <a href="{{ route('dashboard.coordinators.students.index') }}" class="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm hover:bg-slate-100 hover:border-slate-300 transition-colors">
-            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-200 text-slate-600 mb-2"><i class="fas fa-user-graduate"></i></span>
-            <p class="text-sm font-medium text-slate-700">Students</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-slate-900">{{ $overview['students'] ?? 0 }}</p>
+        <a href="{{ route('dashboard.coordinators.students.index') }}" class="rounded-lg bg-slate-700 p-4 shadow-sm hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-400">
+            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-600/20 text-white mb-2"><i class="fas fa-user-graduate"></i></span>
+            <p class="text-sm font-medium text-slate-100">Students</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-white">{{ $overview['students'] ?? 0 }}</p>
         </a>
     </div>
     
