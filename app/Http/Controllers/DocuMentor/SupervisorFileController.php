@@ -63,19 +63,36 @@ class SupervisorFileController extends Controller
         return back()->with('success', 'Final submission uploaded.');
     }
 
-    public function downloadProposal(Project $project, ProjectProposal $proposal): StreamedResponse
+    /**
+     * Download a proposal file. Resolves proposal by id within project so wrong/missing proposal gives redirect, not 404.
+     * Redirects back with message when file is missing (e.g. on live after deploy).
+     */
+    public function downloadProposal(Project $project, int $proposal): StreamedResponse|RedirectResponse
     {
         $this->authorize('view', $project);
-        if ($proposal->project_id !== (int) $project->id) {
-            abort(404, 'Proposal does not belong to this project.');
+
+        $proposalModel = $project->proposals()->find($proposal);
+        if (!$proposalModel) {
+            return back()->with('error', 'Proposal not found for this project.');
+        }
+        $proposal = $proposalModel;
+
+        $path = $proposal->file ? trim($proposal->file, "/ \t\n\r") : null;
+        if (!$path) {
+            return back()->with('error', 'Proposal file path is missing. Please re-upload this proposal.');
         }
 
-        $path = $proposal->file;
-        if (!$path || !Storage::disk('public')->exists($path)) {
-            abort(404, 'Proposal file is missing or was removed. The record exists but the file is not on disk.');
+        $disk = Storage::disk('public');
+        if (!$disk->exists($path)) {
+            // Try without leading slash in case path was stored differently
+            $pathAlt = ltrim($path, '/');
+            if (!$disk->exists($pathAlt)) {
+                return back()->with('error', 'Proposal file not found on server. It may have been removed or not uploaded. Please re-upload the proposal.');
+            }
+            $path = $pathAlt;
         }
 
-        return Storage::disk('public')->download(
+        return $disk->download(
             $path,
             'proposal-v' . $proposal->version_number . '-' . basename($path)
         );
