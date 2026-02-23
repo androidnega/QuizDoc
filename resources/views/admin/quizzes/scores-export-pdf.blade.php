@@ -35,7 +35,7 @@
             @if(!empty($institutionName))
                 <p class="institution">{{ $institutionName }}</p>
             @endif
-            <p class="report-title">Score report — {{ !empty($forClassRep) ? 'Class rep' : 'ERT' }} - {{ $classGroupName ?? $quiz->classGroup?->name ?? $quiz->academicClass?->name ?? '—' }}</p>
+            <p class="report-title">Score report — {{ $classGroupName ?? $quiz->classGroup?->name ?? $quiz->academicClass?->name ?? '—' }}</p>
         </div>
     </div>
 

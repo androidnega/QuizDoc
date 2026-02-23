@@ -100,7 +100,7 @@ class ClassRepController extends Controller
     public function previewPdf(Quiz $quiz): Response
     {
         [$user, ] = $this->ensureClassRepAndQuizInClass($quiz);
-        $quiz->load(['classGroup.level', 'course', 'academicClass']);
+        $quiz->load(['classGroup.level', 'course', 'academicClass', 'examiner']);
         $sessions = $quiz->sessions()
             ->with(['result', 'violations'])
             ->whereNotNull('ended_at')
@@ -111,10 +111,12 @@ class ClassRepController extends Controller
         $examTypeLabel = $quiz->getExamTypeLabel();
         $reportDate = $quiz->ends_at ? $quiz->ends_at->format('F j, Y') : now()->format('F j, Y');
         [$institutionName, $institutionLogoPath] = $this->institutionBranding();
+        $lecturer = $quiz->examiner ?? $quiz->classGroup?->examiner;
+        $lecturerName = $lecturer ? ($lecturer->name ?: $lecturer->username) : '—';
         $pdf = Pdf::loadView('admin.quizzes.scores-export-pdf', [
             'quiz' => $quiz,
             'sessions' => $sessions,
-            'lecturerName' => 'Class Rep: ' . ($user->name ?: $user->username ?? '—'),
+            'lecturerName' => $lecturerName,
             'courseName' => $courseName,
             'classGroupName' => $classGroupName,
             'examTypeLabel' => $examTypeLabel,
@@ -132,7 +134,7 @@ class ClassRepController extends Controller
     public function downloadPdf(Quiz $quiz): Response
     {
         [$user, ] = $this->ensureClassRepAndQuizInClass($quiz);
-        $quiz->load(['classGroup.level', 'course', 'academicClass']);
+        $quiz->load(['classGroup.level', 'course', 'academicClass', 'examiner']);
         $sessions = $quiz->sessions()
             ->with(['result', 'violations'])
             ->whereNotNull('ended_at')
@@ -143,10 +145,12 @@ class ClassRepController extends Controller
         $examTypeLabel = $quiz->getExamTypeLabel();
         $reportDate = $quiz->ends_at ? $quiz->ends_at->format('F j, Y') : now()->format('F j, Y');
         [$institutionName, $institutionLogoPath] = $this->institutionBranding();
+        $lecturer = $quiz->examiner ?? $quiz->classGroup?->examiner;
+        $lecturerName = $lecturer ? ($lecturer->name ?: $lecturer->username) : '—';
         $pdf = Pdf::loadView('admin.quizzes.scores-export-pdf', [
             'quiz' => $quiz,
             'sessions' => $sessions,
-            'lecturerName' => 'Class Rep: ' . ($user->name ?: $user->username ?? '—'),
+            'lecturerName' => $lecturerName,
             'courseName' => $courseName,
             'classGroupName' => $classGroupName,
             'examTypeLabel' => $examTypeLabel,
