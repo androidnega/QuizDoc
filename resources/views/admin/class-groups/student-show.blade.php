@@ -14,7 +14,7 @@
         <div class="rounded-lg border-2 border-amber-400 bg-amber-100 p-4 mb-4">
             <p class="text-sm font-medium text-amber-900 mb-1">One-time login code — give this to the student</p>
             <p class="text-2xl font-bold font-mono tracking-widest text-amber-900 bg-yellow-300 inline-block px-4 py-2 rounded">{{ session('fallback_code') }}</p>
-            <p class="text-xs text-amber-800 mt-2">Valid for {{ \App\Models\Otp::EXAMINER_FALLBACK_VALID_MINUTES }} minutes. Student enters index number and this code on the login page.</p>
+            <p class="text-xs text-amber-800 mt-2">Valid for {{ \App\Models\Otp::EXAMINER_FALLBACK_VALID_DAYS }} days. Student enters index number and this code on the login page.</p>
         </div>
     @endif
     @if(session('error'))
