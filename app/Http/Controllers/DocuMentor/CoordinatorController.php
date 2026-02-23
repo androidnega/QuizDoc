@@ -7,6 +7,7 @@ use App\Models\DocuMentor\AcademicYear;
 use App\Models\DocuMentor\Category;
 use App\Models\DocuMentor\Project;
 use App\Models\DocuMentor\ProjectGroup;
+use App\Models\ClassGroup;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
@@ -23,8 +24,8 @@ class CoordinatorController extends Controller
         $overview = [
             'projects' => Project::count(),
             'projects_approved' => Project::where('approved', true)->count(),
-            'categories' => Category::count(),
             'groups' => ProjectGroup::count(),
+            'class_groups' => ClassGroup::count(),
             'group_leaders' => Schema::hasColumn('users', 'group_leader')
                 ? User::where('group_leader', true)->count()
                 : (int) User::where('role', User::DM_ROLE_LEADER)->count(),

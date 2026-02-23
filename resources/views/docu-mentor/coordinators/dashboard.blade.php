@@ -16,10 +16,10 @@
             <p class="text-sm font-medium text-emerald-100">Approved</p>
             <p class="mt-1 text-2xl font-bold tabular-nums text-white">{{ $overview['projects_approved'] ?? 0 }}</p>
         </a>
-        <a href="{{ route('dashboard.coordinators.categories.index') }}" class="rounded-lg bg-amber-700 p-4 shadow-sm hover:bg-amber-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-amber-400">
-            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-600/20 text-white mb-2"><i class="fas fa-tags"></i></span>
-            <p class="text-sm font-medium text-amber-100">Categories</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-white">{{ $overview['categories'] ?? 0 }}</p>
+        <a href="{{ route('dashboard.class-groups.index') }}" class="rounded-lg bg-amber-700 p-4 shadow-sm hover:bg-amber-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-amber-400">
+            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-600/20 text-white mb-2"><i class="fas fa-layer-group"></i></span>
+            <p class="text-sm font-medium text-amber-100">Class groups</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-white">{{ $overview['class_groups'] ?? 0 }}</p>
         </a>
         <a href="{{ route('dashboard.coordinators.groups.index') }}" class="rounded-lg bg-violet-700 p-4 shadow-sm hover:bg-violet-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-violet-400">
             <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-600/20 text-white mb-2"><i class="fas fa-users"></i></span>
