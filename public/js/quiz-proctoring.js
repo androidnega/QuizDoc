@@ -289,14 +289,14 @@
         if (list.length === 0) {
             try { localStorage.removeItem(storagePrefix + '_pending'); } catch (e) {}
             showOfflineBanner(false);
-            return;
+            return Promise.resolve();
         }
         var payload = list.map(function (p) { return { question_id: p.questionId, answer: p.answer }; });
         var h = { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf(), 'Accept': 'application/json' };
         if (!navigator.onLine) {
             persistPendingToStorage();
             showOfflineBanner(true);
-            return;
+            return Promise.resolve();
         }
         var done = function () {
             for (var i = 0; i < list.length; i++) delete savePending[list[i].questionId];
@@ -308,22 +308,22 @@
             showOfflineBanner(true);
         };
         if (saveAnswersBatchUrl && list.length > 0) {
-            fetch(saveAnswersBatchUrl, { method: 'POST', headers: h, body: JSON.stringify({ answers: payload }) })
+            return fetch(saveAnswersBatchUrl, { method: 'POST', headers: h, body: JSON.stringify({ answers: payload }) })
                 .then(function (r) { if (r.ok) done(); else fail(); })
                 .catch(fail);
-        } else {
-            var settled = 0, anyFail = false;
-            list.forEach(function (p) {
-                fetch(saveAnswerUrl, { method: 'POST', headers: h, body: JSON.stringify({ question_id: p.questionId, answer: p.answer }) })
-                    .then(function (r) {
-                        if (r.ok) delete savePending[p.questionId];
-                        else anyFail = true;
-                        settled++;
-                        if (settled === list.length) { if (anyFail) fail(); else done(); }
-                    })
-                    .catch(function () { anyFail = true; settled++; if (settled === list.length) fail(); });
-            });
         }
+        var anyFail = false;
+        return Promise.all(list.map(function (p) {
+            return fetch(saveAnswerUrl, { method: 'POST', headers: h, body: JSON.stringify({ question_id: p.questionId, answer: p.answer }) })
+                .then(function (r) {
+                    if (r.ok) delete savePending[p.questionId];
+                    else { anyFail = true; }
+                })
+                .catch(function () { anyFail = true; });
+        })).then(function () {
+            if (anyFail) fail();
+            else done();
+        });
     }
 
     function saveAnswer(questionId, answer) {
@@ -444,6 +444,23 @@
             });
     }
 
+    /** Push all current form answers into savePending so they are included in the next flush. */
+    function pushAllFormAnswersToSavePending() {
+        if (!quizForm) return;
+        quizForm.querySelectorAll('input[type="radio"], textarea').forEach(function (el) {
+            var questionId = el.dataset.questionId || (el.name && el.name.replace('q_', ''));
+            if (!questionId) return;
+            var val = '';
+            if (el.type === 'radio') {
+                var r = quizForm.querySelector('input[name="' + el.name + '"]:checked');
+                val = r ? r.value : '';
+            } else {
+                val = el.value || '';
+            }
+            saveAnswer(questionId, val);
+        });
+    }
+
     /** Redirect to final photo page (separate screen). Photo required before submission. Do not redirect when offline. */
     function goToFinalPhoto() {
         if (!navigator.onLine) {
@@ -452,6 +469,7 @@
             return;
         }
         if (!cameraRequired) {
+            pushAllFormAnswersToSavePending();
             flushSavePending();
             fetch(finalizeUrl || '/quiz/finalize', {
                 method: 'POST',
@@ -480,10 +498,14 @@
             return;
         }
         if (window.QuizSnapQuiz) window.QuizSnapQuiz.navigatingToFinalPhoto = true;
-        flushSavePending();
-        if (finalPhotoUrl) {
-            window.location.href = finalPhotoUrl;
-        }
+        pushAllFormAnswersToSavePending();
+        if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+        saveDebounceTimer = null;
+        flushSavePending().then(function () {
+            if (finalPhotoUrl) {
+                window.location.href = finalPhotoUrl;
+            }
+        });
     }
 
     function submitQuiz(doPostFace) {

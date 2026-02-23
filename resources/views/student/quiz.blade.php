@@ -310,7 +310,6 @@
                             class="btn btn-action w-full sm:w-auto py-2.5 px-5 text-sm font-semibold bg-red-600 text-white hover:bg-red-700 border-0"
                             id="post-face-btn"
                             data-final-url="{{ route('student.final-photo.capture') }}"
-                            onclick="window.location.href=this.dataset.finalUrl"
                         >
                             Finish quiz
                         </button>

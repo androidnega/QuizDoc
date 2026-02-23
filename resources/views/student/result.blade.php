@@ -180,7 +180,7 @@
                     <h2 class="text-sm font-semibold text-gray-900 mb-3">Review your answers</h2>
                     <p class="text-xs text-gray-500 mb-4">Full review is available now that the quiz window has ended. Every assigned question is shown, including unanswered ones, with the correct answer and explanation.</p>
                     @php
-                        $answersByQuestion = $session->answers->keyBy('question_id');
+                        $answersByQuestion = $session->answers->keyBy(fn ($a) => (int) $a->question_id);
                         $assignedCorrectMap = $session->assigned_correct_answers ?? [];
                         $shuffledByQuestion = $session->shuffled_question_options ?? [];
                     @endphp
@@ -188,7 +188,7 @@
                         @foreach(($reviewQuestions ?? collect()) as $idx => $question)
                             @php
                                 $answer = $answersByQuestion->get((int) $question->id);
-                                $studentAnswerRaw = trim((string) ($answer->student_answer ?? ''));
+                                $studentAnswerRaw = trim((string) ($answer?->student_answer ?? ''));
                                 $sessionCorrect = $assignedCorrectMap[$question->id] ?? $assignedCorrectMap[(string)$question->id] ?? ($question->correct_answer ?? '');
                                 $isAnswered = $studentAnswerRaw !== '';
                                 $correct = $isAnswered && strtoupper(trim((string)$studentAnswerRaw)) === strtoupper(trim((string)$sessionCorrect));
@@ -217,7 +217,7 @@
                                 if (!$isAnswered) {
                                     $whyWrong = 'This question was not answered.';
                                 } elseif (!$correct) {
-                                    $whyWrong = (trim((string)($question->explanation_wrong ?? '')) !== '') ? $question->explanation_wrong : ($answer->explanation_wrong ?? null);
+                                    $whyWrong = (trim((string)($question->explanation_wrong ?? '')) !== '') ? $question->explanation_wrong : ($answer?->explanation_wrong ?? null);
                                 }
                             @endphp
                             <div class="border border-gray-200 rounded-lg p-3 min-w-0 max-w-full {{ $correct ? 'bg-success-50/50 border-success-200' : 'bg-danger-50/50 border-danger-200' }}">

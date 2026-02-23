@@ -250,7 +250,7 @@
         <h2 class="text-sm font-semibold text-gray-900 mb-2">Question Review</h2>
         @php
             $assignedQuestions = $assignedQuestions ?? collect();
-            $answersByQuestion = $session->answers->keyBy('question_id');
+            $answersByQuestion = $session->answers->keyBy(fn ($a) => (int) $a->question_id);
             $assignedCorrect = $session->assigned_correct_answers ?? [];
             $shuffledByQuestion = $session->shuffled_question_options ?? [];
         @endphp
@@ -261,7 +261,7 @@
                 @foreach($assignedQuestions as $idx => $question)
                     @php
                         $answer = $answersByQuestion->get((int) $question->id);
-                        $studentAnswerRaw = trim((string) ($answer->student_answer ?? ''));
+                        $studentAnswerRaw = trim((string) ($answer?->student_answer ?? ''));
                         $sessionCorrect = $assignedCorrect[$question->id] ?? $assignedCorrect[(string) $question->id] ?? ($question->correct_answer ?? '');
                         $isAnswered = $studentAnswerRaw !== '';
                         $isCorrect = $isAnswered && strtoupper($studentAnswerRaw) === strtoupper(trim((string) $sessionCorrect));
@@ -280,7 +280,7 @@
                         if (!$isAnswered) {
                             $reason = 'Not answered by student.';
                         } elseif (!$isCorrect) {
-                            $reason = trim((string) ($question->explanation_wrong ?? '')) !== '' ? $question->explanation_wrong : ($answer->explanation_wrong ?? null);
+                            $reason = trim((string) ($question->explanation_wrong ?? '')) !== '' ? $question->explanation_wrong : ($answer?->explanation_wrong ?? null);
                         }
                     @endphp
                     <div class="rounded border p-2 {{ $isCorrect ? 'border-green-200 bg-green-50/50' : 'border-red-200 bg-red-50/50' }}">
