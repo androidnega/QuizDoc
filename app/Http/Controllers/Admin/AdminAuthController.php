@@ -6,12 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 
 class AdminAuthController extends Controller
 {
+    private const REMEMBER_COOKIE = 'quizsnap_remember';
+
     /**
      * Show login form (admin/examiner). If already logged in, send to intended URL or dashboard (no redirect away from requested page).
      */
@@ -72,6 +76,17 @@ class AdminAuthController extends Controller
                 'admin_user_id' => $user->id,
                 'admin_role' => $user->role,
             ]);
+            // Remember me: long-lived cookie so user stays logged in across browser restarts
+            if ($request->boolean('remember')) {
+                $token = Str::random(60);
+                $user->remember_token = $token;
+                $user->save();
+                Cookie::queue(self::REMEMBER_COOKIE, $token, 60 * 24 * 30); // 30 days
+            } else {
+                $user->remember_token = null;
+                $user->save();
+                Cookie::queue(Cookie::forget(self::REMEMBER_COOKIE));
+            }
             // Coordinator (not super_admin) → always go to Docu Mentor coordinator dashboard (do not use intended URL, which may be an admin-only route)
             if ($user->role === User::DM_ROLE_COORDINATOR) {
                 return redirect()->route('dashboard')->with('success', 'Logged in');
@@ -89,7 +104,12 @@ class AdminAuthController extends Controller
      */
     public function logout(Request $request): RedirectResponse
     {
+        $userId = session('admin_user_id');
         session()->forget(['admin_authenticated', 'admin_user_id', 'admin_role']);
+        if ($userId) {
+            User::where('id', $userId)->update(['remember_token' => null]);
+        }
+        Cookie::queue(Cookie::forget(self::REMEMBER_COOKIE));
 
         return redirect()->route('login')
             ->with('info', 'You have been logged out.');

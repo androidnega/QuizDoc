@@ -14,7 +14,7 @@
             <img
                 src="{{ $heroUrl }}"
                 alt=""
-                class="absolute inset-0 w-full h-full object-cover object-center"
+                class="absolute inset-0 w-full h-full object-cover object-top"
                 fetchpriority="high"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
             >

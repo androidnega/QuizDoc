@@ -17,6 +17,27 @@ class DocuMentorAuth
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Restore session from "remember me" cookie if session expired
+        if (!session('admin_authenticated', false) && $request->cookie('quizsnap_remember')) {
+            $user = User::where('remember_token', $request->cookie('quizsnap_remember'))
+                ->whereIn('role', [
+                    User::ROLE_SUPER_ADMIN,
+                    User::ROLE_EXAMINER,
+                    User::DM_ROLE_COORDINATOR,
+                    User::DM_ROLE_STUDENT,
+                    User::DM_ROLE_LEADER,
+                ])
+                ->first();
+            if ($user) {
+                $request->session()->regenerate();
+                session([
+                    'admin_authenticated' => true,
+                    'admin_user_id' => $user->id,
+                    'admin_role' => $user->role,
+                ]);
+            }
+        }
+
         if (session('admin_authenticated', false) && session('admin_user_id')) {
             $user = User::find(session('admin_user_id'));
             if ($user && ($user->isDocuMentorStudent() || $user->isDocuMentorSupervisor() || $user->isDocuMentorCoordinator())) {
