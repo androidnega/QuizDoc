@@ -298,7 +298,16 @@ class StudentDashboardController extends Controller
 
         // Same resolution as coordinator: class groups by case-insensitive index so student sees same institution/faculty/department as coordinator
         $cgStudents = ClassGroupStudent::whereRaw('UPPER(TRIM(index_number)) = ?', [$indexUpper])
-            ->with(['classGroup' => fn ($q) => $q->with(['examiner' => fn ($e) => $e->with(['institution', 'faculty', 'department']), 'academicYear', 'level', 'courses'])])
+            ->with([
+                'classGroup' => fn ($q) => $q->with([
+                    'examiner' => fn ($e) => $e->with(['institution', 'faculty', 'department']),
+                    'academicYear',
+                    'level',
+                    'courses',
+                    'quizCategory',
+                    'semester',
+                ]),
+            ])
             ->get();
         $classGroups = $cgStudents->map(fn ($s) => $s->classGroup)->filter()->unique('id')->values();
 
@@ -337,6 +346,8 @@ class StudentDashboardController extends Controller
             ->first();
 
         $levelLabel = null;
+        $qualificationType = null;
+        $currentSemester = null;
         $docuMentorGroups = collect();
         if ($dmUser) {
             $institution = $institution ?? $dmUser->institution;
@@ -389,6 +400,34 @@ class StudentDashboardController extends Controller
             $levelLabel = $levelModel?->label ?? (string) $levelValue;
         }
 
+        // Qualification type from student record (preferred), else from class group quiz category
+        if ($student->quiz_category_id) {
+            $qc = \App\Models\QuizCategory::find($student->quiz_category_id);
+            $qualificationType = $qc?->name;
+        }
+        if (!$qualificationType && $classGroups->isNotEmpty()) {
+            foreach ($classGroups as $cg) {
+                if ($cg?->quizCategory) {
+                    $qualificationType = $cg->quizCategory->name;
+                    break;
+                }
+            }
+        }
+
+        // Current semester from student record (preferred), else from class group semester
+        if ($student->semester_id) {
+            $sem = \App\Models\Semester::find($student->semester_id);
+            $currentSemester = $sem?->name;
+        }
+        if (!$currentSemester && $classGroups->isNotEmpty()) {
+            foreach ($classGroups as $cg) {
+                if ($cg?->semester) {
+                    $currentSemester = $cg->semester->name;
+                    break;
+                }
+            }
+        }
+
         $hasProjectAccess = false;
         $hasQuizAccess = true;
         $isClassRep = false;
@@ -403,6 +442,8 @@ class StudentDashboardController extends Controller
             'classGroups' => $classGroups,
             'studentCourses' => $studentCourses,
             'levelLabel' => $levelLabel,
+             'qualificationType' => $qualificationType,
+             'currentSemester' => $currentSemester,
             'institution' => $institution ?? null,
             'faculty' => $faculty,
             'department' => $department,

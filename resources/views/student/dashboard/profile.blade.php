@@ -10,7 +10,7 @@
     <p class="text-sm text-slate-500 mt-1">Update your name. Phone is tied to your account for login.</p>
 </header>
 
-@if(($levelLabel ?? null) || ($institution ?? null) || ($faculty ?? null) || ($department ?? null) || (isset($academicYears) && $academicYears->isNotEmpty()) || (isset($docuMentorGroups) && $docuMentorGroups->isNotEmpty()))
+@if(($levelLabel ?? null) || ($qualificationType ?? null) || ($currentSemester ?? null) || ($institution ?? null) || ($faculty ?? null) || ($department ?? null) || (isset($academicYears) && $academicYears->isNotEmpty()) || (isset($docuMentorGroups) && $docuMentorGroups->isNotEmpty()))
 <section class="mb-8" aria-label="Academic info">
     <h2 class="text-sm font-medium text-slate-700 mb-3">Academic info</h2>
     <p class="text-xs text-slate-500 mb-3">From your class groups (institution, faculty, department, and academic year).</p>
@@ -44,6 +44,18 @@
             <div class="flex gap-2">
                 <dt class="text-slate-500 w-28 shrink-0">Level</dt>
                 <dd class="font-medium text-slate-800">{{ $levelLabel }}</dd>
+            </div>
+            @endif
+            @if($qualificationType ?? null)
+            <div class="flex gap-2">
+                <dt class="text-slate-500 w-28 shrink-0">Qualification</dt>
+                <dd class="font-medium text-slate-800">{{ $qualificationType }}</dd>
+            </div>
+            @endif
+            @if($currentSemester ?? null)
+            <div class="flex gap-2">
+                <dt class="text-slate-500 w-28 shrink-0">Semester</dt>
+                <dd class="text-slate-800">{{ $currentSemester }}</dd>
             </div>
             @endif
             @if(isset($docuMentorGroups) && $docuMentorGroups->isNotEmpty())
