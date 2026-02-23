@@ -208,7 +208,10 @@ class User extends Authenticatable
             || $this->ledDocuMentorGroups()->exists();
     }
 
-    /** Group leader below level 400: class rep - can download class quiz results, cannot create Docu Mentor projects. Level 400+ uses allows_docu_mentor on StudentLevel. */
+    /**
+     * Class rep = group leader in level 100 or 200 only. Can download class quiz results; not for Docu Mentor.
+     * Leaders in level 300+ (Docu Mentor) remain leaders but do not get the rep tag.
+     */
     public function isClassRep(): bool
     {
         if (!($this->attributes['group_leader'] ?? false)) {
@@ -224,14 +227,8 @@ class User extends Authenticatable
             $lv = \App\Models\StudentLevel::find($student->level_id);
             $levelValue = $lv ? (int) $lv->value : 0;
         }
-        if ($levelValue <= 0) {
-            return false;
-        }
-        $levelModel = \App\Models\StudentLevel::where('value', $levelValue)->first();
-        if ($levelModel && $levelModel->allowsDocuMentor()) {
-            return false;
-        }
-        return true;
+        // Rep tag only for level 100 and 200; level 300+ (Docu Mentor leaders) do not get rep tag
+        return $levelValue === 100 || $levelValue === 200;
     }
 
     public function isSuperAdmin(): bool
