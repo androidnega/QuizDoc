@@ -592,8 +592,7 @@ class ClassGroupController extends Controller
         $indexNumber = trim($request->index_number);
         $name = $request->filled('student_name') ? trim($request->student_name) : null;
         $phoneRaw = $request->filled('phone_contact') ? trim($request->phone_contact) : null;
-        $phone = $phoneRaw ? preg_replace('/\D/', '', $phoneRaw) : null;
-        $phone = ($phone !== null && $phone !== '') ? $phone : null;
+        $phone = $phoneRaw ? Student::normalizePhoneForStorage($phoneRaw) : null;
         
         // If index changed, ensure no duplicate (unique is class_group_id + index_number)
         if (strcasecmp($student->index_number, $indexNumber) !== 0) {
@@ -876,11 +875,11 @@ class ClassGroupController extends Controller
             'index_number_hash' => $indexHash,
             'type' => Otp::TYPE_EXAMINER_FALLBACK,
             'code' => $code,
-            'expires_at' => now()->addMinutes(Otp::EXAMINER_FALLBACK_VALID_MINUTES),
+            'expires_at' => now()->addDays(Otp::EXAMINER_FALLBACK_VALID_DAYS),
         ]);
 
         return redirect()->route($this->staffRoutePrefix() . '.class-groups.students.show', [$classGroup, $student])
-            ->with('success', 'One-time login code generated. Give it to the student. Valid for ' . Otp::EXAMINER_FALLBACK_VALID_MINUTES . ' minutes.')
+            ->with('success', 'One-time login code generated. Give it to the student. Valid for ' . Otp::EXAMINER_FALLBACK_VALID_DAYS . ' days.')
             ->with('fallback_code', $code);
     }
 

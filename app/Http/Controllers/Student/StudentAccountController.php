@@ -96,8 +96,8 @@ class StudentAccountController extends Controller
         // STEP 1 — Check last OTP for this index (type = student_login)
         $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
 
-        // CASE A — OTP exists AND is within 14 days: do not generate/send; allow use of existing OTP
-        if ($lastOtp && $lastOtp->isWithinValidityWindow()) {
+        // CASE A — OTP exists AND not expired: do not generate/send; allow use of existing OTP
+        if ($lastOtp && !$lastOtp->isExpired()) {
             $daysRemaining = $lastOtp->daysRemaining();
             $dayText = $daysRemaining === 1 ? '1 day' : $daysRemaining . ' days';
             return response()->json([
@@ -159,24 +159,19 @@ class StudentAccountController extends Controller
         }
         $indexNumber = $student->index_number;
         $inputPhone = trim((string) ($request->phone ?? ''));
-        $phone = preg_replace('/\D/', '', $inputPhone);
+        $phone = Student::normalizePhoneForStorage($inputPhone);
 
-        // Student cannot change phone—only examiner can remove it
-        $storedNormalized = $student->phone_contact ? preg_replace('/\D/', '', $student->phone_contact) : '';
-        if ($storedNormalized !== '' && $phone !== '' && $storedNormalized !== $phone) {
+        if (!$phone) {
+            $storedNormalized = $student->phone_contact ? Student::normalizePhoneForStorage($student->phone_contact) : '';
+            if ($storedNormalized) {
+                // Registered students can request a new OTP without re-entering phone.
+                $phone = $storedNormalized;
+            }
+        }
+        if (!$phone || strlen($phone) < 10) {
             return response()->json([
                 'success' => false,
-                'message' => 'Phone number cannot be changed. Ask your examiner to remove it first.',
-            ], 422);
-        }
-        if ($storedNormalized !== '' && $phone === '') {
-            // Registered students can request a new OTP without re-entering phone.
-            $phone = $storedNormalized;
-        }
-        if ($phone === '' || strlen($phone) < 10) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Please enter a valid phone number (e.g. 233XXXXXXXXX).',
+                'message' => 'Please enter a valid phone number (e.g. 0244123456, +233244123456).',
             ], 422);
         }
 
@@ -194,10 +189,11 @@ class StudentAccountController extends Controller
 
         $indexHash = $student->index_number_hash;
 
-        // Resend rule: if student already has phone, only allow new OTP after 14 days
+        // Resend rule: if student already has phone, only allow new OTP after current one expires
+        $storedNormalized = $student->phone_contact ? Student::normalizePhoneForStorage($student->phone_contact) : '';
         if ($storedNormalized !== '') {
             $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
-            if ($lastOtp && $lastOtp->isWithinValidityWindow()) {
+            if ($lastOtp && !$lastOtp->isExpired()) {
                 $daysRemaining = $lastOtp->daysRemaining();
                 $dayText = $daysRemaining === 1 ? '1 day' : $daysRemaining . ' days';
                 return response()->json([
@@ -215,7 +211,7 @@ class StudentAccountController extends Controller
             'index_number_hash' => $indexHash,
             'type' => Otp::TYPE_STUDENT_LOGIN,
             'code' => $code,
-            'phone' => $student->phone_contact ? null : $phone,
+            'phone' => $phone,
             'expires_at' => now()->addDays(Otp::STUDENT_LOGIN_VALID_DAYS),
         ]);
 
@@ -331,17 +327,17 @@ class StudentAccountController extends Controller
             ]);
         }
 
-        // Student login OTP: reusable for 14 days; do NOT set used_at
+        // Student login OTP: reusable until expires_at; do NOT set used_at
         $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
-        if (!$lastOtp || !$lastOtp->isWithinValidityWindow() || $lastOtp->code !== $code) {
+        if (!$lastOtp || $lastOtp->isExpired() || $lastOtp->code !== $code) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid or expired code. Please request a new one.',
             ], 422);
         }
 
-        $phone = $lastOtp->phone;
-        if ($phone && !$student->phone_contact) {
+        $phone = $lastOtp->phone ? (Student::normalizePhoneForStorage($lastOtp->phone) ?? $lastOtp->phone) : null;
+        if ($phone) {
             $otherStudent = Student::where('phone_contact', $phone)->where('id', '!=', $student->id)->first();
             if ($otherStudent) {
                 return response()->json([
@@ -350,7 +346,7 @@ class StudentAccountController extends Controller
                 ], 422);
             }
         }
-        $this->completeStudentLogin($student, $phone, $name);
+        $this->completeStudentLogin($student, $phone ?? null, $name);
         return response()->json([
             'success' => true,
             'redirect' => $this->studentLoginRedirect($student),
@@ -359,7 +355,7 @@ class StudentAccountController extends Controller
 
     private function completeStudentLogin(Student $student, ?string $phone, ?string $name): void
     {
-        if ($phone && !$student->phone_contact) {
+        if ($phone) {
             $student->phone_contact = $phone;
         }
         if ($name !== null && $name !== '') {

@@ -116,6 +116,25 @@ class Student extends Model implements Authenticatable
     }
 
     /**
+     * Normalize phone for storage/comparison: digits only; Ghana local (0...) becomes 233...
+     * Accepts +233, 233, or 0... formats.
+     */
+    public static function normalizePhoneForStorage(?string $raw): ?string
+    {
+        if ($raw === null || trim($raw) === '') {
+            return null;
+        }
+        $digits = preg_replace('/\D/', '', $raw);
+        if ($digits === '') {
+            return null;
+        }
+        if (strlen($digits) >= 10 && $digits[0] === '0') {
+            return '233' . substr($digits, 1);
+        }
+        return $digits;
+    }
+
+    /**
      * Find a student by phone (digits only). Tries exact, 0-prefix, and 233 (Ghana) prefix.
      */
     public static function findByPhone(string $digitsOnly): ?self
@@ -130,6 +149,9 @@ class Student extends Model implements Authenticatable
             '0' . $normalized,
             '233' . $normalized,
         ]);
+        if (strlen($digitsOnly) >= 12 && str_starts_with($digitsOnly, '233')) {
+            $candidates[] = '0' . substr($digitsOnly, 3);
+        }
         return self::whereIn('phone_contact', $candidates)->first();
     }
 

@@ -172,8 +172,8 @@ class StudentLoginController extends Controller
         // STEP 1 — Check last OTP for this index (type = student_login)
         $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
 
-        // CASE A — OTP exists AND is within 14 days: do not generate/send; allow use of existing OTP
-        if ($lastOtp && $lastOtp->isWithinValidityWindow()) {
+        // CASE A — OTP exists AND not expired: do not generate/send; allow use of existing OTP
+        if ($lastOtp && !$lastOtp->isExpired()) {
             $daysRemaining = $lastOtp->daysRemaining();
             $dayText = $daysRemaining === 1 ? '1 day' : $daysRemaining . ' days';
             return response()->json([

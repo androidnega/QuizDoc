@@ -28,8 +28,8 @@ class Otp extends Model
     /** Validity window for student login OTP (days). */
     public const STUDENT_LOGIN_VALID_DAYS = 14;
 
-    /** Examiner fallback OTP validity (minutes). */
-    public const EXAMINER_FALLBACK_VALID_MINUTES = 15;
+    /** Examiner fallback OTP validity (days). */
+    public const EXAMINER_FALLBACK_VALID_DAYS = 12;
 
     /**
      * Get the latest student_login OTP for the given index hash, if any.
@@ -52,16 +52,26 @@ class Otp extends Model
     }
 
     /**
-     * Days remaining until this OTP expires (created_at + 14 days).
+     * Check if this OTP has passed its expiry (expires_at when set).
+     */
+    public function isExpired(): bool
+    {
+        return $this->expires_at && $this->expires_at->isPast();
+    }
+
+    /**
+     * Days remaining until this OTP expires (uses expires_at when set, else created_at + 14 days).
+     * Carbon's diffInDays(now(), false) returns negative when $this is in the future, so we take the absolute value.
      */
     public function daysRemaining(): int
     {
-        if (!$this->created_at) {
+        $expiresAt = $this->expires_at ?? ($this->created_at ? $this->created_at->copy()->addDays(self::STUDENT_LOGIN_VALID_DAYS) : null);
+        if (!$expiresAt || $expiresAt->isPast()) {
             return 0;
         }
-        $expiresAt = $this->created_at->copy()->addDays(self::STUDENT_LOGIN_VALID_DAYS);
+        // diffInDays(now(), false) = (expiresAt - now) in days; Carbon returns negative for future, so use abs
         $remaining = (int) $expiresAt->diffInDays(now(), false);
-        return max(0, $remaining);
+        return max(0, abs($remaining));
     }
 
     /**

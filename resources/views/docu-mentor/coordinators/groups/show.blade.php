@@ -21,33 +21,36 @@
     </div>
 
     <div class="rounded-lg border border-gray-200 bg-white p-6">
-        <h2 class="font-semibold text-gray-900 mb-4">Members</h2>
-        <form action="{{ route('dashboard.coordinators.groups.members.store', $group) }}" method="post" class="flex flex-wrap items-end gap-2 mb-4">
-            @csrf
-            <div>
-                <label for="phone" class="block text-xs text-gray-600 mb-1">Add member by phone</label>
-                <input type="text" name="phone" id="phone" placeholder="Phone number" value="{{ old('phone') }}" class="rounded border-gray-300 text-sm w-48" required>
-            </div>
-            <button type="submit" class="btn btn-primary text-sm">Add member</button>
-        </form>
-        <ul class="divide-y divide-gray-200">
+        <h2 class="text-sm font-semibold text-gray-900 mb-3">Members</h2>
+        <div class="rounded-lg border border-gray-100 bg-gray-50/80 p-4 mb-4">
+            <p class="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">Add member by phone</p>
+            <form action="{{ route('dashboard.coordinators.groups.members.store', $group) }}" method="post" class="flex flex-wrap items-end gap-3">
+                @csrf
+                <div class="min-w-0 flex-1">
+                    <label for="phone" class="sr-only">Phone number</label>
+                    <input type="text" name="phone" id="phone" placeholder="e.g. 0244123456, +233244123456" value="{{ old('phone') }}" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" required>
+                </div>
+                <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">Add member</button>
+            </form>
+        </div>
+        <ul class="divide-y divide-gray-200 rounded-lg border border-gray-100 overflow-hidden">
             @foreach($group->members as $member)
-                <li class="flex items-center justify-between py-2">
-                    <span class="text-sm font-medium text-gray-900">{{ $member->name ?? $member->username }}</span>
+                <li class="flex items-center justify-between gap-3 px-3 py-2.5 bg-white hover:bg-gray-50/80 transition-colors">
+                    <span class="text-sm font-medium text-gray-900 truncate">{{ $member->name ?? $member->username }}</span>
                     @if($member->id !== $group->leader_id)
-                        <form action="{{ route('dashboard.coordinators.groups.members.remove', [$group, $member]) }}" method="post" class="inline" onsubmit="return confirm('Remove this member from the group?');">
+                        <form action="{{ route('dashboard.coordinators.groups.members.remove', [$group, $member]) }}" method="post" class="inline shrink-0" onsubmit="return confirm('Remove this member from the group?');">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="text-red-600 hover:text-red-800 text-sm">Remove</button>
+                            <button type="submit" class="text-sm font-medium text-red-600 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1 rounded">Remove</button>
                         </form>
                     @else
-                        <span class="text-xs text-gray-500">Leader</span>
+                        <span class="text-xs font-medium text-gray-500 shrink-0">Leader</span>
                     @endif
                 </li>
             @endforeach
         </ul>
         @if($group->members->isEmpty())
-            <p class="text-gray-500 text-sm">No members.</p>
+            <p class="text-sm text-gray-500 py-4 text-center">No members yet. Add a member by phone above.</p>
         @endif
     </div>
 

@@ -527,8 +527,7 @@ class CoordinatorStudentController extends Controller
         $currentName = $existingStudent?->student_name ?? null;
         $name = $request->has('student_name') ? (trim((string) $request->student_name) ?: null) : $currentName;
         $phoneRaw = $request->filled('phone_contact') ? trim($request->phone_contact) : null;
-        $phone = $phoneRaw ? preg_replace('/\D/', '', $phoneRaw) : null;
-        $phone = ($phone !== null && $phone !== '') ? $phone : null;
+        $phone = $phoneRaw ? Student::normalizePhoneForStorage($phoneRaw) : null;
 
         ClassGroupStudent::whereIn('class_group_id', $classGroupIds)
             ->whereRaw('UPPER(TRIM(index_number)) = ?', [strtoupper(trim($indexNumber))])

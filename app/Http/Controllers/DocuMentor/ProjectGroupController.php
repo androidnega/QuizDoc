@@ -94,7 +94,10 @@ class ProjectGroupController extends Controller
     {
         $request->validate(['phone' => 'required|string|max:20']);
 
-        $phone = preg_replace('/\D/', '', $request->phone);
+        $phone = Student::normalizePhoneForStorage($request->phone);
+        if (!$phone || strlen($phone) < 10) {
+            return back()->with('error', 'Please enter a valid phone number (e.g. 0244123456, +233244123456).');
+        }
         $member = User::where('phone', $phone)->orWhere('phone', 'like', '%' . $phone)->first();
         if (!$member) {
             $student = Student::findByPhone($phone);
