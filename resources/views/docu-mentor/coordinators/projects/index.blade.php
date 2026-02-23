@@ -69,35 +69,15 @@
                                             data-quicklook-id="quicklook-{{ $project->id }}">
                                         <i class="fas fa-eye text-xs"></i>
                                     </button>
-                                    {{-- Assign supervisor dropdown --}}
-                                    <div class="relative inline-block group/dd">
-                                        <button type="button" class="inline-flex items-center justify-center rounded-full p-1.5 text-primary-600 hover:text-primary-800 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                                title="Assign supervisor"
-                                                aria-haspopup="true" aria-expanded="false"
-                                                data-dropdown-toggle="assign-dd-{{ $project->id }}">
-                                            <i class="fas fa-user-tie text-xs"></i>
-                                            <i class="fas fa-caret-down text-[10px] ml-0.5 opacity-70"></i>
-                                        </button>
-                                        <div id="assign-dd-{{ $project->id }}" class="hidden absolute right-0 top-full mt-1 z-20 min-w-[180px] rounded-lg border border-gray-200 bg-white shadow-lg py-1 text-left">
-                                            <a href="{{ route('dashboard.coordinators.projects.show', $project) }}#assign-supervisors" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap">
-                                                Manage supervisors →
-                                            </a>
-                                            <div class="border-t border-gray-100 my-1"></div>
-                                            <p class="px-3 py-1 text-xs font-medium text-gray-500 uppercase">Add supervisor</p>
-                                            @php $availableSupervisors = ($supervisors ?? collect())->filter(fn($s) => !$project->supervisors->contains('id', $s->id)); @endphp
-                                            @forelse($availableSupervisors as $sup)
-                                                <form action="{{ route('dashboard.coordinators.projects.supervisors.store', $project) }}" method="post" class="block">
-                                                    @csrf
-                                                    <input type="hidden" name="supervisor_id" value="{{ $sup->id }}">
-                                                    <button type="submit" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                                        {{ $sup->name ?? $sup->username }}
-                                                    </button>
-                                                </form>
-                                            @empty
-                                                <p class="px-3 py-2 text-xs text-gray-500">No more supervisors to add</p>
-                                            @endforelse
-                                        </div>
-                                    </div>
+                                    {{-- Assign supervisor: opens modal --}}
+                                    <button type="button"
+                                            class="assign-supervisor-btn inline-flex items-center justify-center rounded-full p-1.5 text-primary-600 hover:text-primary-800 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                            title="Assign supervisor"
+                                            data-update-url="{{ route('dashboard.coordinators.projects.update', $project) }}"
+                                            data-supervisor-ids="{{ $project->supervisors->pluck('id')->implode(',') }}"
+                                            data-project-title="{{ e(Str::limit($project->title, 50)) }}">
+                                        <i class="fas fa-user-tie text-xs"></i>
+                                    </button>
 
                                     {{-- Open full project page --}}
                                     <a href="{{ route('dashboard.coordinators.projects.show', $project) }}"
@@ -238,8 +218,80 @@
     </div>
 </div>
 
+{{-- Assign supervisor modal --}}
+<div id="assign-supervisor-modal-overlay" class="fixed inset-0 z-50 bg-black/40 hidden flex items-center justify-center px-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+            <h2 id="assign-supervisor-modal-title" class="text-sm font-semibold text-gray-900">Assign supervisors</h2>
+            <button type="button" id="assign-supervisor-modal-close" class="rounded-full p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+                <i class="fas fa-times text-sm"></i>
+            </button>
+        </div>
+        <form id="assign-supervisor-modal-form" method="post" action="" class="p-5 flex flex-col flex-1 min-h-0">
+            @csrf
+            @method('PUT')
+            <div class="mb-4">
+                <label for="assign-supervisor-modal-select" class="block text-xs font-medium text-gray-600 mb-1">Supervisors</label>
+                <select name="supervisor_ids[]" id="assign-supervisor-modal-select" multiple class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none min-h-[8rem]">
+                    @foreach($supervisors ?? [] as $s)
+                        <option value="{{ $s->id }}">{{ $s->name ?? $s->username }}</option>
+                    @endforeach
+                </select>
+                <p class="mt-1 text-xs text-gray-500">Hold Ctrl (Windows) or ⌘ (Mac) to select multiple.</p>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button type="button" id="assign-supervisor-modal-cancel" class="px-3 py-1.5 rounded border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-3 py-1.5 rounded bg-primary-600 text-sm text-white hover:bg-primary-700">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @push('scripts')
 <script>
+(function () {
+    var overlay = document.getElementById('assign-supervisor-modal-overlay');
+    var form = document.getElementById('assign-supervisor-modal-form');
+    var titleEl = document.getElementById('assign-supervisor-modal-title');
+    var selectEl = document.getElementById('assign-supervisor-modal-select');
+    var closeBtn = document.getElementById('assign-supervisor-modal-close');
+    var cancelBtn = document.getElementById('assign-supervisor-modal-cancel');
+    if (!overlay || !form || !selectEl) return;
+
+    function openAssignModal(updateUrl, supervisorIds, projectTitle) {
+        form.action = updateUrl || '';
+        if (titleEl) titleEl.textContent = projectTitle ? 'Assign supervisors — ' + projectTitle : 'Assign supervisors';
+        var ids = (supervisorIds || '').toString().split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+        [].slice.call(selectEl.options).forEach(function (opt) {
+            opt.selected = ids.indexOf(opt.value) !== -1;
+        });
+        overlay.classList.remove('hidden');
+    }
+
+    function closeAssignModal() {
+        overlay.classList.add('hidden');
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.assign-supervisor-btn');
+        if (!btn) return;
+        e.preventDefault();
+        var updateUrl = btn.getAttribute('data-update-url');
+        var supervisorIds = btn.getAttribute('data-supervisor-ids') || '';
+        var projectTitle = btn.getAttribute('data-project-title') || '';
+        openAssignModal(updateUrl, supervisorIds, projectTitle);
+    });
+
+    if (closeBtn) closeBtn.addEventListener('click', function (e) { e.preventDefault(); closeAssignModal(); });
+    if (cancelBtn) cancelBtn.addEventListener('click', function (e) { e.preventDefault(); closeAssignModal(); });
+    overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeAssignModal();
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && overlay && !overlay.classList.contains('hidden')) closeAssignModal();
+    });
+})();
+
 (function () {
     var overlay = document.getElementById('comment-modal-overlay');
     var form = document.getElementById('comment-modal-form');
@@ -314,24 +366,6 @@
     });
 })();
 
-(function () {
-    document.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-dropdown-toggle]');
-        var targetId = btn ? btn.getAttribute('data-dropdown-toggle') : null;
-        if (targetId) {
-            e.preventDefault();
-            e.stopPropagation();
-            var dd = document.getElementById(targetId);
-            var open = dd && !dd.classList.contains('hidden');
-            document.querySelectorAll('[id^="assign-dd-"]').forEach(function (el) { el.classList.add('hidden'); });
-            if (dd && !open) dd.classList.remove('hidden');
-            return;
-        }
-        if (!e.target.closest('[id^="assign-dd-"]')) {
-            document.querySelectorAll('[id^="assign-dd-"]').forEach(function (el) { el.classList.add('hidden'); });
-        }
-    });
-})();
 </script>
 @endpush
 @endsection
