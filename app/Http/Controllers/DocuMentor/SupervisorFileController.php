@@ -64,18 +64,17 @@ class SupervisorFileController extends Controller
     }
 
     /**
-     * Download a proposal file. Resolves proposal by id within project so wrong/missing proposal gives redirect, not 404.
-     * Redirects back with message when file is missing (e.g. on live after deploy).
+     * Download a proposal file.
+     * Redirects back with message (instead of 404) when proposal/file is missing or mismatched.
      */
-    public function downloadProposal(Project $project, int $proposal): StreamedResponse|RedirectResponse
+    public function downloadProposal(Project $project, ProjectProposal $proposal): StreamedResponse|RedirectResponse
     {
         $this->authorize('view', $project);
 
-        $proposalModel = $project->proposals()->find($proposal);
-        if (!$proposalModel) {
+        // Ensure proposal belongs to this project (handle wrong URL or stale link)
+        if ($proposal->project_id !== (int) $project->id) {
             return back()->with('error', 'Proposal not found for this project.');
         }
-        $proposal = $proposalModel;
 
         $path = $proposal->file ? trim($proposal->file, "/ \t\n\r") : null;
         if (!$path) {
