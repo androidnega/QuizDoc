@@ -248,12 +248,16 @@
         if (uploadedUrlInput.value) {
             progressBar.classList.remove('hidden');
             progressBar.style.width = '100%';
+            // Success state: progress bar turns green instead of yellow
+            progressBar.style.backgroundColor = '#16a34a';
             progressLabel.textContent = 'Upload complete';
             progressLabel.classList.remove('text-slate-500', 'text-red-600');
             progressLabel.classList.add('text-green-600');
         } else {
             progressBar.classList.add('hidden');
             progressBar.style.width = '0%';
+            // Reset to default amber when no file is uploaded
+            progressBar.style.backgroundColor = '#f59e0b';
             progressLabel.textContent = 'Not uploaded yet';
             progressLabel.classList.remove('text-red-600', 'text-green-600');
             progressLabel.classList.add('text-slate-500');
@@ -427,10 +431,8 @@
                         var resp = JSON.parse(xhr.responseText || '{}');
                         if (resp.ok && resp.url && uploadedUrlInput) {
                             uploadedUrlInput.value = resp.url;
-                            progressBar.style.width = '100%';
-                            progressLabel.textContent = 'Upload complete';
-                            progressLabel.classList.remove('text-slate-500', 'text-red-600');
-                            progressLabel.classList.add('text-green-600');
+                            // Let the shared helper handle success styling (including green bar)
+                            applyUploadStateFromHidden();
                             saveFormState();
                             return;
                         }
