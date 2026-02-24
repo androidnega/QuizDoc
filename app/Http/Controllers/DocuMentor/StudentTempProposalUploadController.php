@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\DocuMentor;
 
 use App\Http\Controllers\Controller;
+use App\Services\CloudinaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -31,12 +32,20 @@ class StudentTempProposalUploadController extends Controller
         ]);
 
         $file = $request->file('proposal_file');
-        $path = $file->store('docu-mentor/proposals', 'public');
+        $storedPath = null;
+
+        // Prefer Cloudinary raw upload (PDF) when configured; fall back to local storage.
+        $cloudinary = CloudinaryService::uploadRawFromFile($file, 'docu-mentor/proposals');
+        if (is_array($cloudinary) && !empty($cloudinary['url'])) {
+            $storedPath = $cloudinary['url'];
+        } else {
+            $storedPath = $file->store('docu-mentor/proposals', 'public');
+        }
 
         return response()->json([
             'ok' => true,
-            // We return the stored path; download controller uses Storage::disk('public') with this path.
-            'url' => $path,
+            // We return the stored path or Cloudinary URL; project creation stores this in proposals.file.
+            'url' => $storedPath,
         ]);
     }
 }

@@ -81,6 +81,12 @@ class SupervisorFileController extends Controller
             return back()->with('error', 'Proposal file path is missing. Please re-upload this proposal.');
         }
 
+        // If the stored path is a full URL (e.g. Cloudinary), redirect directly to it.
+        $lower = strtolower($path);
+        if (str_starts_with($lower, 'http://') || str_starts_with($lower, 'https://')) {
+            return redirect()->away($path);
+        }
+
         $disk = Storage::disk('public');
         if (!$disk->exists($path)) {
             // Try without leading slash in case path was stored differently
