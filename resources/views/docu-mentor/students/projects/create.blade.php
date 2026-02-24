@@ -246,18 +246,18 @@
     function applyUploadStateFromHidden() {
         if (!progressLabel || !progressBar || !uploadedUrlInput) return;
         if (uploadedUrlInput.value) {
+            // Uploaded (success): full-width green bar
             progressBar.classList.remove('hidden');
             progressBar.style.width = '100%';
-            // Success state: progress bar turns green instead of yellow
             progressBar.style.backgroundColor = '#16a34a';
             progressLabel.textContent = 'Upload complete';
             progressLabel.classList.remove('text-slate-500', 'text-red-600');
             progressLabel.classList.add('text-green-600');
         } else {
-            progressBar.classList.add('hidden');
+            // Initial / reset state: show thin grey bar with zero progress
+            progressBar.classList.remove('hidden');
             progressBar.style.width = '0%';
-            // Reset to default amber when no file is uploaded
-            progressBar.style.backgroundColor = '#f59e0b';
+            progressBar.style.backgroundColor = '#e5e7eb';
             progressLabel.textContent = 'Not uploaded yet';
             progressLabel.classList.remove('text-red-600', 'text-green-600');
             progressLabel.classList.add('text-slate-500');
@@ -297,15 +297,8 @@
         if (uploadedUrlInput) uploadedUrlInput.value = '';
         if (fileInput) fileInput.value = '';
         if (fileNameEl) fileNameEl.textContent = 'No file selected';
-        if (progressBar) {
-            progressBar.classList.add('hidden');
-            progressBar.style.width = '0%';
-        }
-        if (progressLabel) {
-            progressLabel.textContent = 'Not uploaded yet';
-            progressLabel.classList.remove('text-red-600', 'text-green-600');
-            progressLabel.classList.add('text-slate-500');
-        }
+        // Reset upload UI to initial grey state
+        applyUploadStateFromHidden();
         var featContainer = document.getElementById('features-container');
         if (featContainer) {
             featContainer.innerHTML = '<div class="feature-row flex flex-wrap gap-2 items-end">' +
@@ -404,6 +397,8 @@
             // Start upload immediately after file is added
             progressBar.classList.remove('hidden');
             progressBar.style.width = '0%';
+            // Upload in progress: orange bar
+            progressBar.style.backgroundColor = '#f59e0b';
             progressLabel.textContent = 'Upload progress: 0%';
             progressLabel.classList.remove('text-red-600', 'text-green-600');
             progressLabel.classList.add('text-slate-500');
