@@ -37,12 +37,16 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        // On 419 (CSRF token expired), redirect back with a message instead of showing "419 Page Expired"
-        $exceptions->renderable(function (\Illuminate\Session\TokenMismatchException $e) {
+        // On 419 (CSRF token expired): send to login with a clear message so user never sees raw "419 Page Expired"
+        $exceptions->renderable(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            $message = 'Your session expired. Please log in again.';
+            if ($request->expectsJson() || $request->ajax()) {
+                return \Illuminate\Support\Facades\Response::json(['message' => $message], 419);
+            }
             return redirect()
-                ->back()
+                ->to('/login')
                 ->exceptInput('password', 'password_confirmation')
-                ->withErrors(['session' => 'Your session expired. Please refresh the page and try again.']);
+                ->with('error', $message);
         });
         // When 404 on student Docu Mentor paths and user is staff (not student), show 403 "Student access required" instead of 404
         $exceptions->renderable(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, $request) {
