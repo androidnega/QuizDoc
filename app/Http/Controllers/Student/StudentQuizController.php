@@ -361,10 +361,9 @@ class StudentQuizController extends Controller
                 ]);
             }
         }
-        $capturedCount = $isFaceLossCapture
-            ? $session->violations()->whereNotNull('image_url')->whereIn('type', $faceLossTypes)->count()
-            : $session->violations()->whereNotNull('image_url')->count();
-        if ($isFaceLossCapture && $capturedCount >= self::MAX_QUIZ_VIOLATION_CAPTURES) {
+        // Global cap on stored violation images per session (all types combined)
+        $capturedCount = $session->violations()->whereNotNull('image_url')->count();
+        if ($capturedCount >= self::MAX_QUIZ_VIOLATION_CAPTURES) {
             return response()->json([
                 'success' => true,
                 'image_url' => null,
