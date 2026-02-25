@@ -238,9 +238,15 @@
                         @endif
                         <div class="flex flex-wrap items-center gap-2">
                             <a href="{{ route('dashboard.coordinators.projects.proposals.download', [$project, $p]) }}"
+                               target="_blank" rel="noopener"
+                               class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">
+                                <i class="fas fa-external-link-alt text-primary-600"></i>
+                                Preview
+                            </a>
+                            <a href="{{ route('dashboard.coordinators.projects.proposals.download', [$project, $p]) }}?attachment=1"
                                class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">
                                 <i class="fas fa-file-pdf text-red-500"></i>
-                                Open PDF
+                                Download
                             </a>
                             <button type="button"
                                     class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 comment-btn"

@@ -153,7 +153,10 @@
                         @foreach($project->proposals->sortByDesc('uploaded_at') as $proposal)
                             <li class="flex items-center justify-between gap-2">
                                 <span>Version {{ $proposal->version_number }} — {{ $proposal->uploaded_at?->format('M j, Y') }}</span>
-                                <a href="{{ route('dashboard.coordinators.projects.proposals.download', [$project, $proposal]) }}" class="text-primary-600 hover:text-primary-800 text-xs font-medium shrink-0">Download</a>
+                                <span class="flex items-center gap-2 shrink-0">
+                                    <a href="{{ route('dashboard.coordinators.projects.proposals.download', [$project, $proposal]) }}" target="_blank" rel="noopener" class="text-primary-600 hover:text-primary-800 text-xs font-medium">Preview</a>
+                                    <a href="{{ route('dashboard.coordinators.projects.proposals.download', [$project, $proposal]) }}?attachment=1" class="text-primary-600 hover:text-primary-800 text-xs font-medium">Download</a>
+                                </span>
                             </li>
                         @endforeach
                     </ul>

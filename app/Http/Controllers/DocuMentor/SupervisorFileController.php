@@ -8,6 +8,7 @@ use App\Models\DocuMentor\ProjectFiles;
 use App\Models\DocuMentor\ProjectProposal;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use ZipArchive;
@@ -64,35 +65,53 @@ class SupervisorFileController extends Controller
     }
 
     /**
-     * Download a proposal file.
-     * Redirects back with message (instead of 404) when proposal/file is missing or mismatched.
+     * Download or preview a proposal file.
+     * When file is a Cloudinary (or any HTTP) URL: redirect to it for preview, or stream with Content-Disposition for download.
+     * When file is a local path: stream from public disk.
+     * Query: ?attachment=1 to force download (for remote URLs we proxy and set Content-Disposition).
      */
-    public function downloadProposal(Project $project, ProjectProposal $proposal): StreamedResponse|RedirectResponse
+    public function downloadProposal(Request $request, Project $project, ProjectProposal $proposal): StreamedResponse|RedirectResponse|\Illuminate\Http\Response
     {
         $this->authorize('view', $project);
 
-        // Ensure proposal belongs to this project (handle wrong URL or stale link)
         if ($proposal->project_id !== (int) $project->id) {
             return back()->with('error', 'Proposal not found for this project.');
         }
 
-        $path = $proposal->file ? trim($proposal->file, "/ \t\n\r") : null;
-        if (!$path) {
-            return back()->with('error', 'Proposal file path is missing. Please re-upload this proposal.');
+        $path = $proposal->file ? trim((string) $proposal->file) : null;
+        if ($path === '' || $path === null) {
+            return back()->with('error', 'Proposal file is missing. Please re-upload this proposal.');
         }
 
-        // If the stored path is a full URL (e.g. Cloudinary), redirect directly to it.
-        $lower = strtolower($path);
-        if (str_starts_with($lower, 'http://') || str_starts_with($lower, 'https://')) {
+        $isRemoteUrl = preg_match('#^https?://#i', $path);
+
+        if ($isRemoteUrl) {
+            $forceDownload = $request->boolean('attachment') || $request->boolean('download');
+            if ($forceDownload) {
+                try {
+                    $response = Http::timeout(60)->get($path);
+                    if (! $response->successful()) {
+                        return back()->with('error', 'Proposal file could not be fetched from storage. Please try again or re-upload.');
+                    }
+                    $filename = 'proposal-v' . $proposal->version_number . '.pdf';
+                    return response($response->body(), 200, [
+                        'Content-Type' => $response->header('Content-Type') ?: 'application/pdf',
+                        'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                    ]);
+                } catch (\Throwable $e) {
+                    report($e);
+                    return back()->with('error', 'Proposal file could not be fetched. Please try again.');
+                }
+            }
             return redirect()->away($path);
         }
 
+        $path = trim($path, "/ \t\n\r");
         $disk = Storage::disk('public');
-        if (!$disk->exists($path)) {
-            // Try without leading slash in case path was stored differently
+        if (! $disk->exists($path)) {
             $pathAlt = ltrim($path, '/');
-            if (!$disk->exists($pathAlt)) {
-                return back()->with('error', 'Proposal file not found on server. It may have been removed or not uploaded. Please re-upload the proposal.');
+            if (! $disk->exists($pathAlt)) {
+                return back()->with('error', 'Proposal file not found on server. It may have been removed. Please re-upload the proposal.');
             }
             $path = $pathAlt;
         }

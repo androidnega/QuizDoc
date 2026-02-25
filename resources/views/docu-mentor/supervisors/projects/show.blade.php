@@ -185,10 +185,10 @@
                 <h2 class="font-semibold text-slate-900 mb-4">Proposals</h2>
                 <ul class="space-y-2">
                     @foreach($project->proposals as $p)
-                        <li>
-                            <a href="{{ route('dashboard.docu-mentor.proposals.download', [$project, $p]) }}" class="text-indigo-600 hover:text-indigo-800 text-sm">
-                                v{{ $p->version_number }} — {{ $p->uploaded_at?->format('M j, Y') }}
-                            </a>
+                        <li class="flex flex-wrap items-center gap-2">
+                            <span class="text-sm text-slate-700">v{{ $p->version_number }} — {{ $p->uploaded_at?->format('M j, Y') }}</span>
+                            <a href="{{ route('dashboard.docu-mentor.proposals.download', [$project, $p]) }}" target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-800 text-sm">Preview</a>
+                            <a href="{{ route('dashboard.docu-mentor.proposals.download', [$project, $p]) }}?attachment=1" class="text-indigo-600 hover:text-indigo-800 text-sm">Download</a>
                         </li>
                     @endforeach
                 </ul>
@@ -205,8 +205,10 @@
                     <p class="text-xs font-medium text-slate-600 mb-1">Proposal</p>
                     <ul class="space-y-1 mb-4">
                         @foreach($parent->proposals as $p)
-                            <li>
-                                <a href="{{ route('dashboard.docu-mentor.proposals.download', [$parent, $p]) }}" class="text-indigo-600 hover:text-indigo-800 text-sm">v{{ $p->version_number }} — {{ $p->uploaded_at?->format('M j, Y') }}</a>
+                            <li class="flex flex-wrap items-center gap-2">
+                                <span class="text-sm text-slate-700">v{{ $p->version_number }} — {{ $p->uploaded_at?->format('M j, Y') }}</span>
+                                <a href="{{ route('dashboard.docu-mentor.proposals.download', [$parent, $p]) }}" target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-800 text-sm">Preview</a>
+                                <a href="{{ route('dashboard.docu-mentor.proposals.download', [$parent, $p]) }}?attachment=1" class="text-indigo-600 hover:text-indigo-800 text-sm">Download</a>
                             </li>
                         @endforeach
                     </ul>

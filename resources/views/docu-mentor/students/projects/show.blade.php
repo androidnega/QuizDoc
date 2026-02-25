@@ -180,10 +180,16 @@
             @if($latestProposal)
             <div class="mb-4 rounded-lg border border-primary-200 bg-primary-50/60 px-4 py-3">
                 <p class="text-xs font-medium text-primary-800 uppercase tracking-wide mb-1">Latest proposal (current version)</p>
-                <a href="{{ route('dashboard.projects.proposals.download', [$project, $latestProposal]) }}" class="inline-flex items-center gap-2 text-sm font-semibold text-primary-700 hover:text-primary-900">
-                    <i class="fas fa-file-pdf text-red-500"></i>
-                    Download latest proposal — Version {{ $latestProposal->version_number }} ({{ $latestProposal->uploaded_at?->format('M j, Y') }})
-                </a>
+                <div class="flex flex-wrap items-center gap-3 mt-1">
+                    <a href="{{ route('dashboard.projects.proposals.download', [$project, $latestProposal]) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-sm font-semibold text-primary-700 hover:text-primary-900">
+                        <i class="fas fa-external-link-alt text-primary-600"></i>
+                        Preview
+                    </a>
+                    <a href="{{ route('dashboard.projects.proposals.download', [$project, $latestProposal]) }}?attachment=1" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-900">
+                        <i class="fas fa-file-pdf text-red-500"></i>
+                        Download — Version {{ $latestProposal->version_number }} ({{ $latestProposal->uploaded_at?->format('M j, Y') }})
+                    </a>
+                </div>
             </div>
             @endif
             <ul class="space-y-2 mb-4 divide-y divide-slate-100">
@@ -194,7 +200,8 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                             </svg>
                             <span class="text-sm text-slate-800">Version {{ $p->version_number }}</span>
-                            <a href="{{ route('dashboard.projects.proposals.download', [$project, $p]) }}" class="text-sm font-medium text-slate-700 hover:underline">Download</a>
+                            <a href="{{ route('dashboard.projects.proposals.download', [$project, $p]) }}" target="_blank" rel="noopener" class="text-sm font-medium text-slate-700 hover:underline">Preview</a>
+                            <a href="{{ route('dashboard.projects.proposals.download', [$project, $p]) }}?attachment=1" class="text-sm font-medium text-slate-700 hover:underline">Download</a>
                             <span class="text-xs text-slate-500">{{ $p->uploaded_at?->format('M j, Y') }}</span>
                             @if($p->comment)
                                 <span class="text-xs text-slate-500">— {{ Str::limit($p->comment, 40) }}</span>
@@ -242,8 +249,10 @@
                 <p class="text-xs font-medium text-slate-700 mb-1">Proposal</p>
                 <ul class="space-y-1 mb-4">
                     @foreach($parent->proposals as $p)
-                        <li>
-                            <a href="{{ route('dashboard.projects.proposals.download', [$parent, $p]) }}" class="text-slate-700 hover:text-slate-900 text-sm font-medium">Version {{ $p->version_number }} — {{ $p->uploaded_at?->format('M j, Y') }}</a>
+                        <li class="flex flex-wrap items-center gap-2">
+                            <span class="text-sm text-slate-700">Version {{ $p->version_number }} — {{ $p->uploaded_at?->format('M j, Y') }}</span>
+                            <a href="{{ route('dashboard.projects.proposals.download', [$parent, $p]) }}" target="_blank" rel="noopener" class="text-slate-700 hover:text-slate-900 text-sm font-medium">Preview</a>
+                            <a href="{{ route('dashboard.projects.proposals.download', [$parent, $p]) }}?attachment=1" class="text-slate-700 hover:text-slate-900 text-sm font-medium">Download</a>
                         </li>
                     @endforeach
                 </ul>
