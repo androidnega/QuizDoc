@@ -28,6 +28,11 @@
                     @csrf
                     <button type="submit" class="text-xs font-medium px-2.5 py-1.5 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">Reset IP Lock</button>
                 </form>
+                <form method="post" action="{{ route('dashboard.quizzes.sessions.kill', [$quiz, $session]) }}" onsubmit="return confirm('Kill this session? This will remove the result and allow the student to retake the quiz.');">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="text-xs font-medium px-2.5 py-1.5 rounded border border-red-300 bg-red-50 text-red-700 hover:bg-red-100">Kill session</button>
+                </form>
             </div>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
