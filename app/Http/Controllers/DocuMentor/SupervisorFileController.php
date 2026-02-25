@@ -82,23 +82,24 @@ class SupervisorFileController extends Controller
 
         if ($isRemoteUrl) {
             $forceDownload = $request->boolean('attachment') || $request->boolean('download');
-            if ($forceDownload) {
-                try {
-                    $response = Http::timeout(60)->get($path);
-                    if (! $response->successful()) {
-                        return back()->with('error', 'Proposal file could not be fetched from storage. Please try again or re-upload.');
-                    }
-                    $filename = 'proposal-v' . $proposal->version_number . '.pdf';
-                    return response($response->body(), 200, [
-                        'Content-Type' => $response->header('Content-Type') ?: 'application/pdf',
-                        'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-                    ]);
-                } catch (\Throwable $e) {
-                    report($e);
-                    return back()->with('error', 'Proposal file could not be fetched. Please try again.');
+            try {
+                $response = Http::timeout(60)->get($path);
+                if (! $response->successful()) {
+                    return back()->with('error', 'Proposal file could not be fetched from storage. Please try again or re-upload.');
                 }
+
+                $filename = 'proposal-v' . $proposal->version_number . '.pdf';
+                $contentType = $response->header('Content-Type') ?: 'application/pdf';
+                $disposition = $forceDownload ? 'attachment' : 'inline';
+
+                return response($response->body(), 200, [
+                    'Content-Type' => $contentType,
+                    'Content-Disposition' => $disposition . '; filename="' . $filename . '"',
+                ]);
+            } catch (\Throwable $e) {
+                report($e);
+                return back()->with('error', 'Proposal file could not be fetched. Please try again.');
             }
-            return redirect()->away($path);
         }
 
         $path = trim($path, "/ \t\n\r");
