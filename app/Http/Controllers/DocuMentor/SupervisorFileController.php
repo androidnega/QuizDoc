@@ -73,11 +73,6 @@ class SupervisorFileController extends Controller
     public function downloadProposal(Request $request, Project $project, ProjectProposal $proposal): StreamedResponse|RedirectResponse|\Illuminate\Http\Response
     {
         $this->authorize('view', $project);
-
-        if ($proposal->project_id !== (int) $project->id) {
-            return back()->with('error', 'Proposal not found for this project.');
-        }
-
         $path = $proposal->file ? trim((string) $proposal->file) : null;
         if ($path === '' || $path === null) {
             return back()->with('error', 'Proposal file is missing. Please re-upload this proposal.');

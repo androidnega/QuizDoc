@@ -44,13 +44,24 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('group', fn (string $value) => \App\Models\DocuMentor\ProjectGroup::findOrFail($value));
         Route::bind('chapter', fn (string $value) => \App\Models\DocuMentor\Chapter::findOrFail($value));
         Route::bind('submission', fn (string $value) => \App\Models\DocuMentor\Submission::findOrFail($value));
-        // Proposal must belong to project in URL (avoids 404 when proposal id is from another project)
+        // Proposal must belong to project in URL (avoids mixing proposals across projects)
         Route::bind('proposal', function (string $value) {
             $route = Route::current();
-            $project = $route ? $route->parameter('project') : null;
-            if ($project instanceof \App\Models\DocuMentor\Project) {
-                return \App\Models\DocuMentor\ProjectProposal::where('project_id', $project->id)->where('id', $value)->firstOrFail();
+            $projectParam = $route ? $route->parameter('project') : null;
+            $projectId = null;
+
+            if ($projectParam instanceof \App\Models\DocuMentor\Project) {
+                $projectId = $projectParam->id;
+            } elseif (is_numeric($projectParam)) {
+                $projectId = (int) $projectParam;
             }
+
+            if ($projectId) {
+                return \App\Models\DocuMentor\ProjectProposal::where('project_id', $projectId)
+                    ->where('id', $value)
+                    ->firstOrFail();
+            }
+
             return \App\Models\DocuMentor\ProjectProposal::findOrFail($value);
         });
 
