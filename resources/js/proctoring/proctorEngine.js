@@ -43,6 +43,7 @@
     let criticalCount = 0;
     let isAutoSubmitted = false;
     let violationHistory = [];
+    let remainingImageCaptures = null; // null = unknown, number = remaining image slots on server
     let blinkDetectionEnabled = false;
     let lastBlinkTime = Date.now();
     let blinkWarningShown = false;
@@ -130,8 +131,8 @@
             }).catch(function () {});
         }
 
-        // Send image capture if available
-        if (imageBase64 && violationCaptureUrl) {
+        // Send image capture if available and we have remaining slots.
+        if (imageBase64 && violationCaptureUrl && (remainingImageCaptures === null || remainingImageCaptures > 0)) {
             fetch(violationCaptureUrl, {
                 method: 'POST',
                 headers: {
@@ -144,7 +145,27 @@
                     violation_type: type,
                     image_base64: imageBase64,
                 }),
-            }).catch(function () {});
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        return null;
+                    }
+                    return response.json().catch(function () {
+                        return null;
+                    });
+                })
+                .then(function (data) {
+                    if (!data) return;
+                    if (typeof data.remaining_captures === 'number') {
+                        remainingImageCaptures = data.remaining_captures;
+                    }
+                    if (data.limit_reached === true) {
+                        remainingImageCaptures = 0;
+                    }
+                })
+                .catch(function () {
+                    // Ignore network errors; text log already sent above.
+                });
         }
     }
 
