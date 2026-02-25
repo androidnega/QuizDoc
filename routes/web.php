@@ -236,6 +236,7 @@ Route::middleware(['dashboard.auth', 'student.auth', 'student.has-level'])->pref
 
 // Project (student) routes under /dashboard — same controllers as docu-mentor, unified URLs
 Route::middleware(['dashboard.auth', 'docu-mentor.auth', 'docu-mentor.student', 'docu-mentor.project-access'])->prefix('dashboard')->name('dashboard.')->group(function () {
+    Route::get('/csrf-refresh', fn () => response()->json(['token' => csrf_token()]))->name('csrf-refresh');
     Route::get('/projects', [\App\Http\Controllers\DocuMentor\StudentProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/create', [\App\Http\Controllers\DocuMentor\StudentProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects', [\App\Http\Controllers\DocuMentor\StudentProjectController::class, 'store'])->name('projects.store');

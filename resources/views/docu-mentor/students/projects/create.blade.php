@@ -183,6 +183,7 @@
     var progressLabel = document.getElementById('proposal-upload-label');
     var uploadedUrlInput = document.getElementById('proposal_uploaded_url');
     var uploadEndpoint = "{{ route('docu-mentor.students.projects.proposals.upload-temp') }}";
+    var csrfRefreshUrl = "{{ route('dashboard.csrf-refresh') }}";
     var STORAGE_KEY_STEP = 'dm_project_create_step';
     var STORAGE_KEY_FORM = 'dm_project_create_form';
 
@@ -313,6 +314,25 @@
             step3TitleEl.textContent = title || '—';
             step3GroupEl.textContent = groupText;
             step3Summary.classList.remove('hidden');
+            // Refresh CSRF token before submit to avoid 419 on live (session/cookie issues)
+            if (csrfRefreshUrl && form) {
+                fetch(csrfRefreshUrl, { redirect: 'manual', credentials: 'same-origin' })
+                    .then(function(r) {
+                        if (r.status === 302 || r.type === 'opaqueredirect') {
+                            window.location.href = '/login';
+                            return null;
+                        }
+                        return r.ok ? r.json() : null;
+                    })
+                    .then(function(data) {
+                        if (data && data.token) {
+                            var tokenInput = form.querySelector('input[name="_token"]');
+                            if (tokenInput) tokenInput.value = data.token;
+                            var meta = document.querySelector('meta[name="csrf-token"]');
+                            if (meta) meta.setAttribute('content', data.token);
+                        }
+                    });
+            }
         }
     }
 
