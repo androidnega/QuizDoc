@@ -37,9 +37,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        // On 419 (CSRF token expired): send to login with a clear message so user never sees raw "419 Page Expired"
+        // On 419 (CSRF token mismatch): send to login with a clear message so user never sees raw "419 Page Expired"
         $exceptions->renderable(function (\Illuminate\Session\TokenMismatchException $e, $request) {
-            $message = 'Your session expired. Please log in again.';
+            $message = 'Your session has ended. Please log in again.';
             if ($request->expectsJson() || $request->ajax()) {
                 return \Illuminate\Support\Facades\Response::json(['message' => $message], 419);
             }

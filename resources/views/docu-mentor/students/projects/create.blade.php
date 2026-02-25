@@ -6,22 +6,22 @@
 @section('dashboard_content')
 <header class="mb-6">
     <h1 class="text-xl font-semibold text-slate-800 tracking-tight">Create project</h1>
-    <p class="text-sm text-slate-500 mt-1">Multi-step form. Complete each step and send to Coordinator.</p>
+    <p class="text-sm text-slate-500 mt-1">Complete each step in Docu Mentor, then send to your Coordinator for review.</p>
     <p class="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1" id="create-step-indicator">Step 1 of 3</p>
-    <p class="text-xs font-semibold mt-0.5" style="color:#000000;">Next: Project Details →</p>
-    {{-- Visual step tracker: compact ovals; active = yellow with black text --}}
+    <p class="text-xs font-semibold text-slate-800 mt-0.5 min-h-[1.25rem]" id="create-step-next-label" aria-live="polite">Next: Project Details →</p>
+    {{-- Visual step tracker: active = amber; completed = check; inactive = grey --}}
     <div class="mt-3 inline-flex flex-wrap items-center gap-2 text-xs font-medium" id="create-step-ovals">
-        <div class="flex items-center gap-1">
-            <span data-step-oval="step-1" class="inline-flex h-7 px-4 items-center justify-center rounded-full bg-amber-500 text-black shadow-sm">1</span>
-            <span class="hidden sm:inline text-slate-800">Basic</span>
+        <div class="flex items-center gap-1" data-step-label-wrap="step-1">
+            <span data-step-oval="step-1" class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-black shadow-sm">1</span>
+            <span class="hidden sm:inline text-slate-800" data-step-label="step-1">Basic</span>
         </div>
-        <div class="flex items-center gap-1">
-            <span data-step-oval="step-2" class="inline-flex h-7 px-4 items-center justify-center rounded-full bg-slate-100 text-slate-500 border border-slate-300">2</span>
-            <span class="hidden sm:inline text-slate-500">Details</span>
+        <div class="flex items-center gap-1" data-step-label-wrap="step-2">
+            <span data-step-oval="step-2" class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 border border-slate-300">2</span>
+            <span class="hidden sm:inline text-slate-500" data-step-label="step-2">Details</span>
         </div>
-        <div class="flex items-center gap-1">
-            <span data-step-oval="step-3" class="inline-flex h-7 px-4 items-center justify-center rounded-full bg-slate-100 text-slate-500 border border-slate-300">3</span>
-            <span class="hidden sm:inline text-slate-500">Finish</span>
+        <div class="flex items-center gap-1" data-step-label-wrap="step-3">
+            <span data-step-oval="step-3" class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 border border-slate-300">3</span>
+            <span class="hidden sm:inline text-slate-500" data-step-label="step-3">Finish</span>
         </div>
         <button type="button" id="clear-project-form-btn" class="ml-auto px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-300 text-slate-600 hover:bg-slate-50">
             Start fresh
@@ -150,12 +150,16 @@
             {{-- Step 3: Finish --}}
             <div id="step-3" class="project-step hidden space-y-4">
                 <h2 class="text-sm font-medium text-slate-700 border-b border-slate-100 pb-2">Step 3: Finish</h2>
-                <p class="text-sm text-slate-500 text-sm">Status will be set to <strong>Pending</strong>. Submitting sends the project to the Coordinator for review and supervisor assignment.</p>
+                <p class="text-sm text-slate-500">Your project will be set to <strong>Pending</strong>. The Coordinator will review it in Docu Mentor and assign a supervisor.</p>
+                <div id="step-3-summary" class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 hidden" role="status" aria-live="polite">
+                    <p class="font-medium text-slate-800">Summary</p>
+                    <p class="mt-1"><strong id="step-3-title">—</strong></p>
+                    <p class="text-slate-600">Group: <span id="step-3-group">—</span></p>
+                </div>
                 <div class="flex flex-wrap gap-2">
                     <button type="button" class="step-prev px-4 py-2 rounded-lg text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shrink-0" data-prev="step-2">← Back</button>
                     <button type="submit"
-                            class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium min-h-[44px] sm:min-h-0"
-                            style="background-color: #f59e0b !important; color: #000000 !important;">
+                            class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium min-h-[44px] sm:min-h-0 bg-amber-500 text-black hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2">
                         Send to Coordinator
                     </button>
                     <a href="{{ route('dashboard.projects.index') }}" class="px-4 py-2 rounded-lg text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shrink-0 inline-block">Cancel</a>
@@ -182,16 +186,42 @@
     var STORAGE_KEY_STEP = 'dm_project_create_step';
     var STORAGE_KEY_FORM = 'dm_project_create_form';
 
+    var nextLabelEl = document.getElementById('create-step-next-label');
+    var stepLabelEls = document.querySelectorAll('[data-step-label]');
+    var step3Summary = document.getElementById('step-3-summary');
+    var step3TitleEl = document.getElementById('step-3-title');
+    var step3GroupEl = document.getElementById('step-3-group');
+
     function updateStepOvals(activeStepId) {
         if (!stepOvals.length) return;
         var idx = stepOrder.indexOf(activeStepId);
         stepOvals.forEach(function(oval) {
             var stepId = oval.getAttribute('data-step-oval');
             var stepIdx = stepOrder.indexOf(stepId);
-            oval.className = (stepIdx === idx)
-                ? 'inline-flex h-7 px-4 items-center justify-center rounded-full bg-amber-500 text-black shadow-sm'
-                : 'inline-flex h-7 px-4 items-center justify-center rounded-full bg-slate-100 text-slate-500 border border-slate-300';
+            var isActive = stepIdx === idx;
+            var isCompleted = stepIdx < idx;
+            if (isActive) {
+                oval.className = 'inline-flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-black shadow-sm';
+                oval.textContent = stepIdx + 1;
+            } else if (isCompleted) {
+                oval.className = 'inline-flex h-7 w-7 items-center justify-center rounded-full bg-green-100 text-green-700 border border-green-300';
+                oval.innerHTML = '<i class="fas fa-check text-xs" aria-hidden="true"></i>';
+            } else {
+                oval.className = 'inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 border border-slate-300';
+                oval.textContent = stepIdx + 1;
+            }
         });
+        stepLabelEls.forEach(function(lbl) {
+            var stepId = lbl.getAttribute('data-step-label');
+            var stepIdx = stepOrder.indexOf(stepId);
+            lbl.classList.toggle('text-slate-800', stepIdx === idx);
+            lbl.classList.toggle('text-slate-500', stepIdx !== idx);
+        });
+        if (nextLabelEl) {
+            if (idx === 0) nextLabelEl.textContent = 'Next: Project Details →';
+            else if (idx === 1) nextLabelEl.textContent = 'Next: Finish →';
+            else nextLabelEl.textContent = 'Review and send below.';
+        }
     }
 
     function persistStep(stepId) {
@@ -272,6 +302,18 @@
         if (stepIndicator && idx >= 0) stepIndicator.textContent = 'Step ' + (idx + 1) + ' of 3';
         updateStepOvals(stepId);
         persistStep(stepId);
+        if (stepId === 'step-3' && step3Summary && step3TitleEl && step3GroupEl) {
+            var titleInput = document.getElementById('title');
+            var groupSelect = document.getElementById('group_id');
+            var title = (titleInput && titleInput.value) ? titleInput.value.trim() : '';
+            var groupText = '—';
+            if (groupSelect && groupSelect.selectedIndex >= 0 && groupSelect.options[groupSelect.selectedIndex]) {
+                groupText = groupSelect.options[groupSelect.selectedIndex].text || groupSelect.value;
+            }
+            step3TitleEl.textContent = title || '—';
+            step3GroupEl.textContent = groupText;
+            step3Summary.classList.remove('hidden');
+        }
     }
 
     function clearFormAndStorage() {
