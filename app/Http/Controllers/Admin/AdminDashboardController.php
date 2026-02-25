@@ -33,7 +33,8 @@ class AdminDashboardController extends Controller
         // Sessions = results: only count sessions that have a result (excludes killed/incomplete)
         $sessionsWithResult = QuizSession::whereNotNull('ended_at')->whereHas('result')->count();
         $overview = [
-            'users' => User::whereIn('role', [User::ROLE_SUPER_ADMIN, User::ROLE_EXAMINER])->count(),
+            // Primary Super Admin can see all admins and Docu Mentor users; reflect that in the user count.
+            'users' => User::count(),
             'courses' => Course::count(),
             'class_groups' => ClassGroup::count(),
             'students' => Student::count(),
