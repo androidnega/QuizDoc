@@ -174,8 +174,9 @@ class StudentDashboardController extends Controller
             }
         }
 
-        $docuMentorOnlyDashboard = $hasProjectAccess;
-        $hasQuizAccessForView = !$docuMentorOnlyDashboard;
+        // For normal student login, always show quiz access even when Docu Mentor projects are available.
+        $docuMentorOnlyDashboard = false;
+        $hasQuizAccessForView = true;
 
         return view('student.dashboard.index', [
             'student' => $student,

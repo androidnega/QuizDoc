@@ -780,39 +780,40 @@ document.addEventListener('DOMContentLoaded', function() {
             .finally(function() { btn.disabled = false; });
         });
     }
-    // Supabase Test
-    var supabaseBtn = document.getElementById('supabase-test-btn');
-    if (supabaseBtn) {
-        supabaseBtn.addEventListener('click', function() {
-            var btn = this;
-            var resultEl = document.getElementById('supabase-test-result');
-            resultEl.classList.remove('hidden', 'bg-success-50', 'border-success-200', 'text-success-800', 'bg-danger-50', 'border-danger-200', 'text-danger-800');
-            resultEl.textContent = 'Testing…';
-            btn.disabled = true;
-            fetch('{{ route('dashboard.settings.supabase-test') }}', {
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
-            .then(function(res) {
-                var d = res.data;
-                resultEl.classList.remove('hidden');
-                if (d.success) {
-                    resultEl.classList.add('bg-success-50', 'border', 'border-success-200', 'text-success-800');
-                    resultEl.textContent = d.message || 'Supabase connection OK.';
-                } else {
-                    resultEl.classList.add('bg-danger-50', 'border', 'border-danger-200', 'text-danger-800');
-                    resultEl.textContent = (d.message || 'Supabase test failed.') + (d.detail ? ' ' + d.detail : '');
-                }
-            })
-            .catch(function(err) {
-                resultEl.classList.remove('hidden');
-                resultEl.classList.add('bg-danger-50', 'border', 'border-danger-200', 'text-danger-800');
-                resultEl.textContent = 'Request failed: ' + (err.message || 'Network error');
-            })
-            .finally(function() { btn.disabled = false; });
-        });
-    }
 });
+
+// Supabase Test (all environments; controller restricts to primary super admin)
+var supabaseBtn = document.getElementById('supabase-test-btn');
+if (supabaseBtn) {
+    supabaseBtn.addEventListener('click', function() {
+        var btn = this;
+        var resultEl = document.getElementById('supabase-test-result');
+        resultEl.classList.remove('hidden', 'bg-success-50', 'border-success-200', 'text-success-800', 'bg-danger-50', 'border-danger-200', 'text-danger-800');
+        resultEl.textContent = 'Testing…';
+        btn.disabled = true;
+        fetch('{{ route('dashboard.settings.supabase-test') }}', {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+        .then(function(res) {
+            var d = res.data;
+            resultEl.classList.remove('hidden');
+            if (d.success) {
+                resultEl.classList.add('bg-success-50', 'border', 'border-success-200', 'text-success-800');
+                resultEl.textContent = d.message || 'Supabase connection OK.';
+            } else {
+                resultEl.classList.add('bg-danger-50', 'border', 'border-danger-200', 'text-danger-800');
+                resultEl.textContent = (d.message || 'Supabase test failed.') + (d.detail ? ' ' + d.detail : '');
+            }
+        })
+        .catch(function(err) {
+            resultEl.classList.remove('hidden');
+            resultEl.classList.add('bg-danger-50', 'border', 'border-danger-200', 'text-danger-800');
+            resultEl.textContent = 'Request failed: ' + (err.message || 'Network error');
+        })
+        .finally(function() { btn.disabled = false; });
+    });
+}
 
 // AI Test
 var aiTestBtn = document.getElementById('ai-test-btn');

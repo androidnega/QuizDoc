@@ -15,28 +15,28 @@
     <div class="flex items-center gap-2 px-1 pb-0.5">
         <a href="{{ route('dashboard') }}"
            class="inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap
-                  {{ request()->routeIs('dashboard') ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' }}">
-            <i class="fas fa-home mr-1.5 text-[10px] sm:text-xs text-slate-500"></i>
+                  {{ request()->routeIs('dashboard') ? 'bg-amber-100 border-amber-300 text-slate-900' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-50' }}">
+            <i class="fas fa-home mr-1.5 text-[10px] sm:text-xs text-slate-900"></i>
             Overview
         </a>
 
         @if($hasQuizAccess ?? true)
         <a href="{{ route('dashboard.my-quizzes') }}"
            class="inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap
-                  {{ request()->routeIs('dashboard.my-quizzes*') ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' }}">
-            <i class="fas fa-clipboard-list mr-1.5 text-[10px] sm:text-xs text-slate-500"></i>
+                  {{ request()->routeIs('dashboard.my-quizzes*') ? 'bg-amber-100 border-amber-300 text-slate-900' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-50' }}">
+            <i class="fas fa-clipboard-list mr-1.5 text-[10px] sm:text-xs text-slate-900"></i>
             Quizzes
         </a>
         <a href="{{ route('dashboard.calendar') }}"
            class="inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap
-                  {{ request()->routeIs('dashboard.calendar') ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' }}">
-            <i class="fas fa-calendar-alt mr-1.5 text-[10px] sm:text-xs text-slate-500"></i>
+                  {{ request()->routeIs('dashboard.calendar') ? 'bg-amber-100 border-amber-300 text-slate-900' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-50' }}">
+            <i class="fas fa-calendar-alt mr-1.5 text-[10px] sm:text-xs text-slate-900"></i>
             Calendar
         </a>
         <a href="{{ route('dashboard.course-materials') }}"
            class="inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap
-                  {{ request()->routeIs('dashboard.course-materials') ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' }}">
-            <i class="fas fa-book mr-1.5 text-[10px] sm:text-xs text-slate-500"></i>
+                  {{ request()->routeIs('dashboard.course-materials') ? 'bg-amber-100 border-amber-300 text-slate-900' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-50' }}">
+            <i class="fas fa-book mr-1.5 text-[10px] sm:text-xs text-slate-900"></i>
             Materials
         </a>
         @endif
@@ -45,15 +45,15 @@
             @if(isset($student) && $student)
             <a href="{{ route('student.enter-documentor', ['redirect' => 'dashboard.projects.index']) }}"
                class="inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap
-                      {{ request()->routeIs('dashboard.projects*') || request()->routeIs('dashboard.public-projects') || request()->routeIs('dashboard.group*') ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' }}">
-                <i class="fas fa-folder-open mr-1.5 text-[10px] sm:text-xs text-slate-500"></i>
+                      {{ request()->routeIs('dashboard.projects*') || request()->routeIs('dashboard.public-projects') || request()->routeIs('dashboard.group*') ? 'bg-amber-100 border-amber-300 text-slate-900' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-50' }}">
+                <i class="fas fa-folder-open mr-1.5 text-[10px] sm:text-xs text-slate-900"></i>
                 Projects
             </a>
             @else
             <a href="{{ route('dashboard.projects.index') }}"
                class="inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap
-                      {{ request()->routeIs('dashboard.projects*') || request()->routeIs('dashboard.public-projects') || request()->routeIs('dashboard.group*') ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' }}">
-                <i class="fas fa-folder-open mr-1.5 text-[10px] sm:text-xs text-slate-500"></i>
+                      {{ request()->routeIs('dashboard.projects*') || request()->routeIs('dashboard.public-projects') || request()->routeIs('dashboard.group*') ? 'bg-amber-100 border-amber-300 text-slate-900' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-50' }}">
+                <i class="fas fa-folder-open mr-1.5 text-[10px] sm:text-xs text-slate-900"></i>
                 Projects
             </a>
             @endif
@@ -61,16 +61,16 @@
 
         <a href="{{ route('dashboard.my-profile') }}"
            class="inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap
-                  {{ request()->routeIs('dashboard.my-profile') ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' }}">
-            <i class="fas fa-user mr-1.5 text-[10px] sm:text-xs text-slate-500"></i>
+                  {{ request()->routeIs('dashboard.my-profile') ? 'bg-amber-100 border-amber-300 text-slate-900' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-50' }}">
+            <i class="fas fa-user mr-1.5 text-[10px] sm:text-xs text-slate-900"></i>
             Profile
         </a>
 
         @if($isClassRep ?? false)
         <a href="{{ route('dashboard.class-results.index') }}"
            class="inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap
-                  {{ request()->routeIs('dashboard.class-results*') ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' }}">
-            <i class="fas fa-file-download mr-1.5 text-[10px] sm:text-xs text-slate-500"></i>
+                  {{ request()->routeIs('dashboard.class-results*') ? 'bg-amber-100 border-amber-300 text-slate-900' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-50' }}">
+            <i class="fas fa-file-download mr-1.5 text-[10px] sm:text-xs text-slate-900"></i>
             Class results
         </a>
         @endif
