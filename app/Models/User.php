@@ -255,6 +255,34 @@ class User extends Authenticatable
         return $this->courses()->where('is_archived', false)->pluck('courses.id')->all();
     }
 
+    /**
+     * Coordinator (or Super Admin) with SMS balance who "has" this class group.
+     * Used for OTP/SMS deduction: all students under class groups deduct from the coordinator's SMS.
+     * Coordinator has a class group if: super_admin (all), or coordinator with no department (all), or coordinator's department matches the class group examiner's department.
+     */
+    public static function coordinatorWithSmsBalanceForClassGroup(ClassGroup $classGroup): ?self
+    {
+        $classGroup->load('examiner');
+        $examinerDepartmentId = $classGroup->examiner?->department_id;
+
+        $q = self::query()
+            ->where(function ($q) {
+                $q->where('role', self::DM_ROLE_COORDINATOR)
+                    ->orWhere('role', self::ROLE_SUPER_ADMIN)
+                    ->orWhere('coordinator', true);
+            })
+            ->whereRaw('(COALESCE(sms_allocation, 0) - COALESCE(sms_used, 0)) > 0');
+
+        $q->where(function ($q) use ($examinerDepartmentId) {
+            $q->whereNull('department_id');
+            if ($examinerDepartmentId !== null) {
+                $q->orWhere('department_id', $examinerDepartmentId);
+            }
+        });
+
+        return $q->first();
+    }
+
     /** IDs of class groups in scope: all for super_admin; coordinator by department; examiner only groups where they teach a course. */
     public function classGroupIds(): array
     {

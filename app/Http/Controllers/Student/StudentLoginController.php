@@ -165,9 +165,9 @@ class StudentLoginController extends Controller
             ]);
         }
 
-        // Examiner (from class group, quiz, or class_group_course lecturers) with SMS balance — used for deducting SMS; if none, we still send OTP so students can log in
+        // Coordinator (who has this class group) or examiner with SMS balance — used for deducting SMS; if none, we still send OTP so students can log in
         $quiz->load(['classGroup.examiner', 'examiner']);
-        $examiner = $this->examinerWithSmsBalanceForQuiz($quiz);
+        $smsOwner = $this->smsOwnerForQuiz($quiz);
 
         // STEP 1 — Check last OTP for this index (type = student_login)
         $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
@@ -204,8 +204,8 @@ class StudentLoginController extends Controller
             }
             return response()->json(['success' => false, 'message' => $msg], 422);
         }
-        if ($examiner) {
-            $examiner->increment('sms_used');
+        if ($smsOwner) {
+            $smsOwner->increment('sms_used');
         }
         return response()->json([
             'success' => true,
@@ -219,10 +219,18 @@ class StudentLoginController extends Controller
     }
 
     /**
-     * Get an examiner with SMS balance for this quiz: class group owner, then quiz examiner, then lecturers from class_group_course.
+     * User whose SMS balance is deducted for this quiz's OTP: coordinator (who has the class group) first, then examiner (class group owner, quiz examiner, or lecturers).
      */
-    private function examinerWithSmsBalanceForQuiz(Quiz $quiz): ?User
+    private function smsOwnerForQuiz(Quiz $quiz): ?User
     {
+        $classGroup = $quiz->classGroup;
+        if ($classGroup) {
+            $coordinator = User::coordinatorWithSmsBalanceForClassGroup($classGroup);
+            if ($coordinator) {
+                return $coordinator;
+            }
+        }
+
         $candidates = [];
         if ($quiz->classGroup?->examiner) {
             $candidates[] = $quiz->classGroup->examiner;

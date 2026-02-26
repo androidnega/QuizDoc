@@ -90,8 +90,8 @@ class StudentAccountController extends Controller
             ]);
         }
 
-        // Examiner with SMS balance (for deducting); if none, we still send OTP so students can log in
-        $examiner = $this->examinerWithSmsBalanceForIndex($cgStudent->index_number);
+        // Coordinator (who has the student's class groups) or examiner with SMS balance (for deducting); if none, we still send OTP so students can log in
+        $smsOwner = $this->smsOwnerForIndex($cgStudent->index_number);
 
         // STEP 1 — Check last OTP for this index (type = student_login)
         $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
@@ -128,8 +128,8 @@ class StudentAccountController extends Controller
             }
             return response()->json(['success' => false, 'message' => $msg], 422);
         }
-        if ($examiner) {
-            $examiner->increment('sms_used');
+        if ($smsOwner) {
+            $smsOwner->increment('sms_used');
         }
         return response()->json([
             'success' => true,
@@ -185,7 +185,7 @@ class StudentAccountController extends Controller
         }
 
         // Examiner with SMS balance (for deducting); if none, we still send OTP so students can log in
-        $examiner = $this->examinerWithSmsBalanceForIndex($student->index_number);
+        $smsOwner = $this->smsOwnerForIndex($student->index_number);
 
         $indexHash = $student->index_number_hash;
 
@@ -224,8 +224,8 @@ class StudentAccountController extends Controller
             }
             return response()->json(['success' => false, 'message' => $msg], 422);
         }
-        if ($examiner) {
-            $examiner->increment('sms_used');
+        if ($smsOwner) {
+            $smsOwner->increment('sms_used');
         }
         return response()->json([
             'success' => true,
@@ -238,16 +238,25 @@ class StudentAccountController extends Controller
         ]);
     }
 
-    /** Get an examiner with SMS balance for the given index (via class group membership).
-     * Tries class group owner (examiner_id) first, then lecturers from class_group_course. */
-    private function examinerWithSmsBalanceForIndex(string $indexNumber): ?\App\Models\User
+    /** User whose SMS balance is deducted for this index: coordinator (who has the student's class groups) first, then examiner (class group owner or lecturers). */
+    private function smsOwnerForIndex(string $indexNumber): ?\App\Models\User
     {
         $cgStudents = ClassGroupStudent::whereRaw('UPPER(TRIM(index_number)) = ?', [strtoupper(trim($indexNumber))])
             ->with('classGroup.examiner')
             ->get();
-        $classGroupIds = $cgStudents->pluck('class_group_id')->unique()->filter()->values()->all();
 
-        // 1) Class group owner (examiner_id on class_groups)
+        // 1) Coordinator who has any of the student's class groups (and has SMS balance)
+        foreach ($cgStudents as $cg) {
+            $classGroup = $cg->classGroup;
+            if ($classGroup) {
+                $coordinator = \App\Models\User::coordinatorWithSmsBalanceForClassGroup($classGroup);
+                if ($coordinator) {
+                    return $coordinator;
+                }
+            }
+        }
+
+        // 2) Class group owner (examiner_id on class_groups)
         foreach ($cgStudents as $cg) {
             $examiner = $cg->classGroup?->examiner;
             if ($examiner && $examiner->isExaminer() && $examiner->sms_remaining > 0) {
@@ -255,7 +264,8 @@ class StudentAccountController extends Controller
             }
         }
 
-        // 2) Lecturers assigned to this class group via class_group_course (per-course examiner_id)
+        // 3) Lecturers assigned to this class group via class_group_course (per-course examiner_id)
+        $classGroupIds = $cgStudents->pluck('class_group_id')->unique()->filter()->values()->all();
         if (empty($classGroupIds)) {
             return null;
         }
