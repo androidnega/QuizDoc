@@ -439,6 +439,20 @@ class SettingsController extends Controller
      */
     public function supabaseTest(): JsonResponse
     {
+        $currentUser = auth()->user() ?? User::find(session('admin_user_id'));
+        $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
+        $isPrimarySuperAdmin = $primarySuperAdminId !== null && (
+            ($currentUser && (int) $currentUser->id === (int) $primarySuperAdminId)
+            || ((int) session('admin_user_id') === (int) $primarySuperAdminId)
+        );
+
+        if (! $isPrimarySuperAdmin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only the primary super admin can test Supabase from settings.',
+            ], 403);
+        }
+
         $result = SupabaseStorageService::testConnection();
         return response()->json($result, $result['success'] ? 200 : 422);
     }

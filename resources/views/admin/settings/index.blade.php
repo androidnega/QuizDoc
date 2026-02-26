@@ -435,7 +435,7 @@
                         <input type="number" name="supabase_signed_url_ttl" id="supabase_signed_url_ttl" value="{{ old('supabase_signed_url_ttl', $supabase_ttl ?? 60) }}" min="1" max="1440" class="block w-28 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none">
                         <p class="text-xs text-gray-500 mt-1">How long download links remain valid. Default: 60 minutes.</p>
                     </div>
-                    @unless(app()->environment('production'))
+                    @if($can_manage_backup ?? false)
                     <div class="pt-4 border-t border-gray-100">
                         <p class="text-xs font-medium text-gray-500 mb-0.5">Test connection</p>
                         <p class="text-xs text-gray-500 mb-2">Save settings first, then test. Verifies Supabase URL, service key, and bucket.</p>
@@ -444,7 +444,7 @@
                         </button>
                         <div id="supabase-test-result" class="mt-3 hidden rounded-lg border p-3 text-sm"></div>
                     </div>
-                    @endunless
+                    @endif
                 </div>
                 </div>
 
