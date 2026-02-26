@@ -161,6 +161,32 @@
     <h2 class="text-xs sm:text-sm font-semibold text-slate-900 mb-2.5 sm:mb-3 uppercase tracking-wide">Quick access</h2>
     {{-- Two cards per row on mobile, three on larger screens --}}
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
+        {{-- Calendar is available to all students with dashboard access --}}
+        <a href="{{ route('dashboard.calendar') }}" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3.5 sm:p-4 flex items-center justify-between no-underline hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition-colors min-h-[56px] sm:min-h-[72px] overflow-hidden">
+            <div class="flex items-center gap-3 min-w-0">
+                <span class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+                    <i class="fas fa-calendar-alt text-sm"></i>
+                </span>
+                <div class="min-w-0">
+                    <span class="text-sm font-semibold text-slate-900 block truncate">Calendar</span>
+                    <span class="text-xs text-slate-600 block truncate">Exam & quiz dates</span>
+                </div>
+            </div>
+            <i class="fas fa-chevron-right text-slate-400 text-xs shrink-0 hidden sm:inline-block"></i>
+        </a>
+        {{-- Class results quick access for class reps (any level) --}}
+        @if($isClassRep ?? false)
+        <a href="{{ route('dashboard.class-results.index') }}" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3.5 sm:p-4 flex items-center justify-between no-underline hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition-colors min-h-[56px] sm:min-h-[72px] overflow-hidden">
+            <div class="flex items-center gap-3 min-w-0">
+                <span class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0"><i class="fas fa-file-download text-sm"></i></span>
+                <div class="min-w-0">
+                    <span class="text-sm font-semibold text-slate-900 block truncate">Class results</span>
+                    <span class="text-xs text-slate-600 block truncate">See class results</span>
+                </div>
+            </div>
+            <i class="fas fa-chevron-right text-slate-400 text-xs shrink-0"></i>
+        </a>
+        @endif
         @if($hasProjectAccess ?? false)
         <a href="{{ route('student.enter-documentor', ['redirect' => 'dashboard.projects.index']) }}" class="hidden sm:flex bg-white rounded-2xl border border-slate-200 shadow-sm p-3.5 sm:p-4 items-center justify-between no-underline hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition-colors min-h-[56px] sm:min-h-[72px] overflow-hidden">
             <div class="flex items-center gap-3 min-w-0">
@@ -206,18 +232,6 @@
                 </div>
             </div>
             <i class="fas fa-chevron-right text-slate-400 text-xs shrink-0 hidden sm:inline-block"></i>
-        </a>
-        @endif
-        @if($isClassRep ?? false)
-        <a href="{{ route('dashboard.class-results.index') }}" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3.5 sm:p-4 flex items-center justify-between no-underline hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition-colors min-h-[56px] sm:min-h-[72px] overflow-hidden">
-            <div class="flex items-center gap-3 min-w-0">
-                <span class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0"><i class="fas fa-file-download text-sm"></i></span>
-                <div class="min-w-0">
-                    <span class="text-sm font-semibold text-slate-900 block truncate">Class results</span>
-                    <span class="text-xs text-slate-600 block truncate">Download PDFs</span>
-                </div>
-            </div>
-            <i class="fas fa-chevron-right text-slate-400 text-xs shrink-0"></i>
         </a>
         @endif
         @if(($isGroupLeader ?? false) && !($leaderWithoutGroup ?? false))

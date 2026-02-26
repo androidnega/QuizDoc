@@ -319,16 +319,18 @@
                 fetch(csrfRefreshUrl, { redirect: 'manual', credentials: 'same-origin' })
                     .then(function(r) {
                         if (r.status === 302 || r.type === 'opaqueredirect') {
-                            window.location.href = '/login';
+                            // If the student session expired, send them back to the student login flow,
+                            // not the staff /login page.
+                            window.location.href = "{{ route('student.login.form') }}";
                             return null;
                         }
                         return r.ok ? r.json() : null;
                     })
                     .then(function(data) {
                         if (data && data.token) {
-                            var tokenInput = form.querySelector('input[name="_token"]');
+                            var tokenInput = form.querySelector('input[name=\"_token\"]');
                             if (tokenInput) tokenInput.value = data.token;
-                            var meta = document.querySelector('meta[name="csrf-token"]');
+                            var meta = document.querySelector('meta[name=\"csrf-token\"]');
                             if (meta) meta.setAttribute('content', data.token);
                         }
                     });
