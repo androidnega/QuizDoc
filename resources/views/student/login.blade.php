@@ -18,7 +18,7 @@
                 <form id="login-form" class="space-y-4">
                     <div>
                         <label for="index_number" class="block text-sm font-medium text-gray-700 mb-1">Index number</label>
-                        <input type="text" id="index_number" name="index_number" required placeholder="e.g. BC/ITS/24/047" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" style="text-transform: uppercase;" autocomplete="off">
+                        <input type="text" id="index_number" name="index_number" required placeholder="e.g. BC/ITS/24/047" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" style="text-transform: uppercase;" autocomplete="off">
                     </div>
                     <div id="login-error" class="hidden">
                         <div class="bg-danger-50 border border-danger-200 rounded-lg p-3 text-sm text-danger-800" id="login-error-text"></div>
@@ -41,7 +41,7 @@
                 <p class="text-sm text-gray-600" id="phone-step-message">Enter your active phone number (e.g. 233XXXXXXXXX).</p>
                 <div>
                     <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone number</label>
-                    <input type="tel" id="phone" name="phone" placeholder="233XXXXXXXXX" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" autocomplete="tel">
+                    <input type="tel" id="phone" name="phone" placeholder="233XXXXXXXXX" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" autocomplete="tel">
                 </div>
                 <div id="phone-error" class="hidden">
                     <div class="bg-danger-50 border border-danger-200 rounded-lg p-3 text-sm text-danger-800" id="phone-error-text"></div>
@@ -65,7 +65,7 @@
                 </div>
                 <div>
                     <label for="otp_name" class="block text-sm font-medium text-gray-700 mb-1">Your name (optional)</label>
-                    <input type="text" id="otp_name" name="student_name" placeholder="Full name" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" autocomplete="name" style="text-transform: capitalize;">
+                    <input type="text" id="otp_name" name="student_name" placeholder="Full name" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" autocomplete="name" style="text-transform: capitalize;">
                 </div>
                 <div id="otp-error" class="hidden">
                     <div class="bg-danger-50 border border-danger-200 rounded-lg p-3 text-sm text-danger-800" id="otp-error-text"></div>

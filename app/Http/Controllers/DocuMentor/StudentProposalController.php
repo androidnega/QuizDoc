@@ -35,11 +35,11 @@ class StudentProposalController extends Controller
             return back()->with('error', 'Maximum 3 proposals per project.');
         }
         $request->validate([
-            'file' => ['required', 'file', 'mimes:pdf', 'max:1024'],
+            'file' => ['required', 'file', 'mimes:pdf', 'max:716'],
             'comment' => 'nullable|string|max:1000',
         ], [
             'file.mimes' => 'Proposals must be PDF only.',
-            'file.max' => 'Proposal file must be less than 1MB.',
+            'file.max' => 'Proposal file must be less than 0.7MB.',
         ]);
 
         $file = $request->file('file');

@@ -24,10 +24,10 @@ class StudentTempProposalUploadController extends Controller
         }
 
         $request->validate([
-            'proposal_file' => ['required', 'file', 'mimes:pdf', 'max:1024'],
+            'proposal_file' => ['required', 'file', 'mimes:pdf', 'max:716'],
         ], [
             'proposal_file.mimes' => 'Proposal must be PDF only.',
-            'proposal_file.max' => 'Proposal file must be less than 1MB.',
+            'proposal_file.max' => 'Proposal file must be less than 0.7MB.',
         ]);
 
         $file = $request->file('proposal_file');

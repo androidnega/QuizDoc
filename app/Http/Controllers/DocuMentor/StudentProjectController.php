@@ -25,8 +25,12 @@ class StudentProjectController extends Controller
         $leaderWithoutGroup = $user->canLeadDocuMentorProjects() && !$user->ledDocuMentorGroups()->exists();
         $isClassRep = $user->isClassRep();
         $isGroupLeader = $user->canLeadDocuMentorProjects();
+        $leaderHasProject = false;
+        if ($isGroupLeader) {
+            $leaderHasProject = $user->ledDocuMentorGroups()->whereHas('project')->exists();
+        }
 
-        return view('docu-mentor.students.projects.index', compact('user', 'projects', 'leaderWithoutGroup', 'isClassRep', 'isGroupLeader'));
+        return view('docu-mentor.students.projects.index', compact('user', 'projects', 'leaderWithoutGroup', 'isClassRep', 'isGroupLeader', 'leaderHasProject'));
     }
 
     public function create(): View|RedirectResponse
@@ -78,7 +82,7 @@ class StudentProjectController extends Controller
             'description' => 'nullable|string|max:700',
             'category_id' => 'nullable|exists:categories,id',
             'parent_project_id' => 'nullable|exists:projects,id',
-            'proposal_file' => ['nullable', 'file', 'mimes:pdf', 'max:1024'],
+            'proposal_file' => ['nullable', 'file', 'mimes:pdf', 'max:716'],
             'proposal_uploaded_url' => 'nullable|string|max:2048',
             'budget' => 'nullable|numeric|min:0',
             'features' => 'nullable|array',
@@ -86,8 +90,15 @@ class StudentProjectController extends Controller
             'features.*.description' => 'nullable|string|max:500',
         ], [
             'proposal_file.mimes' => 'Proposal must be PDF only.',
-            'proposal_file.max' => 'Proposal file must be less than 1MB.',
+            'proposal_file.max' => 'Proposal file must be less than 0.7MB.',
         ]);
+
+        $hasUploadedProposal = trim((string) $request->input('proposal_uploaded_url', '')) !== '' || $request->hasFile('proposal_file');
+        if (! $hasUploadedProposal) {
+            return back()
+                ->withErrors(['proposal_file' => 'Please upload a proposal PDF before submitting your project.'])
+                ->withInput();
+        }
 
         $group = ProjectGroup::findOrFail($request->group_id);
         $this->authorize('update', $group);

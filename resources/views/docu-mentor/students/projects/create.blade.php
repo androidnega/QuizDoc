@@ -6,7 +6,7 @@
 @section('dashboard_content')
 <header class="mb-6">
     <h1 class="text-xl font-semibold text-slate-800 tracking-tight">Create project</h1>
-    <p class="text-sm text-slate-500 mt-1">Complete each step in Docu Mentor, then send to your Coordinator for review.</p>
+    <p class="text-sm text-slate-500 mt-1">Complete each step in Docu Mentor, then submit your project for Coordinator review.</p>
     <p class="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1" id="create-step-indicator">Step 1 of 3</p>
     <p class="text-xs font-semibold text-slate-800 mt-0.5 min-h-[1.25rem]" id="create-step-next-label" aria-live="polite">Next: Project Details →</p>
     {{-- Visual step tracker: active = amber; completed = check; inactive = grey --}}
@@ -93,7 +93,7 @@
             <div id="step-2" class="project-step hidden space-y-4">
                 <h2 class="text-sm font-medium text-slate-700 border-b border-slate-100 pb-2">Step 2: Project Details</h2>
                 <div>
-                    <label for="proposal_file" class="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-1">Upload proposal (PDF only, max 1MB)</label>
+                    <label for="proposal_file" class="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-1">Upload proposal (PDF only, max 0.7MB — required)</label>
                     <div class="flex items-center gap-3">
                         <label for="proposal_file" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer"
                                style="background-color: #f59e0b !important; color: #000000 !important;">
@@ -160,7 +160,7 @@
                     <button type="button" class="step-prev px-4 py-2 rounded-lg text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shrink-0" data-prev="step-2">← Back</button>
                     <button type="submit"
                             class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium min-h-[44px] sm:min-h-0 bg-amber-500 text-black hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2">
-                        Send to Coordinator
+                        Submit project
                     </button>
                     <a href="{{ route('dashboard.projects.index') }}" class="px-4 py-2 rounded-lg text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shrink-0 inline-block">Cancel</a>
                 </div>
@@ -221,7 +221,7 @@
         if (nextLabelEl) {
             if (idx === 0) nextLabelEl.textContent = 'Next: Project Details →';
             else if (idx === 1) nextLabelEl.textContent = 'Next: Finish →';
-            else nextLabelEl.textContent = 'Review and send below.';
+            else nextLabelEl.textContent = 'Review and submit below.';
         }
     }
 

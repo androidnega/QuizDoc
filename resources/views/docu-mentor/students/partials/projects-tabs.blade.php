@@ -18,8 +18,15 @@
         <i class="fas fa-users mr-1"></i>Manage group
     </a>
     @endif
+    @php $leaderHasProject = $leaderHasProject ?? false; @endphp
+    @if($leaderHasProject)
+    <div class="ml-auto inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed opacity-70" aria-disabled="true">
+        <i class="fas fa-lock mr-1"></i>Project created
+    </div>
+    @else
     <a href="{{ route('dashboard.projects.create') }}" class="ml-auto inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium bg-slate-600 text-white hover:bg-slate-700 shrink-0">
         <i class="fas fa-plus mr-1"></i>Create Project
     </a>
+    @endif
     @endif
 </nav>
