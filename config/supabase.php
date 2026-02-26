@@ -1,24 +1,13 @@
 <?php
 
-use App\Models\Setting;
-
-$supabaseUrl = env('SUPABASE_URL');
-$supabaseServiceKey = env('SUPABASE_SERVICE_KEY');
-$supabaseBucket = env('SUPABASE_BUCKET');
-$signedUrlTtl = env('SUPABASE_SIGNED_URL_TTL'); // minutes
-
-if (class_exists(Setting::class)) {
-    $supabaseUrl = Setting::getValue(Setting::KEY_SUPABASE_URL, $supabaseUrl);
-    $supabaseServiceKey = Setting::getValue(Setting::KEY_SUPABASE_SERVICE_KEY, $supabaseServiceKey);
-    $supabaseBucket = Setting::getValue(Setting::KEY_SUPABASE_BUCKET, $supabaseBucket);
-    $signedUrlTtl = Setting::getValue(Setting::KEY_SUPABASE_SIGNED_URL_TTL, $signedUrlTtl ?? '60');
-}
+// IMPORTANT: Do NOT access models/facades here; config is loaded before the app is bootstrapped.
+// This file only reads from .env. DB-based overrides are handled at runtime in SupabaseStorageService.
 
 return [
-    'url' => rtrim((string) $supabaseUrl, '/'),
-    'service_key' => $supabaseServiceKey,
-    'bucket' => $supabaseBucket,
-    // in minutes; will be converted to seconds when signing URLs
-    'signed_url_ttl' => (int) ($signedUrlTtl ?: 60),
+    'url' => rtrim((string) env('SUPABASE_URL', ''), '/'),
+    'service_key' => env('SUPABASE_SERVICE_KEY'),
+    'bucket' => env('SUPABASE_BUCKET'),
+    // in minutes; will be converted to seconds when signing URLs (default 60)
+    'signed_url_ttl' => (int) env('SUPABASE_SIGNED_URL_TTL', 60),
 ];
 

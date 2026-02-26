@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Setting;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -10,9 +11,9 @@ class SupabaseStorageService
 {
     public static function isConfigured(): bool
     {
-        $url = config('supabase.url');
-        $key = config('supabase.service_key');
-        $bucket = config('supabase.bucket');
+        $url = static::getUrl();
+        $key = static::getServiceKey();
+        $bucket = static::getBucket();
 
         return (bool) ($url && $key && $bucket);
     }
@@ -31,9 +32,9 @@ class SupabaseStorageService
             ];
         }
 
-        $baseUrl = rtrim((string) config('supabase.url'), '/');
-        $serviceKey = (string) config('supabase.service_key');
-        $bucket = (string) config('supabase.bucket');
+        $baseUrl = rtrim(static::getUrl(), '/');
+        $serviceKey = static::getServiceKey();
+        $bucket = static::getBucket();
 
         $extension = strtolower($file->getClientOriginalExtension());
         $safeName = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME));
@@ -93,10 +94,10 @@ class SupabaseStorageService
             ];
         }
 
-        $baseUrl = rtrim((string) config('supabase.url'), '/');
-        $serviceKey = (string) config('supabase.service_key');
-        $bucket = (string) config('supabase.bucket');
-        $ttlMinutes = (int) (config('supabase.signed_url_ttl') ?: 60);
+        $baseUrl = rtrim(static::getUrl(), '/');
+        $serviceKey = static::getServiceKey();
+        $bucket = static::getBucket();
+        $ttlMinutes = static::getSignedUrlTtlMinutes();
         $ttlSeconds = max(60, $ttlMinutes * 60);
 
         $path = ltrim($path, '/');
@@ -145,6 +146,54 @@ class SupabaseStorageService
                 'message' => 'Supabase sign URL error: ' . $e->getMessage(),
             ];
         }
+    }
+
+    private static function getUrl(): string
+    {
+        $db = class_exists(Setting::class)
+            ? Setting::getValue(Setting::KEY_SUPABASE_URL)
+            : null;
+
+        return $db !== null && $db !== ''
+            ? rtrim($db, '/')
+            : (string) config('supabase.url');
+    }
+
+    private static function getServiceKey(): string
+    {
+        $db = class_exists(Setting::class)
+            ? Setting::getValue(Setting::KEY_SUPABASE_SERVICE_KEY)
+            : null;
+
+        return $db !== null && $db !== ''
+            ? $db
+            : (string) config('supabase.service_key');
+    }
+
+    private static function getBucket(): string
+    {
+        $db = class_exists(Setting::class)
+            ? Setting::getValue(Setting::KEY_SUPABASE_BUCKET)
+            : null;
+
+        if ($db !== null && $db !== '') {
+            return $db;
+        }
+
+        return (string) config('supabase.bucket');
+    }
+
+    private static function getSignedUrlTtlMinutes(): int
+    {
+        $db = class_exists(Setting::class)
+            ? Setting::getValue(Setting::KEY_SUPABASE_SIGNED_URL_TTL)
+            : null;
+
+        if ($db !== null && trim($db) !== '') {
+            return max(1, min(1440, (int) $db));
+        }
+
+        return (int) (config('supabase.signed_url_ttl') ?: 60);
     }
 }
 
