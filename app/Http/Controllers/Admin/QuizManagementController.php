@@ -134,7 +134,8 @@ class QuizManagementController extends Controller
     public function validateAiJson(Request $request): \Illuminate\Http\JsonResponse
     {
         $request->validate([
-            'ai_json' => 'required|string|max:50000',
+            // Allow large AI JSON payloads (200k+ characters)
+            'ai_json' => 'required|string|max:200000',
             'number_of_questions' => 'required|integer|min:1|max:250',
         ]);
         $aiService = app(AiQuestionService::class);
@@ -171,7 +172,8 @@ class QuizManagementController extends Controller
                 'questions_per_student' => 'required|integer|min:1|max:250',
                 'duration_minutes' => 'required|integer|min:1|max:300',
                 'topics' => 'nullable|string|max:1000',
-                'ai_json' => 'nullable|string|max:50000',
+                // Allow large AI JSON payloads (200k+ characters)
+                'ai_json' => 'nullable|string|max:200000',
                 'is_active' => 'boolean',
                 'starts_at' => 'nullable|date',
                 'ends_at' => 'nullable|date|after_or_equal:starts_at',
