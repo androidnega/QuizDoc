@@ -76,11 +76,12 @@
                 <h1 class="min-w-0 flex-1 truncate text-lg font-semibold text-gray-900">@yield('examiner_heading', 'Examiner')</h1>
                 @php
                     $examiner = auth()->user();
-                    $smsRemaining = $examiner && $examiner->isExaminer() ? $examiner->sms_remaining : 0;
-                    $smsAllocation = $examiner && $examiner->isExaminer() ? ($examiner->sms_allocation ?? 0) : 0;
+                    $showSmsInHeader = $examiner && $examiner->isDocuMentorCoordinator();
+                    $smsRemaining = $showSmsInHeader ? $examiner->sms_remaining : 0;
+                    $smsAllocation = $showSmsInHeader ? ($examiner->sms_allocation ?? 0) : 0;
                     $smsColorClass = $smsRemaining >= 100 ? 'text-green-600' : 'text-red-600';
                 @endphp
-                @if($examiner && $examiner->isExaminer())
+                @if($showSmsInHeader)
                 <div class="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm {{ $smsColorClass }}" title="SMS balance for login tokens">
                     <span class="text-gray-500">SMS:</span>
                     <span class="font-semibold">{{ $smsRemaining }}</span>

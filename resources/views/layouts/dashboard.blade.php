@@ -180,7 +180,7 @@
                 <h1 class="min-w-0 flex-1 truncate text-base sm:text-lg font-semibold text-gray-900">@yield('dashboard_heading', 'Dashboard')</h1>
                 @php
                     $examiner = auth()->user();
-                    $showSmsInHeader = $examiner && ($examiner->isExaminer() || $examiner->role === \App\Models\User::DM_ROLE_COORDINATOR);
+                    $showSmsInHeader = $examiner && $examiner->isDocuMentorCoordinator();
                     if ($showSmsInHeader) {
                         $examiner->refresh();
                     }
@@ -197,10 +197,12 @@
                     <div class="flex items-center gap-1 sm:gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 sm:px-2.5 text-xs sm:text-sm {{ $aiTokenColor }}" title="AI quiz generations remaining">
                         <span class="font-semibold tabular-nums">{{ $aiTokenStatus['remaining'] }}</span>
                     </div>
+                    @if($showSmsInHeader)
                     <div class="flex flex-shrink-0 items-center gap-1 sm:gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 sm:px-2.5 text-xs sm:text-sm {{ $smsColorClass }}" title="SMS balance">
                         <span class="text-gray-500 hidden sm:inline">SMS:</span>
                         <span class="font-semibold">{{ $smsRemaining }}</span>
                     </div>
+                    @endif
                 </div>
                 @endif
                 <div class="relative flex flex-shrink-0 items-center" id="profile-menu-wrap">
