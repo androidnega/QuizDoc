@@ -47,7 +47,8 @@ class UserManagementController extends Controller
         $user = $this->adminUser();
         $isSuperAdmin = $user && $user->isSuperAdmin();
 
-        // Super Admin sees all admin + Docu Mentor users; Examiners only see themselves.
+        // Super Admin sees only staff-style users (Super Admin, Examiners, Docu Mentor Coordinators).
+        // Docu Mentor students/leaders are technical bridge accounts and should not appear here.
         $query = User::query()->with('courses');
 
         if (!$isSuperAdmin && $user) {
@@ -57,23 +58,19 @@ class UserManagementController extends Controller
             $primarySuperAdminId = User::where('role', User::ROLE_SUPER_ADMIN)->min('id');
 
             if ($user->id === $primarySuperAdminId) {
-                // Primary Super Admin: all admins and users (super admins, examiners, coordinators, Docu Mentor students/leaders)
+                // Primary Super Admin: all core staff accounts (super admins, examiners, coordinators)
                 $query->whereIn('role', [
                     User::ROLE_SUPER_ADMIN,
                     User::ROLE_EXAMINER,
                     User::DM_ROLE_COORDINATOR,
-                    User::DM_ROLE_STUDENT,
-                    User::DM_ROLE_LEADER,
                 ]);
             } else {
-                // Secondary Super Admin: see themselves + all non-super-admin staff and users
+                // Secondary Super Admin: see themselves + all non-super-admin staff accounts
                 $query->where(function ($q) use ($user) {
                     $q->where('id', $user->id)
                       ->orWhereIn('role', [
                           User::ROLE_EXAMINER,
                           User::DM_ROLE_COORDINATOR,
-                        User::DM_ROLE_STUDENT,
-                        User::DM_ROLE_LEADER,
                       ]);
                 });
             }
