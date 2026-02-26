@@ -206,6 +206,7 @@
             </div>
             <i class="fas fa-chevron-right text-slate-400 text-xs shrink-0 hidden sm:inline-block"></i>
         </a>
+        @if(!($docuMentorOnlyDashboard ?? false))
         <a href="{{ route('student.enter-documentor', ['redirect' => 'dashboard.public-projects']) }}" class="hidden sm:flex bg-white rounded-2xl border border-slate-200 shadow-sm p-3.5 sm:p-4 items-center justify-between no-underline hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition-colors min-h-[56px] sm:min-h-[72px] overflow-hidden">
             <div class="flex items-center gap-3 min-w-0">
                 <span class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0"><i class="fas fa-search text-sm"></i></span>
@@ -216,6 +217,7 @@
             </div>
             <i class="fas fa-chevron-right text-slate-400 text-xs shrink-0 hidden sm:inline-block"></i>
         </a>
+        @endif
         @if($docuMentorGroup ?? null)
         <a href="{{ isset($student) && $student ? route('student.enter-documentor', ['redirect' => 'dashboard.group.show', 'group' => $docuMentorGroup->id]) : route('dashboard.group.show', ['group' => $docuMentorGroup->id]) }}" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3.5 sm:p-4 flex items-center justify-between no-underline hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition-colors min-h-[56px] sm:min-h-[72px] overflow-hidden">
             <div class="flex items-center gap-3 min-w-0">

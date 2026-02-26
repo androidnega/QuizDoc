@@ -126,6 +126,7 @@ class AppServiceProvider extends ServiceProvider
                 if ($dmUser) {
                     $isClassRep = $dmUser->isClassRep();
                     $hasProjectAccess = $dmUser->isDocuMentorStudent();
+                    $hasQuizAccess = $dmUser->isDocuMentorStudent() ? (bool) session('student_id') : true;
                     $isGroupLeader = $dmUser->isGroupLeader();
                     $leaderWithoutGroup = $isGroupLeader && $dmUser->ledDocuMentorGroups()->doesntExist();
                     if ($isGroupLeader) {
