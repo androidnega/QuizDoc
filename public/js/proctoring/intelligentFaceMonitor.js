@@ -54,7 +54,10 @@
     // Require this many consecutive frames with 2+ faces before recording (reduces false positives)
     const MULTIPLE_FACES_CONSECUTIVE_THRESHOLD = 10; // 10 consecutive frames (~2s) before recording multiple faces
     // Second face smaller than this ratio of primary face area is ignored (reflection/noise)
-    const MULTIPLE_FACES_MIN_SECOND_RATIO = 0.12;
+    const MULTIPLE_FACES_MIN_SECOND_RATIO = 0.35;
+    // Minimum confidence + area ratio for a BlazeFace detection to be treated as a real face
+    const MIN_FACE_CONFIDENCE_BLAZE = 0.85;
+    const MIN_FACE_AREA_RATIO_BLAZE = 0.04; // 4% of frame area
 
     // State
     let model = null;
@@ -473,8 +476,34 @@
         const videoEl = config.videoElement || videoElement;
         if (!isRunning || !videoEl) return;
 
-        const faceCount = predictions ? predictions.length : 0;
-        const boundingBoxes = predictions || [];
+        const boxes = Array.isArray(predictions) ? predictions : [];
+        const frameArea = (videoEl.videoWidth || 640) * (videoEl.videoHeight || 480);
+
+        // Filter out low-confidence / tiny detections (reduces reflections and noise)
+        const boundingBoxes = boxes.filter(function (box) {
+            if (!box || !box.topLeft || !box.bottomRight) return false;
+            // Confidence: BlazeFace exposes probability[0] (or probability/score)
+            let score = 0;
+            if (Array.isArray(box.probability) && box.probability.length) {
+                score = box.probability[0] || 0;
+            } else if (typeof box.probability === 'number') {
+                score = box.probability;
+            } else if (typeof box.score === 'number') {
+                score = box.score;
+            }
+            if (score < MIN_FACE_CONFIDENCE_BLAZE) {
+                return false;
+            }
+            // Area ratio relative to full frame
+            const w = Math.abs((box.bottomRight[0] || 0) - (box.topLeft[0] || 0));
+            const h = Math.abs((box.bottomRight[1] || 0) - (box.topLeft[1] || 0));
+            const area = w * h;
+            if (!frameArea || area <= 0) return false;
+            const ratio = area / frameArea;
+            return ratio >= MIN_FACE_AREA_RATIO_BLAZE;
+        });
+
+        const faceCount = boundingBoxes.length;
 
         // Phase 1: Strict face presence detection (pre-quiz)
         if (!isQuizStarted) {

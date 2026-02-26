@@ -946,7 +946,7 @@
                     document.body.appendChild(monitorVideo);
                 }
             }
-            monitorVideo.classList.add('w-full', 'h-full', 'object-cover');
+            monitorVideo.classList.add('w-full', 'h-full', 'object-contain');
             monitorVideo.style.display = 'block';
             monitorVideo.setAttribute('playsinline', '');
             monitorVideo.srcObject = stream;
