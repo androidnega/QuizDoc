@@ -87,6 +87,16 @@ class SettingsController extends Controller
             'landing_hero_enabled' => Setting::getValue(Setting::KEY_LANDING_HERO_ENABLED, '1') === '1',
             'landing_show_quiz_token' => Setting::getValue(Setting::KEY_LANDING_SHOW_QUIZ_TOKEN, '0') === '1',
             'login_hero_image' => Setting::getValue(Setting::KEY_LOGIN_HERO_IMAGE),
+
+            // Supabase Storage (student documents)
+            'supabase_url' => Setting::getValue(Setting::KEY_SUPABASE_URL, ''),
+            'supabase_bucket' => Setting::getValue(Setting::KEY_SUPABASE_BUCKET, ''),
+            'supabase_ttl' => Setting::getValue(Setting::KEY_SUPABASE_SIGNED_URL_TTL, '60'),
+            'supabase_service_key_set' => (bool) Setting::getValue(Setting::KEY_SUPABASE_SERVICE_KEY),
+            'supabase_service_key_masked' => ($k = Setting::getValue(Setting::KEY_SUPABASE_SERVICE_KEY))
+                ? (strlen($k) > 8 ? substr($k, 0, 4) . '…' . substr($k, -4) : '••••')
+                : null,
+
             'can_manage_proctoring' => $canManageProctoring,
             'can_manage_backup' => $canManageBackup,
             'show_backup_tab' => $canManageBackup, // only primary sees the Backup tab
@@ -177,6 +187,13 @@ class SettingsController extends Controller
             'landing_hero_enabled' => 'nullable|boolean',
             'landing_show_quiz_token' => 'nullable|boolean',
             'notify_digest_recipient' => 'nullable|email|max:255',
+
+            // Supabase Storage
+            'supabase_url' => 'nullable|url|max:255',
+            'supabase_service_key' => 'nullable|string|max:1024',
+            'clear_supabase_service_key' => 'nullable|boolean',
+            'supabase_bucket' => 'nullable|string|max:255',
+            'supabase_signed_url_ttl' => 'nullable|integer|min:1|max:1440',
         ]);
 
         $currentUser = auth()->user() ?? User::find(session('admin_user_id'));
@@ -285,6 +302,23 @@ class SettingsController extends Controller
             Setting::setValue(Setting::KEY_AI_QUIZ_COOLDOWN_HOURS, (string) $hours);
             Cache::forget('setting:' . Setting::KEY_AI_QUIZ_COOLDOWN_HOURS);
         }
+
+        // Supabase Storage: URL, bucket, service key (encrypted), signed URL TTL
+        if ($request->filled('supabase_url')) {
+            Setting::setValue(Setting::KEY_SUPABASE_URL, trim($request->supabase_url));
+        }
+        if ($request->boolean('clear_supabase_service_key')) {
+            Setting::setValue(Setting::KEY_SUPABASE_SERVICE_KEY, null);
+        } elseif ($request->filled('supabase_service_key')) {
+            Setting::setValue(Setting::KEY_SUPABASE_SERVICE_KEY, trim($request->supabase_service_key));
+        }
+        if ($request->filled('supabase_bucket')) {
+            Setting::setValue(Setting::KEY_SUPABASE_BUCKET, trim($request->supabase_bucket));
+        }
+        if ($request->has('supabase_signed_url_ttl')) {
+            $ttl = max(1, min(1440, (int) $request->supabase_signed_url_ttl));
+            Setting::setValue(Setting::KEY_SUPABASE_SIGNED_URL_TTL, (string) $ttl);
+        }
         if (session('admin_role') === 'super_admin') {
             Setting::setValue(Setting::KEY_LANDING_HERO_ENABLED, $request->boolean('landing_hero_enabled') ? '1' : '0');
             Cache::forget('setting:' . Setting::KEY_LANDING_HERO_ENABLED);
@@ -342,8 +376,16 @@ class SettingsController extends Controller
             Cache::forget('setting:' . Setting::KEY_CLOUDINARY_FOLDER);
         }
 
+        // Supabase Storage settings cache
+        if ($request->hasAny(['supabase_url', 'supabase_service_key', 'clear_supabase_service_key', 'supabase_bucket', 'supabase_signed_url_ttl'])) {
+            Cache::forget('setting:' . Setting::KEY_SUPABASE_URL);
+            Cache::forget('setting:' . Setting::KEY_SUPABASE_SERVICE_KEY);
+            Cache::forget('setting:' . Setting::KEY_SUPABASE_BUCKET);
+            Cache::forget('setting:' . Setting::KEY_SUPABASE_SIGNED_URL_TTL);
+        }
+
         $tab = $request->input('settings_tab', 'general');
-        $validTabs = ['general', 'email', 'ai', 'cloudinary', 'otp', 'proctoring', 'backup'];
+        $validTabs = ['general', 'email', 'ai', 'cloudinary', 'supabase', 'otp', 'proctoring', 'backup'];
         if (!in_array($tab, $validTabs, true)) {
             $tab = 'general';
         }

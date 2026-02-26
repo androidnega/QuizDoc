@@ -7,7 +7,6 @@ use App\Models\DocuMentor\AcademicYear;
 use App\Models\DocuMentor\Category;
 use App\Models\DocuMentor\Project;
 use App\Models\DocuMentor\ProjectGroup;
-use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -121,13 +120,7 @@ class StudentProjectController extends Controller
             $storedPath = $uploadedUrl;
         } elseif ($request->hasFile('proposal_file')) {
             $file = $request->file('proposal_file');
-
-            // Prefer Cloudinary for storage; fall back to local if not configured or upload fails
-            $cloudinary = CloudinaryService::uploadRawFromFile($file, 'docu-mentor/proposals');
-            $storedPath = $cloudinary['url'] ?? null;
-            if (!$storedPath) {
-                $storedPath = $file->store('docu-mentor/proposals', 'public');
-            }
+            $storedPath = $file->store('docu-mentor/proposals', 'public');
         }
 
         if ($storedPath) {

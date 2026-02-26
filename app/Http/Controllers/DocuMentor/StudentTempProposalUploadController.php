@@ -3,14 +3,12 @@
 namespace App\Http\Controllers\DocuMentor;
 
 use App\Http\Controllers\Controller;
-use App\Services\CloudinaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Temporary proposal upload for project creation wizard.
- * Uploads PDF to Cloudinary and returns the URL without creating a Project/Proposal yet.
+ * Stores PDF locally (public disk). Does not use Cloudinary for proposals.
  */
 class StudentTempProposalUploadController extends Controller
 {
@@ -32,19 +30,10 @@ class StudentTempProposalUploadController extends Controller
         ]);
 
         $file = $request->file('proposal_file');
-        $storedPath = null;
-
-        // Prefer Cloudinary raw upload (PDF) when configured; fall back to local storage.
-        $cloudinary = CloudinaryService::uploadRawFromFile($file, 'docu-mentor/proposals');
-        if (is_array($cloudinary) && !empty($cloudinary['url'])) {
-            $storedPath = $cloudinary['url'];
-        } else {
-            $storedPath = $file->store('docu-mentor/proposals', 'public');
-        }
+        $storedPath = $file->store('docu-mentor/proposals', 'public');
 
         return response()->json([
             'ok' => true,
-            // We return the stored path or Cloudinary URL; project creation stores this in proposals.file.
             'url' => $storedPath,
         ]);
     }

@@ -5,10 +5,8 @@ namespace App\Http\Controllers\DocuMentor;
 use App\Http\Controllers\Controller;
 use App\Models\DocuMentor\Project;
 use App\Models\DocuMentor\ProjectProposal;
-use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Section 3: Proposal Rules.
@@ -44,15 +42,7 @@ class StudentProposalController extends Controller
         ]);
 
         $file = $request->file('file');
-        $storedPath = null;
-
-        // Prefer Cloudinary raw upload for proposals; fall back to local storage.
-        $cloudinary = CloudinaryService::uploadRawFromFile($file, 'docu-mentor/proposals');
-        if (is_array($cloudinary) && !empty($cloudinary['url'])) {
-            $storedPath = $cloudinary['url'];
-        } else {
-            $storedPath = $file->store('docu-mentor/proposals', 'public');
-        }
+        $storedPath = $file->store('docu-mentor/proposals', 'public');
 
         $version = $project->proposals()->max('version_number') + 1;
 

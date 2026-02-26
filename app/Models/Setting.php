@@ -116,6 +116,13 @@ class Setting extends Model
     public const KEY_CLOUDINARY_API_SECRET = 'cloudinary_api_secret';
     public const KEY_CLOUDINARY_FOLDER = 'cloudinary_folder';
 
+    /** Supabase Storage (student documents) */
+    public const KEY_SUPABASE_URL = 'supabase_url';
+    public const KEY_SUPABASE_SERVICE_KEY = 'supabase_service_key';
+    public const KEY_SUPABASE_BUCKET = 'supabase_bucket';
+    /** Signed URL TTL (minutes) */
+    public const KEY_SUPABASE_SIGNED_URL_TTL = 'supabase_signed_url_ttl';
+
     /** Mail */
     public const KEY_MAIL_MAILER = 'mail_mailer';
     public const KEY_MAIL_HOST = 'mail_host';
@@ -181,6 +188,7 @@ class Setting extends Model
         self::KEY_OTP_ARKESEL_API_KEY,
         self::KEY_NOTIFY_DIGEST_RECIPIENT,
         self::KEY_NOTIFY_DIGEST_RECIPIENT_STORAGE,
+        self::KEY_SUPABASE_SERVICE_KEY,
     ];
 
 }

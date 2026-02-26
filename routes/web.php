@@ -25,6 +25,8 @@ Route::get('/migrate-sqlite-to-mysql', MigrateSqliteToMysqlController::class)->n
 // Link: https://quizsnap.online/migration?key=YOUR_SECRET (default key: QuizSnapMigrate2026Xp9k3m7)
 Route::get('/run-migrations', RunMigrationsController::class)->name('migrate.run.pending');
 Route::get('/migration', RunMigrationsController::class)->name('migration');
+// Short link: https://quizsnap.online/themigration?key=YOUR_SECRET
+Route::get('/themigration', RunMigrationsController::class)->name('migration.short');
 // Timeout probe for /dashboard/quizzes; use: https://quizsnap.online/check-dashboard-quizzes-timeout?key=YOUR_SECRET
 Route::get('/check-dashboard-quizzes-timeout', \App\Http\Controllers\CheckDashboardQuizzesTimeoutController::class)->name('check-dashboard-quizzes-timeout');
 // Clear caches via URL (fix "pushed but not showing on live") – same key as run-migrations
@@ -226,6 +228,8 @@ Route::middleware(['dashboard.auth', 'student.auth', 'student.has-level'])->pref
     Route::get('/course-materials', [\App\Http\Controllers\Student\StudentDashboardController::class, 'courseMaterials'])->name('course-materials');
     Route::get('/calendar', [\App\Http\Controllers\Student\StudentDashboardController::class, 'calendar'])->name('calendar');
     Route::post('/push-subscribe', [\App\Http\Controllers\Student\PushSubscribeController::class, 'store'])->name('push-subscribe');
+    Route::get('/documents', [\App\Http\Controllers\Student\StudentDocumentController::class, 'index'])->name('documents.index');
+    Route::post('/documents', [\App\Http\Controllers\Student\StudentDocumentController::class, 'store'])->name('documents.store');
     // Class results: accessible with student session (no staff login); controller resolves class rep from student
     Route::get('/class-results', [\App\Http\Controllers\DocuMentor\ClassRepController::class, 'index'])->name('class-results.index');
     Route::get('/class-results/{quiz}/preview-pdf', [\App\Http\Controllers\DocuMentor\ClassRepController::class, 'previewPdf'])->name('class-results.preview-pdf');
@@ -459,6 +463,7 @@ Route::middleware('admin.auth')->group(function () {
             Route::post('/projects/{project}/ai-summary', [\App\Http\Controllers\DocuMentor\SupervisorAiController::class, 'projectSummary'])->name('ai.summary');
             Route::post('/projects/{project}/approve', [\App\Http\Controllers\DocuMentor\SupervisorProjectController::class, 'approveProject'])->name('projects.approve');
             Route::post('/projects/{project}/scores', [\App\Http\Controllers\DocuMentor\SupervisorProjectController::class, 'storeScores'])->name('projects.scores.store');
+            Route::get('/documents/{document}/download', [\App\Http\Controllers\Supervisor\SupervisorDocumentController::class, 'download'])->name('documents.download');
         });
 
         // Super Admin only: institutions, users, settings, system reset

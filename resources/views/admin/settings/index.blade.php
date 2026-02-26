@@ -40,6 +40,12 @@
                             <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                             Cloudinary
                         </button>
+                        <button type="button" class="settings-tab-btn whitespace-nowrap px-4 py-3 sm:px-6 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm touch-manipulation min-h-[44px]" data-tab="supabase" id="tab-btn-supabase">
+                            <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v12H4zM4 16l4 4h8l4-4"/>
+                            </svg>
+                            Supabase
+                        </button>
                         <button type="button" class="settings-tab-btn whitespace-nowrap px-4 py-3 sm:px-6 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium text-sm touch-manipulation min-h-[44px]" data-tab="otp" id="tab-btn-otp">
                             <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                             OTP (SMS)
@@ -388,6 +394,50 @@
                 </div>
                 </div>
 
+                <!-- Tab: Supabase -->
+                <div class="settings-tab-content p-6 hidden" data-tab-content="supabase" id="tab-content-supabase">
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Supabase Storage</p>
+                <p class="text-sm text-gray-500 mb-4">Configure Supabase Storage for student documents. Settings are stored in the database (service key encrypted) and used only on the backend.</p>
+                <div class="space-y-5">
+                    <div>
+                        <label for="supabase_url" class="block text-xs font-medium text-gray-500 mb-0.5">Project URL</label>
+                        <input type="url" name="supabase_url" id="supabase_url" value="{{ old('supabase_url', $supabase_url ?? '') }}" placeholder="https://your-project.supabase.co" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                        <p class="text-xs text-gray-500 mt-1">Supabase project base URL (e.g. https://xyzcompany.supabase.co).</p>
+                    </div>
+                    <div>
+                        <label for="supabase_bucket" class="block text-xs font-medium text-gray-500 mb-0.5">Bucket Name</label>
+                        <input type="text" name="supabase_bucket" id="supabase_bucket" value="{{ old('supabase_bucket', $supabase_bucket ?? '') }}" placeholder="student-documents" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                        <p class="text-xs text-gray-500 mt-1">Name of the storage bucket where student documents will be stored.</p>
+                    </div>
+                    <div>
+                        <label for="supabase_service_key" class="block text-xs font-medium text-gray-500 mb-0.5">Service Key (service_role)</label>
+                        @if($supabase_service_key_set ?? false)
+                            <p class="text-sm text-gray-600 mb-1.5">
+                                Current key:
+                                <code class="px-2 py-0.5 bg-gray-100 rounded text-gray-700">
+                                    {{ $supabase_service_key_masked ?? '••••' }}
+                                </code>
+                            </p>
+                            <input type="password" name="supabase_service_key" id="supabase_service_key" autocomplete="off" placeholder="Enter new key to replace, or leave blank to keep" class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none">
+                            <label class="flex items-center gap-2 cursor-pointer mt-1.5">
+                                <input type="checkbox" name="clear_supabase_service_key" value="1" class="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500">
+                                <span class="text-sm text-gray-600">Remove Supabase service key</span>
+                            </label>
+                        @else
+                            <input type="password" name="supabase_service_key" id="supabase_service_key" autocomplete="off" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none">
+                            <p class="text-xs text-gray-500 mt-1">
+                                Supabase <strong>service_role</strong> key. Stored encrypted and used only by the backend.
+                            </p>
+                        @endif
+                    </div>
+                    <div>
+                        <label for="supabase_signed_url_ttl" class="block text-xs font-medium text-gray-500 mb-0.5">Signed URL expiry (minutes)</label>
+                        <input type="number" name="supabase_signed_url_ttl" id="supabase_signed_url_ttl" value="{{ old('supabase_signed_url_ttl', $supabase_ttl ?? 60) }}" min="1" max="1440" class="block w-28 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none">
+                        <p class="text-xs text-gray-500 mt-1">How long download links remain valid. Default: 60 minutes.</p>
+                    </div>
+                </div>
+                </div>
+
                 <!-- Tab: OTP (Arkesel) -->
                 <div class="settings-tab-content p-6 hidden" data-tab-content="otp" id="tab-content-otp">
                 <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">OTP Providers (SMS)</p>
@@ -629,7 +679,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const tabBtns = document.querySelectorAll('.settings-tab-btn');
     const tabContents = document.querySelectorAll('.settings-tab-content');
-    const validTabs = ['general', 'email', 'ai', 'cloudinary', 'otp', 'proctoring', 'backup'];
+    const validTabs = ['general', 'email', 'ai', 'cloudinary', 'supabase', 'otp', 'proctoring', 'backup'];
 
     function switchToTab(targetTab) {
         if (!validTabs.includes(targetTab)) targetTab = 'general';
