@@ -7,6 +7,7 @@ use App\Models\DocuMentor\AcademicYear;
 use App\Models\DocuMentor\Category;
 use App\Models\DocuMentor\Project;
 use App\Models\DocuMentor\ProjectGroup;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -117,10 +118,21 @@ class StudentProjectController extends Controller
         $uploadedUrl = trim((string) $request->input('proposal_uploaded_url', ''));
 
         if ($uploadedUrl !== '') {
+            // May be a Supabase path (supabase:...) or local path from temp upload.
             $storedPath = $uploadedUrl;
         } elseif ($request->hasFile('proposal_file')) {
             $file = $request->file('proposal_file');
-            $storedPath = $file->store('docu-mentor/proposals', 'public');
+
+            // Prefer Supabase Storage; fall back to local public disk.
+            if (SupabaseStorageService::isConfigured()) {
+                $result = SupabaseStorageService::uploadDocument($file, 'docu-mentor/proposals');
+                if ($result['success'] ?? false) {
+                    $storedPath = 'supabase:' . $result['path'];
+                }
+            }
+            if (!$storedPath) {
+                $storedPath = $file->store('docu-mentor/proposals', 'public');
+            }
         }
 
         if ($storedPath) {

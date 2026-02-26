@@ -488,6 +488,7 @@ Route::middleware('admin.auth')->group(function () {
             if (! app()->environment('production')) {
                 Route::get('/settings/ai-test', [SettingsController::class, 'aiTest'])->name('settings.ai-test');
                 Route::get('/settings/cloudinary-test', [SettingsController::class, 'cloudinaryTest'])->name('settings.cloudinary-test');
+                Route::get('/settings/supabase-test', [SettingsController::class, 'supabaseTest'])->name('settings.supabase-test');
             }
             Route::post('/settings/otp-test', [SettingsController::class, 'otpTest'])->name('settings.otp-test');
             Route::get('/settings/otp-balance', [SettingsController::class, 'otpBalance'])->name('settings.otp-balance');

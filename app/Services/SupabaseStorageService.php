@@ -148,6 +148,86 @@ class SupabaseStorageService
         }
     }
 
+    /**
+     * Test Supabase connectivity and bucket access using current config/DB settings.
+     *
+     * @return array{success: bool, message: string, detail?: string}
+     */
+    public static function testConnection(): array
+    {
+        if (!static::isConfigured()) {
+            return [
+                'success' => false,
+                'message' => 'Supabase is not configured. Set URL, service key, and bucket in Admin Settings.',
+            ];
+        }
+
+        $baseUrl = rtrim(static::getUrl(), '/');
+        $serviceKey = static::getServiceKey();
+        $bucket = static::getBucket();
+
+        $endpoint = $baseUrl . '/storage/v1/bucket/' . rawurlencode($bucket);
+
+        try {
+            $response = Http::withHeaders([
+                'apikey' => $serviceKey,
+                'Authorization' => 'Bearer ' . $serviceKey,
+            ])->get($endpoint);
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'message' => 'Supabase connection OK. Bucket is reachable.',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Supabase request failed.',
+                'detail' => 'HTTP ' . $response->status() . ': ' . $response->body(),
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'success' => false,
+                'message' => 'Supabase request error.',
+                'detail' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Delete a document from Supabase Storage by object path.
+     */
+    public static function deleteDocument(string $path): bool
+    {
+        if (!static::isConfigured() || $path === '') {
+            return false;
+        }
+
+        $baseUrl = rtrim(static::getUrl(), '/');
+        $serviceKey = static::getServiceKey();
+        $bucket = static::getBucket();
+        $path = ltrim($path, '/');
+
+        $endpoint = $baseUrl . '/storage/v1/object/' . rawurlencode($bucket) . '/' . $path;
+
+        try {
+            $response = Http::withHeaders([
+                'apikey' => $serviceKey,
+                'Authorization' => 'Bearer ' . $serviceKey,
+            ])->delete($endpoint);
+
+            return $response->successful() || $response->status() === 404;
+        } catch (\Throwable $e) {
+            \Log::warning('Supabase delete exception', [
+                'message' => $e->getMessage(),
+                'path' => $path,
+            ]);
+            return false;
+        }
+    }
+
+
     private static function getUrl(): string
     {
         $db = class_exists(Setting::class)

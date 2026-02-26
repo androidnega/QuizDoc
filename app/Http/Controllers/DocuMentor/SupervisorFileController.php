@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DocuMentor\Project;
 use App\Models\DocuMentor\ProjectFiles;
 use App\Models\DocuMentor\ProjectProposal;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Http;
@@ -34,10 +35,27 @@ class SupervisorFileController extends Controller
         $fields = ['brief_pdf', 'diary_pdf', 'assessment_file', 'assessment_form_file'];
         foreach ($fields as $field) {
             if ($request->hasFile($field)) {
-                if ($pf->$field) {
+                $newPath = null;
+
+                if ($pf->$field && str_starts_with($pf->$field, 'supabase:')) {
+                    $oldObject = substr($pf->$field, strlen('supabase:'));
+                    SupabaseStorageService::deleteDocument($oldObject);
+                } elseif ($pf->$field) {
                     Storage::disk('public')->delete($pf->$field);
                 }
-                $pf->$field = $request->file($field)->store('docu-mentor/project-files', 'public');
+
+                if (SupabaseStorageService::isConfigured()) {
+                    $result = SupabaseStorageService::uploadDocument($request->file($field), 'docu-mentor/project-files');
+                    if ($result['success'] ?? false) {
+                        $newPath = 'supabase:' . $result['path'];
+                    }
+                }
+
+                if (!$newPath) {
+                    $newPath = $request->file($field)->store('docu-mentor/project-files', 'public');
+                }
+
+                $pf->$field = $newPath;
             }
         }
         $pf->uploaded_at = now();
@@ -55,11 +73,26 @@ class SupervisorFileController extends Controller
         ]);
 
         if ($project->final_submission) {
-            Storage::disk('public')->delete($project->final_submission);
+            if (str_starts_with($project->final_submission, 'supabase:')) {
+                $oldObject = substr($project->final_submission, strlen('supabase:'));
+                SupabaseStorageService::deleteDocument($oldObject);
+            } else {
+                Storage::disk('public')->delete($project->final_submission);
+            }
         }
 
-        $path = $request->file('final_submission')->store('docu-mentor/final-submissions', 'public');
-        $project->update(['final_submission' => $path]);
+        $newPath = null;
+        if (SupabaseStorageService::isConfigured()) {
+            $result = SupabaseStorageService::uploadDocument($request->file('final_submission'), 'docu-mentor/final-submissions');
+            if ($result['success'] ?? false) {
+                $newPath = 'supabase:' . $result['path'];
+            }
+        }
+        if (!$newPath) {
+            $newPath = $request->file('final_submission')->store('docu-mentor/final-submissions', 'public');
+        }
+
+        $project->update(['final_submission' => $newPath]);
 
         return back()->with('success', 'Final submission uploaded.');
     }
@@ -76,6 +109,21 @@ class SupervisorFileController extends Controller
         $path = $proposal->file ? trim((string) $proposal->file) : null;
         if ($path === '' || $path === null) {
             return back()->with('error', 'Proposal file is missing. Please re-upload this proposal.');
+        }
+
+        if (str_starts_with($path, 'supabase:')) {
+            $objectPath = substr($path, strlen('supabase:'));
+            $result = SupabaseStorageService::createSignedUrl($objectPath);
+            if (!($result['success'] ?? false) || empty($result['url'])) {
+                return back()->with('error', $result['message'] ?? 'Proposal file could not be fetched from storage. Please try again or contact administrator.');
+            }
+            $url = $result['url'];
+
+            if ($request->boolean('attachment') || $request->boolean('download')) {
+                $url .= (str_contains($url, '?') ? '&' : '?') . 'download=1';
+            }
+
+            return redirect()->away($url);
         }
 
         $isRemoteUrl = preg_match('#^https?://#i', $path);
@@ -122,13 +170,30 @@ class SupervisorFileController extends Controller
     {
         $this->authorize('view', $project);
 
-        if (!$project->final_submission || !Storage::disk('public')->exists($project->final_submission)) {
+        if (!$project->final_submission) {
+            abort(404, 'File not found.');
+        }
+
+        $path = trim((string) $project->final_submission);
+
+        if (str_starts_with($path, 'supabase:')) {
+            $objectPath = substr($path, strlen('supabase:'));
+            $result = SupabaseStorageService::createSignedUrl($objectPath);
+            if (!($result['success'] ?? false) || empty($result['url'])) {
+                abort(404, $result['message'] ?? 'File not found.');
+            }
+            $url = $result['url'];
+            $url .= (str_contains($url, '?') ? '&' : '?') . 'download=1';
+            return redirect()->away($url);
+        }
+
+        if (!Storage::disk('public')->exists($path)) {
             abort(404, 'File not found.');
         }
 
         return Storage::disk('public')->download(
-            $project->final_submission,
-            'final-submission-' . \Str::slug($project->title) . '.' . pathinfo($project->final_submission, PATHINFO_EXTENSION)
+            $path,
+            'final-submission-' . \Str::slug($project->title) . '.' . pathinfo($path, PATHINFO_EXTENSION)
         );
     }
 
@@ -148,8 +213,29 @@ class SupervisorFileController extends Controller
         $added = 0;
 
         foreach ($project->proposals as $p) {
-            if ($p->file && file_exists($base . $p->file)) {
-                $zip->addFile($base . $p->file, 'proposals/proposal-v' . $p->version_number . '-' . basename($p->file));
+            if (!$p->file) {
+                continue;
+            }
+            $filePath = $p->file;
+            if (str_starts_with($filePath, 'supabase:')) {
+                $objectPath = substr($filePath, strlen('supabase:'));
+                $result = SupabaseStorageService::createSignedUrl($objectPath);
+                if ($result['success'] ?? false) {
+                    try {
+                        $resp = Http::timeout(60)->get($result['url']);
+                        if ($resp->successful()) {
+                            $zip->addFromString(
+                                'proposals/proposal-v' . $p->version_number . '-' . basename($objectPath),
+                                $resp->body()
+                            );
+                            $added++;
+                        }
+                    } catch (\Throwable $e) {
+                        // Skip on error; continue adding others.
+                    }
+                }
+            } elseif (file_exists($base . $filePath)) {
+                $zip->addFile($base . $filePath, 'proposals/proposal-v' . $p->version_number . '-' . basename($filePath));
                 $added++;
             }
         }
@@ -157,22 +243,78 @@ class SupervisorFileController extends Controller
         $pf = $project->projectFiles()->first();
         if ($pf) {
             foreach (['brief_pdf', 'diary_pdf', 'assessment_file', 'assessment_form_file'] as $f) {
-                if ($pf->$f && file_exists($base . $pf->$f)) {
-                    $zip->addFile($base . $pf->$f, 'project-files/' . basename($pf->$f));
+                $filePath = $pf->$f;
+                if (!$filePath) {
+                    continue;
+                }
+                if (str_starts_with($filePath, 'supabase:')) {
+                    $objectPath = substr($filePath, strlen('supabase:'));
+                    $result = SupabaseStorageService::createSignedUrl($objectPath);
+                    if ($result['success'] ?? false) {
+                        try {
+                            $resp = Http::timeout(60)->get($result['url']);
+                            if ($resp->successful()) {
+                                $zip->addFromString('project-files/' . basename($objectPath), $resp->body());
+                                $added++;
+                            }
+                        } catch (\Throwable $e) {
+                            // ignore
+                        }
+                    }
+                } elseif (file_exists($base . $filePath)) {
+                    $zip->addFile($base . $filePath, 'project-files/' . basename($filePath));
                     $added++;
                 }
             }
         }
 
-        if ($project->final_submission && file_exists($base . $project->final_submission)) {
-            $zip->addFile($base . $project->final_submission, 'final-submission.' . pathinfo($project->final_submission, PATHINFO_EXTENSION));
-            $added++;
+        if ($project->final_submission) {
+            $filePath = $project->final_submission;
+            if (str_starts_with($filePath, 'supabase:')) {
+                $objectPath = substr($filePath, strlen('supabase:'));
+                $result = SupabaseStorageService::createSignedUrl($objectPath);
+                if ($result['success'] ?? false) {
+                    try {
+                        $resp = Http::timeout(60)->get($result['url']);
+                        if ($resp->successful()) {
+                            $zip->addFromString('final-submission.' . pathinfo($objectPath, PATHINFO_EXTENSION), $resp->body());
+                            $added++;
+                        }
+                    } catch (\Throwable $e) {
+                        // ignore
+                    }
+                }
+            } elseif (file_exists($base . $filePath)) {
+                $zip->addFile($base . $filePath, 'final-submission.' . pathinfo($filePath, PATHINFO_EXTENSION));
+                $added++;
+            }
         }
 
         foreach ($project->chapters as $ch) {
             foreach ($ch->submissions as $s) {
-                if ($s->file && file_exists($base . $s->file)) {
-                    $zip->addFile($base . $s->file, 'chapters/ch' . $ch->order . '-' . basename($s->file));
+                if (!$s->file) {
+                    continue;
+                }
+                $filePath = $s->file;
+                if (str_starts_with($filePath, 'supabase:')) {
+                    $objectPath = substr($filePath, strlen('supabase:'));
+                    $result = SupabaseStorageService::createSignedUrl($objectPath);
+                    if ($result['success'] ?? false) {
+                        try {
+                            $resp = Http::timeout(60)->get($result['url']);
+                            if ($resp->successful()) {
+                                $zip->addFromString(
+                                    'chapters/ch' . $ch->order . '-' . basename($objectPath),
+                                    $resp->body()
+                                );
+                                $added++;
+                            }
+                        } catch (\Throwable $e) {
+                            // ignore
+                        }
+                    }
+                } elseif (file_exists($base . $filePath)) {
+                    $zip->addFile($base . $filePath, 'chapters/ch' . $ch->order . '-' . basename($filePath));
                     $added++;
                 }
             }

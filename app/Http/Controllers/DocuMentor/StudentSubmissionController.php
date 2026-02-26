@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DocuMentor\Chapter;
 use App\Models\DocuMentor\Project;
 use App\Models\DocuMentor\Submission;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 
@@ -42,7 +43,16 @@ class StudentSubmissionController extends Controller
             ]);
         }
 
-        $path = $request->file('file')->store('docu-mentor/submissions', 'public');
+        $path = null;
+        if (SupabaseStorageService::isConfigured()) {
+            $result = SupabaseStorageService::uploadDocument($request->file('file'), 'docu-mentor/submissions');
+            if ($result['success'] ?? false) {
+                $path = 'supabase:' . $result['path'];
+            }
+        }
+        if (!$path) {
+            $path = $request->file('file')->store('docu-mentor/submissions', 'public');
+        }
 
         Submission::create([
             'file' => $path,

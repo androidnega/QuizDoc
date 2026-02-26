@@ -435,6 +435,16 @@
                         <input type="number" name="supabase_signed_url_ttl" id="supabase_signed_url_ttl" value="{{ old('supabase_signed_url_ttl', $supabase_ttl ?? 60) }}" min="1" max="1440" class="block w-28 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none">
                         <p class="text-xs text-gray-500 mt-1">How long download links remain valid. Default: 60 minutes.</p>
                     </div>
+                    @unless(app()->environment('production'))
+                    <div class="pt-4 border-t border-gray-100">
+                        <p class="text-xs font-medium text-gray-500 mb-0.5">Test connection</p>
+                        <p class="text-xs text-gray-500 mb-2">Save settings first, then test. Verifies Supabase URL, service key, and bucket.</p>
+                        <button type="button" id="supabase-test-btn" class="inline-flex items-center justify-center rounded-md border border-transparent bg-yellow-500 px-3 py-2 text-sm font-medium text-yellow-900 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-1">
+                            Test Supabase
+                        </button>
+                        <div id="supabase-test-result" class="mt-3 hidden rounded-lg border p-3 text-sm"></div>
+                    </div>
+                    @endunless
                 </div>
                 </div>
 
@@ -760,6 +770,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     resultEl.classList.add('bg-danger-50', 'border', 'border-danger-200', 'text-danger-800');
                     resultEl.textContent = (d.message || 'Cloudinary test failed.') + (d.detail ? ' ' + d.detail : '');
+                }
+            })
+            .catch(function(err) {
+                resultEl.classList.remove('hidden');
+                resultEl.classList.add('bg-danger-50', 'border', 'border-danger-200', 'text-danger-800');
+                resultEl.textContent = 'Request failed: ' + (err.message || 'Network error');
+            })
+            .finally(function() { btn.disabled = false; });
+        });
+    }
+    // Supabase Test
+    var supabaseBtn = document.getElementById('supabase-test-btn');
+    if (supabaseBtn) {
+        supabaseBtn.addEventListener('click', function() {
+            var btn = this;
+            var resultEl = document.getElementById('supabase-test-result');
+            resultEl.classList.remove('hidden', 'bg-success-50', 'border-success-200', 'text-success-800', 'bg-danger-50', 'border-danger-200', 'text-danger-800');
+            resultEl.textContent = 'Testing…';
+            btn.disabled = true;
+            fetch('{{ route('dashboard.settings.supabase-test') }}', {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+            .then(function(res) {
+                var d = res.data;
+                resultEl.classList.remove('hidden');
+                if (d.success) {
+                    resultEl.classList.add('bg-success-50', 'border', 'border-success-200', 'text-success-800');
+                    resultEl.textContent = d.message || 'Supabase connection OK.';
+                } else {
+                    resultEl.classList.add('bg-danger-50', 'border', 'border-danger-200', 'text-danger-800');
+                    resultEl.textContent = (d.message || 'Supabase test failed.') + (d.detail ? ' ' + d.detail : '');
                 }
             })
             .catch(function(err) {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\DocuMentor;
 
 use App\Http\Controllers\Controller;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -30,7 +31,18 @@ class StudentTempProposalUploadController extends Controller
         ]);
 
         $file = $request->file('proposal_file');
-        $storedPath = $file->store('docu-mentor/proposals', 'public');
+        $storedPath = null;
+
+        // Prefer Supabase Storage for Docu Mentor proposals; fall back to local public disk.
+        if (SupabaseStorageService::isConfigured()) {
+            $result = SupabaseStorageService::uploadDocument($file, 'docu-mentor/proposals');
+            if ($result['success'] ?? false) {
+                $storedPath = 'supabase:' . $result['path'];
+            }
+        }
+        if (!$storedPath) {
+            $storedPath = $file->store('docu-mentor/proposals', 'public');
+        }
 
         return response()->json([
             'ok' => true,

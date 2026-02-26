@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\AiQuestionService;
 use App\Services\ArkeselService;
 use App\Services\CloudinaryService;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -430,6 +431,15 @@ class SettingsController extends Controller
     public function cloudinaryTest(): JsonResponse
     {
         $result = CloudinaryService::testConnection();
+        return response()->json($result, $result['success'] ? 200 : 422);
+    }
+
+    /**
+     * Test Supabase Storage connection. Returns JSON for Settings page.
+     */
+    public function supabaseTest(): JsonResponse
+    {
+        $result = SupabaseStorageService::testConnection();
         return response()->json($result, $result['success'] ? 200 : 422);
     }
 
