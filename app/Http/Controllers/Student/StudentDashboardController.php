@@ -174,6 +174,9 @@ class StudentDashboardController extends Controller
             }
         }
 
+        $docuMentorOnlyDashboard = $hasProjectAccess;
+        $hasQuizAccessForView = !$docuMentorOnlyDashboard;
+
         return view('student.dashboard.index', [
             'student' => $student,
             'user' => null,
@@ -186,8 +189,8 @@ class StudentDashboardController extends Controller
             'lastQuiz' => $lastQuiz,
             'greeting' => $greeting,
             'hasProjectAccess' => $hasProjectAccess,
-            'hasQuizAccess' => true,
-            'docuMentorOnlyDashboard' => false,
+            'hasQuizAccess' => $hasQuizAccessForView,
+            'docuMentorOnlyDashboard' => $docuMentorOnlyDashboard,
             'displayName' => $student->first_name,
             'isClassRep' => $isClassRep,
             'isGroupLeader' => $isGroupLeader,

@@ -126,7 +126,7 @@ class AppServiceProvider extends ServiceProvider
                 if ($dmUser) {
                     $isClassRep = $dmUser->isClassRep();
                     $hasProjectAccess = $dmUser->isDocuMentorStudent();
-                    $hasQuizAccess = $dmUser->isDocuMentorStudent() ? (bool) session('student_id') : true;
+                    $hasQuizAccess = $dmUser->isDocuMentorStudent() ? false : true;
                     $isGroupLeader = $dmUser->isGroupLeader();
                     $leaderWithoutGroup = $isGroupLeader && $dmUser->ledDocuMentorGroups()->doesntExist();
                     if ($isGroupLeader) {
@@ -136,11 +136,27 @@ class AppServiceProvider extends ServiceProvider
             } elseif ($user instanceof \App\Models\User) {
                 $isClassRep = $user->isClassRep();
                 $hasProjectAccess = $user->isDocuMentorStudent();
-                $hasQuizAccess = !$user->isDocuMentorStudent() || session('student_id');
+                $hasQuizAccess = !$user->isDocuMentorStudent();
                 $isGroupLeader = $user->isGroupLeader();
                 $leaderWithoutGroup = $isGroupLeader && $user->ledDocuMentorGroups()->doesntExist();
                 if ($isGroupLeader) {
                     $leaderHasProject = $user->ledDocuMentorGroups()->whereHas('project')->exists();
+                }
+            } elseif ($student) {
+                $indexUpper = strtoupper(trim($student->index_number ?? ''));
+                $dmUser = \App\Models\User::whereIn('role', [\App\Models\User::DM_ROLE_STUDENT, \App\Models\User::DM_ROLE_LEADER])
+                    ->whereRaw('UPPER(TRIM(index_number)) = ?', [$indexUpper])
+                    ->first();
+                if ($dmUser && $dmUser->canAccessDocuMentorProjects()) {
+                    $hasProjectAccess = true;
+                    $hasQuizAccess = false;
+                    $isClassRep = $dmUser->isClassRep();
+                    $isGroupLeader = $dmUser->canLeadDocuMentorProjects();
+                    $leaderGroup = $dmUser->ledDocuMentorGroups()->with('project')->first();
+                    $memberGroup = $dmUser->docuMentorGroups()->with('project')->first();
+                    $docuMentorGroup = $leaderGroup ?: $memberGroup;
+                    $leaderWithoutGroup = $isGroupLeader && !$leaderGroup;
+                    $leaderHasProject = $leaderGroup ? (bool) $leaderGroup->project : false;
                 }
             }
             $view->with(array_merge(
