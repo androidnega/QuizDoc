@@ -23,9 +23,9 @@
             {{-- Mobile: breadcrumb (tappable) opens sidebar; desktop has no sidebar --}}
             <div class="flex sm:hidden items-center min-w-0 flex-1">
                 <button type="button" id="student-mobile-menu-btn" class="flex items-center gap-2 min-w-0 flex-1 text-left rounded-lg py-2 pr-2 focus:outline-none focus:ring-2 focus:ring-slate-700 focus:ring-offset-2 focus:ring-offset-amber-400" aria-label="Open menu" aria-expanded="false" aria-controls="student-mobile-sidebar">
-                    <span class="shrink-0 flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/20 text-white"><i class="fas fa-bars text-sm"></i></span>
-                    <span class="text-sm font-semibold text-slate-900 truncate" id="student-breadcrumb-label">{{ $breadcrumbLabel }}</span>
-                    <i class="fas fa-chevron-down text-slate-600 text-xs shrink-0 ml-0.5 transition-transform duration-200 student-mobile-chevron" aria-hidden="true"></i>
+                    <span class="shrink-0 flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/20 text-black"><i class="fas fa-bars text-sm"></i></span>
+                    <span class="text-sm font-semibold text-black truncate" id="student-breadcrumb-label">{{ $breadcrumbLabel }}</span>
+                    <i class="fas fa-chevron-down text-black text-xs shrink-0 ml-0.5 transition-transform duration-200 student-mobile-chevron" aria-hidden="true"></i>
                 </button>
             </div>
             {{-- Desktop: logo --}}
@@ -34,24 +34,24 @@
                 <span class="text-sm font-bold text-slate-900">QuizSnap</span>
             </a>
 
-            {{-- Desktop nav: icons white on yellow; active = lighter yellow --}}
+            {{-- Desktop nav: black text on yellow; active = lighter yellow --}}
             <nav class="hidden sm:flex items-center gap-1 flex-1 justify-center min-w-0" aria-label="Dashboard navigation">
-                <a href="{{ route('dashboard') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ $studentNavHome ? 'bg-amber-200 text-slate-900' : 'text-white hover:bg-amber-500/30' }}"><i class="fas fa-home mr-1.5 text-xs {{ $studentNavHome ? 'text-slate-700' : 'text-white' }}"></i>Home</a>
+                <a href="{{ route('dashboard') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ $studentNavHome ? 'bg-amber-200 text-black' : 'text-black hover:bg-amber-500/30' }}"><i class="fas fa-home mr-1.5 text-xs {{ $studentNavHome ? 'text-black' : 'text-black' }}"></i>Home</a>
                 @if($hasProjectAccess ?? false)
                 @if(isset($student) && $student)
                 @php $projectsActive = request()->routeIs('dashboard.projects*') || request()->routeIs('dashboard.public-projects') || request()->routeIs('dashboard.group*'); @endphp
-                <a href="{{ route('student.enter-documentor', ['redirect' => 'dashboard.projects.index']) }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ $projectsActive ? 'bg-amber-200 text-slate-900' : 'text-white hover:bg-amber-500/30' }}"><i class="fas fa-folder-open mr-1.5 text-xs {{ $projectsActive ? 'text-slate-700' : 'text-white' }}"></i>Projects</a>
+                <a href="{{ route('student.enter-documentor', ['redirect' => 'dashboard.projects.index']) }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ $projectsActive ? 'bg-amber-200 text-black' : 'text-black hover:bg-amber-500/30' }}"><i class="fas fa-folder-open mr-1.5 text-xs {{ $projectsActive ? 'text-black' : 'text-black' }}"></i>Projects</a>
                 @else
                 @php $projectsActive = request()->routeIs('dashboard.projects*') || request()->routeIs('dashboard.public-projects') || request()->routeIs('dashboard.group*'); @endphp
-                <a href="{{ route('dashboard.projects.index') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ $projectsActive ? 'bg-amber-200 text-slate-900' : 'text-white hover:bg-amber-500/30' }}"><i class="fas fa-folder-open mr-1.5 text-xs {{ $projectsActive ? 'text-slate-700' : 'text-white' }}"></i>Projects</a>
+                <a href="{{ route('dashboard.projects.index') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ $projectsActive ? 'bg-amber-200 text-black' : 'text-black hover:bg-amber-500/30' }}"><i class="fas fa-folder-open mr-1.5 text-xs {{ $projectsActive ? 'text-black' : 'text-black' }}"></i>Projects</a>
                 @endif
                 @if($isClassRep ?? false)
-                <a href="{{ route('dashboard.class-results.index') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('dashboard.class-results*') ? 'bg-amber-200 text-slate-900' : 'text-white hover:bg-amber-500/30' }}"><i class="fas fa-file-download mr-1.5 text-xs {{ request()->routeIs('dashboard.class-results*') ? 'text-slate-700' : 'text-white' }}"></i>Class Results</a>
+                <a href="{{ route('dashboard.class-results.index') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('dashboard.class-results*') ? 'bg-amber-200 text-black' : 'text-black hover:bg-amber-500/30' }}"><i class="fas fa-file-download mr-1.5 text-xs {{ request()->routeIs('dashboard.class-results*') ? 'text-black' : 'text-black' }}"></i>Class Results</a>
                 @endif
                 @endif
                 @if($hasQuizAccess ?? true)
-                <a href="{{ route('dashboard.my-quizzes') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('dashboard.my-quizzes*') ? 'bg-amber-200 text-slate-900' : 'text-white hover:bg-amber-500/30' }}"><i class="fas fa-clipboard-list mr-1.5 text-xs {{ request()->routeIs('dashboard.my-quizzes*') ? 'text-slate-700' : 'text-white' }}"></i>Quizzes</a>
-                <a href="{{ route('dashboard.course-materials') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('dashboard.course-materials') ? 'bg-amber-200 text-slate-900' : 'text-white hover:bg-amber-500/30' }}"><i class="fas fa-book mr-1.5 text-xs {{ request()->routeIs('dashboard.course-materials') ? 'text-slate-700' : 'text-white' }}"></i>Materials</a>
+                <a href="{{ route('dashboard.my-quizzes') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('dashboard.my-quizzes*') ? 'bg-amber-200 text-black' : 'text-black hover:bg-amber-500/30' }}"><i class="fas fa-clipboard-list mr-1.5 text-xs {{ request()->routeIs('dashboard.my-quizzes*') ? 'text-black' : 'text-black' }}"></i>Quizzes</a>
+                <a href="{{ route('dashboard.course-materials') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('dashboard.course-materials') ? 'bg-amber-200 text-black' : 'text-black hover:bg-amber-500/30' }}"><i class="fas fa-book mr-1.5 text-xs {{ request()->routeIs('dashboard.course-materials') ? 'text-black' : 'text-black' }}"></i>Materials</a>
                 @endif
             </nav>
 
@@ -112,8 +112,8 @@
     {{-- Mobile: slide-out sidebar (breadcrumb menu opens this); start closed --}}
     <aside id="student-mobile-sidebar" class="fixed top-0 left-0 z-40 h-full w-72 max-w-[85vw] bg-white border-r border-slate-200 shadow-xl transition-transform duration-200 ease-out sm:hidden" style="transform: translateX(-100%);" aria-label="Mobile menu" aria-hidden="true">
         <div class="flex items-center justify-between h-14 px-4 border-b border-slate-200 bg-amber-400">
-            <span class="text-sm font-bold text-slate-900">Menu</span>
-            <button type="button" id="student-mobile-sidebar-close" class="p-2 rounded-lg text-white hover:bg-amber-500/30" aria-label="Close menu"><i class="fas fa-times"></i></button>
+            <span class="text-sm font-bold text-black">Menu</span>
+            <button type="button" id="student-mobile-sidebar-close" class="p-2 rounded-lg text-black hover:bg-amber-500/30" aria-label="Close menu"><i class="fas fa-times"></i></button>
         </div>
         <nav class="p-4 space-y-1" aria-label="Dashboard navigation">
             <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-800 no-underline {{ $studentNavHome ? 'bg-amber-200 text-slate-900' : 'hover:bg-slate-100' }}"><i class="fas fa-home w-5 text-center text-slate-600"></i><span>Home</span></a>
