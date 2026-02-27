@@ -11,31 +11,22 @@ class StudentWebAuthnService
     private ?object $webauthn = null;
 
     /**
-     * Lazy-load WebAuthn. In local env, pass $requestHost so rp_id matches the browser (avoids localhost vs 127.0.0.1).
+     * Lazy-load WebAuthn. When $requestHost is provided, always use it as rp_id so it matches the browser origin
+     * (avoids localhost vs 127.0.0.1 and subdomain mismatches on both local and production).
      */
     private function getWebAuthn(?string $requestHost = null): object
     {
         if (! class_exists('\\lbuchs\\WebAuthn\\WebAuthn', true)) {
             throw new PasskeyUnavailableException('Passkey sign-in is not available. Use your index number and code instead.');
         }
-        $rpId = $requestHost !== null && $requestHost !== '' && app()->environment('local')
+        $rpId = $requestHost !== null && $requestHost !== ''
             ? $requestHost
             : config('webauthn.rp_id');
         $allowedFormats = ['none', 'packed', 'apple'];
-        if ($requestHost !== null && $requestHost !== '' && app()->environment('local')) {
-            return new \lbuchs\WebAuthn\WebAuthn(
-                config('webauthn.rp_name'),
-                $rpId,
-                $allowedFormats,
-                config('webauthn.use_base64url', true)
-            );
-        }
-        if ($this->webauthn === null) {
-            $rpName = config('webauthn.rp_name');
-            $useBase64 = config('webauthn.use_base64url', true);
-            $this->webauthn = new \lbuchs\WebAuthn\WebAuthn($rpName, $rpId, $allowedFormats, $useBase64);
-        }
-        return $this->webauthn;
+        $rpName = config('webauthn.rp_name');
+        $useBase64 = config('webauthn.use_base64url', true);
+        // Create a fresh instance per requestHost/rpId to avoid cross-origin mismatches.
+        return new \lbuchs\WebAuthn\WebAuthn($rpName, $rpId, $allowedFormats, $useBase64);
     }
 
     /** Call only after getWebAuthn() so the package is loaded. */
