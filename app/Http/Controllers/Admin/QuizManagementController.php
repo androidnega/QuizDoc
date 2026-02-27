@@ -414,16 +414,20 @@ class QuizManagementController extends Controller
         $approvedQuestionsTotal = $approvedQuestionsQuery->count();
         $approvedQuestions = $approvedQuestionsQuery->get();
 
-        // Completed sessions for Sessions tab: only sessions that have a result (tally sessions = results)
+        // Completed sessions for Sessions tab: show every session that has a computed result
+        // (even if ended_at was not set correctly for some historical attempts).
         $sessionsQuery = $quiz->sessions()
             ->with(['result', 'violations'])
-            ->whereNotNull('ended_at')
             ->whereHas('result')
-            ->orderByDesc('ended_at');
+            ->orderByDesc('ended_at')
+            ->orderByDesc('id');
         $sessionsPaginator = $sessionsQuery->get();
 
-        // Stats for Sessions tab (only completed sessions with result; broken/incomplete sessions not counted)
-        $completedSessions = $quiz->sessions()->whereNotNull('ended_at')->whereHas('result')->with(['result', 'violations'])->get();
+        // Stats for Sessions tab (only sessions that have a result)
+        $completedSessions = $quiz->sessions()
+            ->whereHas('result')
+            ->with(['result', 'violations'])
+            ->get();
         $scores = $completedSessions->pluck('result.score')->filter()->values();
         $sessionsStats = [
             'total_students' => $completedSessions->count(),
