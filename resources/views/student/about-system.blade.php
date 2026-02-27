@@ -164,14 +164,33 @@
                             </div>
                             <div class="flex-1">
                                 <h2 class="text-2xl font-semibold text-slate-900 mb-1">Proctoring & Security</h2>
-                                <p class="text-sm text-slate-500">How we ensure exam integrity</p>
+                                <p class="text-sm text-slate-500">What is monitored and when your quiz may auto-submit</p>
                             </div>
                         </div>
-                        <div class="ml-20 space-y-3 text-slate-700">
-                            <p><strong>Face verification:</strong> Pre and post-quiz photos help verify that you completed the quiz.</p>
-                            <p><strong>Tab monitoring:</strong> The system detects when you switch tabs or leave the quiz window.</p>
-                            <p><strong>One device per session:</strong> You cannot take the same quiz from multiple devices simultaneously.</p>
-                            <p><strong>Fair assessment:</strong> These measures ensure a fair testing environment for all students.</p>
+                        <div class="ml-20 space-y-4 text-slate-700">
+                            <p class="text-sm text-slate-500 uppercase tracking-wide font-semibold">What is monitored during a proctored quiz</p>
+                            <ul class="list-disc pl-5 space-y-2">
+                                <li><strong>Face verification & camera:</strong> A pre-quiz photo (and sometimes post-quiz photo) confirms it is really you. If camera proctoring is enabled for your quiz, your camera must stay on and your face should remain clearly visible and centered.</li>
+                                <li><strong>Screen focus & tab changes:</strong> The system can detect when you leave the quiz tab, minimize the window, or resize it in suspicious ways.</li>
+                                <li><strong>Multiple faces & environment:</strong> If more than one face is detected for a proctored quiz, or your face repeatedly leaves the frame, these events are logged for your examiner.</li>
+                                <li><strong>Clipboard & screenshots:</strong> Attempts to copy/paste quiz content or take screenshots are recorded as serious violations.</li>
+                                <li><strong>Devices & network:</strong> For protected quizzes, using a second device or a different network (IP address) for the same attempt can be treated as a violation.</li>
+                            </ul>
+
+                            <p class="text-sm text-slate-500 uppercase tracking-wide font-semibold mt-4">When the system may auto-submit your quiz</p>
+                            <ul class="list-disc pl-5 space-y-2">
+                                <li><strong>Serious violations:</strong> Certain actions (for example: using a phone on camera, clear screenshot attempts, obvious copy/paste of quiz content, multiple faces or multiple devices for the same attempt, or repeated tab switching/blur events) can cause your quiz to be <span class="font-semibold text-red-700">automatically submitted and flagged</span> for review.</li>
+                                <li><strong>Too many warnings:</strong> If you repeatedly break proctoring rules (for example, your face is out of frame many times, or there are many warning-level violations), the system may automatically submit your quiz and mark the attempt as risky for the examiner.</li>
+                                <li><strong>Time running out:</strong> When the quiz timer reaches zero, QuizSnap will submit your attempt automatically using the last answers we successfully saved.</li>
+                            </ul>
+
+                            <p class="text-sm text-slate-500 uppercase tracking-wide font-semibold mt-4">What does <span class="font-semibold text-slate-800 normal-case">not</span> auto-submit your quiz</p>
+                            <ul class="list-disc pl-5 space-y-2">
+                                <li><strong>Network problems:</strong> If your connection drops, your answers are stored safely in your browser and will sync when you come back online. Network errors alone do <span class="font-semibold">not</span> auto-submit your quiz.</li>
+                                <li><strong>Short camera glitches:</strong> Brief camera interruptions are treated as warnings. You will see on-screen messages and should fix the issue quickly, but a single glitch does not immediately submit your quiz.</li>
+                            </ul>
+
+                            <p><strong>Fair assessment:</strong> Proctoring is designed to protect honest students. If you stay on the quiz page, keep your camera on (when required), avoid external help, and follow the rules, you can complete your quiz without interruption.</p>
                         </div>
                     </section>
 
