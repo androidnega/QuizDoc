@@ -425,11 +425,6 @@ class ClassGroupController extends Controller
         $this->authorize('update', $classGroup);
         $hasClassGroupColumn = Schema::hasColumn('class_groups', 'allowed_devices');
         $hasQuizColumn = Schema::hasColumn('quizzes', 'allowed_devices');
-        // If neither table supports allowed_devices, keep old behaviour and show error.
-        if (! $hasClassGroupColumn && ! $hasQuizColumn) {
-            return redirect()->route($this->staffRoutePrefix() . '.class-groups.show', $classGroup)
-                ->with('error', 'Device restrictions are not supported in this installation.');
-        }
         $request->validate([
             'allowed_devices' => 'required|in:desktop,mobile,both',
         ]);
@@ -446,8 +441,12 @@ class ClassGroupController extends Controller
             $classGroup->quizzes()->update(['allowed_devices' => $allowed]);
         }
 
+        $message = (! $hasClassGroupColumn && ! $hasQuizColumn)
+            ? 'Saved. Device restrictions are not enforced on this installation, so this choice is informational only.'
+            : 'Allowed devices updated for quizzes in this group.';
+
         return redirect()->route($this->staffRoutePrefix() . '.class-groups.show', $classGroup)
-            ->with('success', 'Allowed devices updated for quizzes in this group.');
+            ->with('success', $message);
     }
 
     public function destroy(ClassGroup $classGroup): RedirectResponse
