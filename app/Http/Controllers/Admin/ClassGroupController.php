@@ -309,7 +309,9 @@ class ClassGroupController extends Controller
         $examinerIds = $visibleCourses->pluck('pivot.examiner_id')->filter()->unique()->values()->all();
         $examinersMap = $examinerIds ? User::whereIn('id', $examinerIds)->get(['id', 'username', 'name'])->keyBy('id') : collect();
 
-        return view('admin.class-groups.show', compact('classGroup', 'students', 'availableCourses', 'examinersMap', 'visibleCourses', 'visibleQuizzes'));
+        $showAllowedDevices = Schema::hasColumn('class_groups', 'allowed_devices') || Schema::hasColumn('quizzes', 'allowed_devices');
+
+        return view('admin.class-groups.show', compact('classGroup', 'students', 'availableCourses', 'examinersMap', 'visibleCourses', 'visibleQuizzes', 'showAllowedDevices'));
     }
 
     public function edit(ClassGroup $classGroup): View|RedirectResponse

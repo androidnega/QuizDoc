@@ -48,8 +48,8 @@
             <p class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5"><strong>No students yet.</strong> Add indices in Student index list below before creating a quiz.</p>
         @endif
 
-        {{-- Coordinator: Allowed devices toggle for all quizzes in this group --}}
-        @if(!$isExaminer)
+        {{-- Coordinator: Allowed devices toggle (only when DB supports it) --}}
+        @if(!$isExaminer && ($showAllowedDevices ?? false))
             @php
                 $allowedDevices = $classGroup->allowed_devices ?? \App\Models\ClassGroup::ALLOWED_DEVICES_DESKTOP;
                 $allowedOptions = \App\Models\ClassGroup::allowedDevicesOptions();
