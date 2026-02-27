@@ -146,8 +146,10 @@
 @push('scripts')
 <script>
 (function() {
-    if (typeof PublicKeyCredential === 'undefined') {
-        var section = document.querySelector('.passkey-section');
+    var section = document.querySelector('.passkey-section');
+    var isMobileDevice = /Android|iPhone|iPod/i.test((navigator.userAgent || ''));
+    // Only allow passkey setup on supported browsers and mobile phones (fingerprint / Face ID on phone).
+    if (typeof PublicKeyCredential === 'undefined' || !isMobileDevice) {
         if (section) section.classList.add('hidden');
         return;
     }

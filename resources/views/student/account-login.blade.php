@@ -81,22 +81,6 @@
                     <button type="button" id="btn-back-to-phone" class="w-full py-2 px-4 text-sm font-medium rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300">← Back</button>
                 </div>
             </div>
-
-            {{-- Step: Register fingerprint/passkey after OTP success — required to use "Sign in with fingerprint" next time --}}
-            <div id="step-passkey-offer" class="space-y-4 hidden">
-                <p class="text-gray-700 font-medium">Register your fingerprint or Face ID for this device</p>
-                <p class="text-sm text-gray-600">Pick your fingerprint (or Face ID) now so you can use it to sign in next time—no index number or code needed.</p>
-                <div class="flex gap-3">
-                    <button type="button" id="btn-passkey-skip" class="flex-1 py-2.5 px-4 text-sm font-medium rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300">Skip for now</button>
-                    <button type="button" id="btn-passkey-add" class="flex-1 py-2.5 px-4 text-sm font-semibold rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 flex items-center justify-center gap-2">
-                        <i class="fas fa-fingerprint" aria-hidden="true"></i>
-                        Register fingerprint / Face ID
-                    </button>
-                </div>
-                <div id="passkey-add-error" class="hidden">
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800" id="passkey-add-error-text"></div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -114,16 +98,27 @@
     var nameInput = document.getElementById('otp_name');
     var currentIndexNumber = '';
     var lastPhoneUsed = '';
-    var pendingRedirectAfterPasskey = '';
 
     var passkeyLoginWrap = document.getElementById('passkey-login-wrap');
-    var stepPasskeyOffer = document.getElementById('step-passkey-offer');
     var deviceHasBiometric = false;
-    // Only show passkey option when device has a user-verifying platform authenticator (fingerprint / Face ID)
+    var isMobileDevice = /Android|iPhone|iPod/i.test((navigator.userAgent || ''));
+    function hasPasskeyCookie() {
+        try {
+            return document.cookie.split(';').some(function(c) {
+                return c.trim().indexOf('quizsnap_has_passkey=') === 0;
+            });
+        } catch (e) {
+            return false;
+        }
+    }
+    // Only show passkey option when device has a user-verifying platform authenticator (fingerprint / Face ID),
+    // the browser is on a mobile phone, and this device has previously registered a passkey.
     if (typeof PublicKeyCredential !== 'undefined' && typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
         PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function(available) {
             deviceHasBiometric = !!available;
-            if (available && passkeyLoginWrap) passkeyLoginWrap.classList.remove('hidden');
+            if (available && passkeyLoginWrap && isMobileDevice && hasPasskeyCookie()) {
+                passkeyLoginWrap.classList.remove('hidden');
+            }
         }).catch(function() {});
     }
 
@@ -144,7 +139,6 @@
         stepIndex.classList.add('hidden');
         stepPhone.classList.add('hidden');
         stepOtp.classList.add('hidden');
-        if (stepPasskeyOffer) stepPasskeyOffer.classList.add('hidden');
         if (step === 'index') stepIndex.classList.remove('hidden');
         else if (step === 'phone') stepPhone.classList.remove('hidden');
         else if (step === 'otp') {
@@ -154,7 +148,6 @@
             if (enterWrap) enterWrap.classList.remove('hidden');
             if (codeFields) codeFields.classList.add('hidden');
         }
-        else if (step === 'passkey-offer') { if (stepPasskeyOffer) stepPasskeyOffer.classList.remove('hidden'); }
     }
 
     document.getElementById('btn-show-otp-code').addEventListener('click', function() {
@@ -504,96 +497,13 @@
                 showError('otp-error', data.message || 'Invalid or expired code.');
                 return;
             }
-            if (data.redirect && deviceHasBiometric) {
-                pendingRedirectAfterPasskey = data.redirect;
-                showStep('passkey-offer');
-                document.getElementById('passkey-add-error').classList.add('hidden');
-            } else if (data.redirect) {
+            if (data.redirect) {
                 window.location.href = data.redirect;
             }
         })
         .catch(function() {
             setLoading(document.getElementById('btn-verify-otp'), false);
             showError('otp-error', 'Network error. Please try again.');
-        });
-    });
-
-    document.getElementById('btn-passkey-skip').addEventListener('click', function() {
-        if (pendingRedirectAfterPasskey) window.location.href = pendingRedirectAfterPasskey;
-    });
-
-    document.getElementById('btn-passkey-add').addEventListener('click', function() {
-        var btn = document.getElementById('btn-passkey-add');
-        var errWrap = document.getElementById('passkey-add-error');
-        var errText = document.getElementById('passkey-add-error-text');
-        if (errWrap) errWrap.classList.add('hidden');
-        btn.disabled = true;
-        var optionsResponse;
-        fetch('{{ route("student.passkey.register-options") }}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-            body: JSON.stringify({})
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            optionsResponse = data;
-            if (!data.success || !data.options || !data.options.publicKey) {
-                if (errText) errText.textContent = data.message || 'Could not prepare passkey.';
-                if (errWrap) errWrap.classList.remove('hidden');
-                btn.disabled = false;
-                return;
-            }
-            var pk = data.options.publicKey;
-            var publicKey = {
-                rp: pk.rp || { name: 'QuizSnap', id: window.location.hostname },
-                user: {
-                    id: base64urlToBuffer(pk.user.id),
-                    name: pk.user.name || '',
-                    displayName: pk.user.displayName || ''
-                },
-                challenge: base64urlToBuffer(pk.challenge),
-                pubKeyCredParams: pk.pubKeyCredParams || [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
-                timeout: pk.timeout || 60000,
-                authenticatorSelection: pk.authenticatorSelection || { userVerification: 'preferred', residentKey: 'required' }
-            };
-            if (pk.excludeCredentials && pk.excludeCredentials.length) {
-                publicKey.excludeCredentials = pk.excludeCredentials.map(function(c) {
-                    return { type: 'public-key', id: base64urlToBuffer(c.id) };
-                });
-            }
-            return navigator.credentials.create({ publicKey: publicKey });
-        })
-        .then(function(cred) {
-            btn.disabled = false;
-            if (!cred) return;
-            var r = cred.response;
-            var challengeBase64 = (optionsResponse && optionsResponse.options && optionsResponse.options.publicKey && optionsResponse.options.publicKey.challenge) ? optionsResponse.options.publicKey.challenge : null;
-            var body = {
-                clientDataJSON: bufferToBase64url(r.clientDataJSON),
-                attestationObject: bufferToBase64url(r.attestationObject),
-                challenge: challengeBase64
-            };
-            return fetch('{{ route("student.passkey.register") }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-                body: JSON.stringify(body)
-            });
-        })
-        .then(function(r) {
-            if (!r) return;
-            return r.json();
-        })
-        .then(function(data) {
-            if (data && data.success && pendingRedirectAfterPasskey) window.location.href = pendingRedirectAfterPasskey;
-            else if (data && !data.success) {
-                if (errText) errText.textContent = data.message || 'Could not add passkey.';
-                if (errWrap) errWrap.classList.remove('hidden');
-            }
-        })
-        .catch(function() {
-            btn.disabled = false;
-            if (errText) errText.textContent = 'Could not add passkey. Try again or skip.';
-            if (errWrap) errWrap.classList.remove('hidden');
         });
     });
 })();

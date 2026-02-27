@@ -85,10 +85,23 @@ class StudentWebAuthnController extends Controller
                 $request->device_name,
                 $request->getHost()
             );
-            return response()->json([
-                'success' => true,
-                'message' => 'Passkey added. You can sign in with fingerprint or Face ID on this device next time.',
-            ]);
+            return response()
+                ->json([
+                    'success' => true,
+                    'message' => 'Passkey added. You can sign in with fingerprint or Face ID on this device next time.',
+                ])
+                // Hint for the login page: only show passkey button on this device when a passkey has been registered.
+                ->cookie(
+                    'quizsnap_has_passkey',
+                    '1',
+                    60 * 24 * 365,
+                    '/',
+                    null,
+                    config('session.secure', false),
+                    true,
+                    false,
+                    'Lax'
+                );
         } catch (PasskeyUnavailableException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()]);
         } catch (\Throwable $e) {
