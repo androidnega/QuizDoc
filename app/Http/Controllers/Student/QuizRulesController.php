@@ -27,7 +27,7 @@ class QuizRulesController extends Controller
         $quiz = null;
         if ($token) {
             $token = trim((string) $token);
-            $quiz = Quiz::with('course')->where('link_token', $token)->first();
+            $quiz = Quiz::with(['course', 'classGroup'])->where('link_token', $token)->first();
             if (!$quiz || !$quiz->isAvailableForStudent(false)) {
                 return view('student.link-expired');
             }
@@ -44,7 +44,17 @@ class QuizRulesController extends Controller
                 return redirect()->route('student.rules.show.quiz', ['token' => $quiz->link_token]);
             }
         }
-        return view('student.quiz-rules', compact('quiz'));
+        // Resolve allowed devices from class group (coordinator setting), fallback to quiz then desktop
+        $allowedDevices = 'desktop';
+        if ($quiz && \Illuminate\Support\Facades\Schema::hasColumn('class_groups', 'allowed_devices')) {
+            $allowedDevices = $quiz->classGroup?->getAttribute('allowed_devices')
+                ?? $quiz->getAttribute('allowed_devices')
+                ?? 'desktop';
+        } elseif ($quiz) {
+            $allowedDevices = $quiz->getAttribute('allowed_devices') ?? 'desktop';
+        }
+        $mobileAllowed = in_array($allowedDevices, ['mobile', 'both'], true);
+        return view('student.quiz-rules', compact('quiz', 'mobileAllowed'));
     }
 
     /**

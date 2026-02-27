@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Services\ArkeselService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -200,7 +201,8 @@ class ClassGroupController extends Controller
         $academicYears = \App\Models\DocuMentor\AcademicYear::orderBy('year', 'desc')->get();
         $academicClasses = AcademicClass::with('academicYear')->orderBy('name')->get();
         $accentColors = ClassGroup::ACCENT_COLORS;
-        return view('admin.class-groups.create', compact('courses', 'examiners', 'levels', 'semesters', 'academicYears', 'academicClasses', 'accentColors'));
+        $allowedDevicesOptions = Schema::hasColumn('class_groups', 'allowed_devices') ? ClassGroup::allowedDevicesOptions() : [];
+        return view('admin.class-groups.create', compact('courses', 'examiners', 'levels', 'semesters', 'academicYears', 'academicClasses', 'accentColors', 'allowedDevicesOptions'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -232,6 +234,9 @@ class ClassGroupController extends Controller
             'course_assignments.*.course_id' => 'required|exists:courses,id',
             'course_assignments.*.examiner_id' => 'required|exists:users,id',
         ];
+        if (Schema::hasColumn('class_groups', 'allowed_devices')) {
+            $rules['allowed_devices'] = 'nullable|in:desktop,mobile,both';
+        }
         $request->validate($rules);
 
         foreach ($assignments as $a) {
@@ -251,7 +256,7 @@ class ClassGroupController extends Controller
             ? $request->accent_color
             : ClassGroup::nextAccentColor();
 
-        $classGroup = ClassGroup::create([
+        $createData = [
             'name' => trim($request->name),
             'examiner_id' => $firstExaminerId,
             'level_id' => (int) $request->level_id,
@@ -259,7 +264,13 @@ class ClassGroupController extends Controller
             'academic_year_id' => (int) $request->academic_year_id,
             'academic_class_id' => $request->filled('academic_class_id') ? (int) $request->academic_class_id : null,
             'accent_color' => $accentColor,
-        ]);
+        ];
+        if (Schema::hasColumn('class_groups', 'allowed_devices')) {
+            $createData['allowed_devices'] = in_array($request->input('allowed_devices'), [ClassGroup::ALLOWED_DEVICES_DESKTOP, ClassGroup::ALLOWED_DEVICES_MOBILE, ClassGroup::ALLOWED_DEVICES_BOTH], true)
+                ? $request->input('allowed_devices')
+                : ClassGroup::ALLOWED_DEVICES_DESKTOP;
+        }
+        $classGroup = ClassGroup::create($createData);
 
         $syncData = [];
         foreach ($assignments as $a) {
@@ -326,7 +337,8 @@ class ClassGroupController extends Controller
         $academicYears = \App\Models\DocuMentor\AcademicYear::orderBy('year', 'desc')->get();
         $academicClasses = AcademicClass::orderBy('name')->get();
         $accentColors = ClassGroup::ACCENT_COLORS;
-        return view('admin.class-groups.edit', compact('classGroup', 'courses', 'examiners', 'levels', 'semesters', 'academicYears', 'academicClasses', 'accentColors'));
+        $allowedDevicesOptions = Schema::hasColumn('class_groups', 'allowed_devices') ? ClassGroup::allowedDevicesOptions() : [];
+        return view('admin.class-groups.edit', compact('classGroup', 'courses', 'examiners', 'levels', 'semesters', 'academicYears', 'academicClasses', 'accentColors', 'allowedDevicesOptions'));
     }
 
     public function update(Request $request, ClassGroup $classGroup): RedirectResponse
@@ -354,6 +366,9 @@ class ClassGroupController extends Controller
             'course_assignments.*.course_id' => 'required|exists:courses,id',
             'course_assignments.*.examiner_id' => 'required|exists:users,id',
         ];
+        if (Schema::hasColumn('class_groups', 'allowed_devices')) {
+            $rules['allowed_devices'] = 'nullable|in:desktop,mobile,both';
+        }
         $request->validate($rules);
 
         foreach ($assignments as $a) {
@@ -373,7 +388,7 @@ class ClassGroupController extends Controller
             ? $request->accent_color
             : $classGroup->accent_color;
 
-        $classGroup->update([
+        $updateData = [
             'name' => trim($request->name),
             'examiner_id' => $firstExaminerId,
             'level_id' => (int) $request->level_id,
@@ -381,7 +396,15 @@ class ClassGroupController extends Controller
             'academic_year_id' => (int) $request->academic_year_id,
             'academic_class_id' => $request->filled('academic_class_id') ? (int) $request->academic_class_id : null,
             'accent_color' => $accentColor,
-        ]);
+        ];
+        if (Schema::hasColumn('class_groups', 'allowed_devices')) {
+            $reqAllowed = $request->input('allowed_devices');
+            $validDevices = [ClassGroup::ALLOWED_DEVICES_DESKTOP, ClassGroup::ALLOWED_DEVICES_MOBILE, ClassGroup::ALLOWED_DEVICES_BOTH];
+            $updateData['allowed_devices'] = in_array($reqAllowed, $validDevices, true)
+                ? $reqAllowed
+                : ($classGroup->getAttribute('allowed_devices') ?? ClassGroup::ALLOWED_DEVICES_DESKTOP);
+        }
+        $classGroup->update($updateData);
 
         $syncData = [];
         foreach ($assignments as $a) {
@@ -390,6 +413,28 @@ class ClassGroupController extends Controller
         $classGroup->courses()->sync($syncData);
 
         return redirect()->route($this->staffRoutePrefix() . '.class-groups.show', $classGroup)->with('success', 'Saved');
+    }
+
+    /**
+     * Update allowed_devices for a class group (coordinator toggle on show page).
+     */
+    public function updateAllowedDevices(Request $request, ClassGroup $classGroup): RedirectResponse
+    {
+        $this->authorize('update', $classGroup);
+        if (!Schema::hasColumn('class_groups', 'allowed_devices')) {
+            return redirect()->route($this->staffRoutePrefix() . '.class-groups.show', $classGroup)
+                ->with('error', 'Device restrictions are not supported in this installation.');
+        }
+        $request->validate([
+            'allowed_devices' => 'required|in:desktop,mobile,both',
+        ]);
+        $allowed = $request->input('allowed_devices');
+        $classGroup->update([
+            'allowed_devices' => $allowed,
+        ]);
+
+        return redirect()->route($this->staffRoutePrefix() . '.class-groups.show', $classGroup)
+            ->with('success', 'Allowed devices updated for quizzes in this group.');
     }
 
     public function destroy(ClassGroup $classGroup): RedirectResponse

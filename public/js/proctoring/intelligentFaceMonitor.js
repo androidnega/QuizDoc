@@ -661,7 +661,7 @@
             } else {
                 const secondsLeft = Math.ceil((OUT_OF_FRAME_EVENT_MIN_MS - noFaceDurationMs) / 1000);
                 setLiveFrameState(
-                    'yellow',
+                    'red',
                     'Face not detected',
                     'Return to frame within ' + Math.max(0, secondsLeft) + 's to avoid a warning.'
                 );

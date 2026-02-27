@@ -8,6 +8,7 @@ use App\Events\ProctorFrameUpdated;
 use App\Jobs\SendQuizResultReadyNotification;
 use App\Models\Answer;
 use App\Models\Question;
+use App\Models\Quiz;
 use App\Models\QuizSession;
 use App\Models\QuizViolation;
 use App\Models\Result;
@@ -112,7 +113,7 @@ class StudentQuizController extends Controller
         if (!$token) {
             return redirect()->route('student.landing')->with('error', 'Error');
         }
-        $session = QuizSession::with(['quiz', 'quiz.questions'])->where('session_token', $token)->firstOrFail();
+        $session = QuizSession::with(['quiz', 'quiz.classGroup', 'quiz.questions'])->where('session_token', $token)->firstOrFail();
         if ($session->ended_at) {
             return redirect()->to($this->quizCompleteUrl());
         }
@@ -184,6 +185,52 @@ class StudentQuizController extends Controller
         $headTurnCount = $session->violations()->where('type', 'head_turn')->count();
         $normalViolationCount = $this->countNormalViolations($session);
 
+        // Resolve allowed devices from class group (coordinator setting), then quiz, then desktop
+        $allowedDevices = $session->quiz->classGroup?->getAttribute('allowed_devices')
+            ?? $session->quiz->getAttribute('allowed_devices')
+            ?? Quiz::ALLOWED_DEVICES_DESKTOP;
+        $isMobile = $this->isMobileRequest($request);
+
+        // Mobile-only quiz opened on desktop: show notice to use phone
+        if ($allowedDevices === Quiz::ALLOWED_DEVICES_MOBILE && ! $isMobile) {
+            return response()
+                ->view('student.quiz-mobile-only-notice', ['session' => $session])
+                ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                ->header('Pragma', 'no-cache');
+        }
+
+        // Both allowed and user is on mobile: serve mobile blade (one question per page, live feed on top)
+        if (($allowedDevices === Quiz::ALLOWED_DEVICES_BOTH || $allowedDevices === Quiz::ALLOWED_DEVICES_MOBILE) && $isMobile) {
+            $mobileTotalPages = $totalQuestions > 0 ? $totalQuestions : 1;
+            $viewData = [
+                'session' => $session,
+                'questions' => $questions,
+                'shuffledOptionsByQuestion' => $shuffledOptionsByQuestion,
+                'savedAnswers' => $savedAnswers,
+                'answeredCount' => $answeredCount,
+                'durationSeconds' => $durationSeconds,
+                'remainingSeconds' => $remaining,
+                'perPage' => 1,
+                'totalPages' => $mobileTotalPages,
+                'proctoringCameraRequired' => $proctoringCameraRequired,
+                'proctoringFaceMonitor' => $proctoringFaceMonitor,
+                'proctoringTabSwitch' => $proctoringTabSwitch,
+                'proctoringObjectDetect' => $proctoringObjectDetect,
+                'proctoringBlockRightClick' => $proctoringBlockRightClick,
+                'proctoringBlockCopyPaste' => $proctoringBlockCopyPaste,
+                'liveProctorEnabled' => $liveProctorEnabled,
+                'matchedStudentName' => $matchedStudentName,
+                'studentNameLinked' => $studentNameLinked,
+                'outOfFrameCount' => $outOfFrameCount,
+                'headTurnCount' => $headTurnCount,
+                'normalViolationCount' => $normalViolationCount,
+            ];
+            return response()
+                ->view('student.quiz-mobile', $viewData)
+                ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                ->header('Pragma', 'no-cache');
+        }
+
         return response()
             ->view('student.quiz', [
                 'session' => $session,
@@ -207,6 +254,7 @@ class StudentQuizController extends Controller
                 'outOfFrameCount' => $outOfFrameCount,
                 'headTurnCount' => $headTurnCount,
                 'normalViolationCount' => $normalViolationCount,
+                'allowedDevices' => $allowedDevices,
             ])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache');
@@ -361,9 +409,11 @@ class StudentQuizController extends Controller
                 ]);
             }
         }
-        // Global cap on stored violation images per session (all types combined)
+        // Global cap on stored violation images per session (all types combined),
+        // but always allow captures for critical events like phone_detected or multiple faces.
         $capturedCount = $session->violations()->whereNotNull('image_url')->count();
-        if ($capturedCount >= self::MAX_QUIZ_VIOLATION_CAPTURES) {
+        $isCriticalCapture = in_array($violationType, ['phone_detected', 'multiple_faces_during_quiz', 'multiple_faces_pre_quiz'], true);
+        if (! $isCriticalCapture && $capturedCount >= self::MAX_QUIZ_VIOLATION_CAPTURES) {
             return response()->json([
                 'success' => true,
                 'image_url' => null,
@@ -954,6 +1004,15 @@ class StudentQuizController extends Controller
     private function isProctoringCameraRequired(): bool
     {
         return Setting::getValue(Setting::KEY_PROCTORING_CAMERA_REQUIRED, '1') === '1';
+    }
+
+    /**
+     * Detect if the request is from a mobile device (phone/tablet) for quiz device gating.
+     */
+    private function isMobileRequest(Request $request): bool
+    {
+        $ua = $request->userAgent() ?? '';
+        return (bool) preg_match('/Mobile|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini|Tablet|Silk|Kindle|MiuiBrowser|SamsungBrowser/i', $ua);
     }
 
     private function isProctoringTypeEnabled(string $type): bool

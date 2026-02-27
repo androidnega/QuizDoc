@@ -9,6 +9,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ClassGroup extends Model
 {
+    /** Allowed devices for quizzes in this group: desktop, mobile, both */
+    public const ALLOWED_DEVICES_DESKTOP = 'desktop';
+    public const ALLOWED_DEVICES_MOBILE = 'mobile';
+    public const ALLOWED_DEVICES_BOTH = 'both';
+
     /** Soft accent colors for cards (no gradient). Keys used in DB; values are Tailwind bg/border classes. */
     public const ACCENT_COLORS = [
         'sky'    => ['bg' => 'bg-sky-50', 'border' => 'border-sky-200', 'text' => 'text-sky-800'],
@@ -21,7 +26,7 @@ class ClassGroup extends Model
         'slate'  => ['bg' => 'bg-slate-100', 'border' => 'border-slate-200', 'text' => 'text-slate-800'],
     ];
 
-    protected $fillable = ['name', 'examiner_id', 'quiz_category_id', 'level_id', 'semester_id', 'academic_year_id', 'academic_class_id', 'accent_color'];
+    protected $fillable = ['name', 'examiner_id', 'quiz_category_id', 'level_id', 'semester_id', 'academic_year_id', 'academic_class_id', 'accent_color', 'allowed_devices'];
 
     /** Soft accent per group (no gradient). When accent_color is set use it; otherwise vary by id so groups get different colors. */
     public function getAccentClassesAttribute(): array
@@ -59,6 +64,16 @@ class ClassGroup extends Model
         $keys = array_keys(self::ACCENT_COLORS);
         $idx = self::query()->count() % count($keys);
         return $keys[$idx];
+    }
+
+    /** Dropdown options for allowed devices (used by coordinator on class group form). */
+    public static function allowedDevicesOptions(): array
+    {
+        return [
+            self::ALLOWED_DEVICES_DESKTOP => 'Desktop only',
+            self::ALLOWED_DEVICES_MOBILE => 'Mobile only',
+            self::ALLOWED_DEVICES_BOTH => 'Both (desktop and mobile)',
+        ];
     }
 
     public function examiner(): BelongsTo

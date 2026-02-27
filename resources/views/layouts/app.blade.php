@@ -258,8 +258,9 @@
     // Only enforce the quiz screen-size guard on actual quiz-taking pages.
     $shouldGuardQuiz = request()->routeIs('student.quiz.show') || request()->routeIs('student.quiz.ready');
     $skipGuard = ! $shouldGuardQuiz;
+    $quizAllowsMobile = $quizAllowsMobile ?? false;
 @endphp
-<body class="font-sans text-gray-800 quizsnap-nojs @yield('body_extra_class') @yield('body_class', 'bg-offwhite')" data-skip-guard="{{ $skipGuard ? 'true' : 'false' }}">
+<body class="font-sans text-gray-800 quizsnap-nojs @yield('body_extra_class') @yield('body_class', 'bg-offwhite')" data-skip-guard="{{ $skipGuard ? 'true' : 'false' }}" data-quiz-allows-mobile="{{ $quizAllowsMobile ? 'true' : 'false' }}">
     <noscript>
         <div class="fixed inset-0 z-[99999] flex items-center justify-center bg-offwhite p-6" role="alert">
             <div class="bg-white border border-gray-200 rounded-xl p-8 max-w-md text-center shadow-lg">

@@ -201,6 +201,12 @@ class Student extends Model implements Authenticatable
         return $this->hasMany(QuizSession::class, 'student_index', 'index_number');
     }
 
+    /** WebAuthn passkeys (fingerprint / Face ID) for this student. */
+    public function passkeys(): HasMany
+    {
+        return $this->hasMany(StudentPasskey::class);
+    }
+
     public function hasPhone(): bool
     {
         return $this->phone_contact !== null && trim($this->phone_contact) !== '';

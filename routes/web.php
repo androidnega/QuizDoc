@@ -199,6 +199,12 @@ Route::post('/student/account/send-otp', [\App\Http\Controllers\Student\StudentA
 Route::post('/student/account/verify-otp', [\App\Http\Controllers\Student\StudentAccountController::class, 'verifyOtp'])->name('student.account.verify-otp');
 Route::post('/student/account/logout', [\App\Http\Controllers\Student\StudentAccountController::class, 'logout'])->name('student.account.logout');
 
+// Student passkey (WebAuthn) — students only; not for staff/admin
+Route::post('/student/account/passkey/login-options', [\App\Http\Controllers\Student\StudentWebAuthnController::class, 'loginOptions'])->name('student.passkey.login-options');
+Route::post('/student/account/passkey/login', [\App\Http\Controllers\Student\StudentWebAuthnController::class, 'login'])->name('student.passkey.login');
+Route::post('/student/account/passkey/register-options', [\App\Http\Controllers\Student\StudentWebAuthnController::class, 'registerOptions'])->name('student.passkey.register-options');
+Route::post('/student/account/passkey/register', [\App\Http\Controllers\Student\StudentWebAuthnController::class, 'register'])->name('student.passkey.register');
+
 // Student level selection (when no level set)
 Route::get('/student/select-level', [\App\Http\Controllers\Student\StudentLevelController::class, 'show'])
     ->middleware('dashboard.auth')
@@ -298,6 +304,7 @@ Route::middleware('admin.auth')->group(function () {
         Route::get('/class-groups/{classGroup}', [ClassGroupController::class, 'show'])->name('class-groups.show');
         Route::get('/class-groups/{classGroup}/edit', [ClassGroupController::class, 'edit'])->name('class-groups.edit');
         Route::put('/class-groups/{classGroup}', [ClassGroupController::class, 'update'])->name('class-groups.update');
+        Route::put('/class-groups/{classGroup}/allowed-devices', [ClassGroupController::class, 'updateAllowedDevices'])->name('class-groups.allowed-devices.update');
         Route::delete('/class-groups/{classGroup}', [ClassGroupController::class, 'destroy'])->name('class-groups.destroy');
         Route::get('/class-groups/{classGroup}/students', [ClassGroupController::class, 'studentsIndex'])->name('class-groups.students.index');
         Route::get('/class-groups/{classGroup}/students/export/excel', [ClassGroupController::class, 'exportStudentsExcel'])->name('class-groups.students.export.excel');

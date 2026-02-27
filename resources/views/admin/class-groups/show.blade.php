@@ -25,7 +25,7 @@
     </a>
 
     {{-- Card: Actions (compact) — soft accent from group color --}}
-    <div class="rounded-lg {{ $accent['bg'] }} border {{ $accent['border'] }} px-4 py-3 shadow-sm">
+    <div class="rounded-lg {{ $accent['bg'] }} border {{ $accent['border'] }} px-4 py-3 shadow-sm space-y-3">
         <div class="flex flex-wrap items-center gap-2">
             <span class="text-sm font-semibold text-gray-700 mr-1">Group actions</span>
             @if(!$isExaminer)
@@ -46,6 +46,27 @@
         </div>
         @if($isExaminer && $students->total() === 0)
             <p class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5"><strong>No students yet.</strong> Add indices in Student index list below before creating a quiz.</p>
+        @endif
+
+        {{-- Coordinator: Allowed devices toggle for all quizzes in this group --}}
+        @if(!$isExaminer)
+            @php
+                $allowedDevices = $classGroup->allowed_devices ?? \App\Models\ClassGroup::ALLOWED_DEVICES_DESKTOP;
+                $allowedOptions = \App\Models\ClassGroup::allowedDevicesOptions();
+            @endphp
+            <form method="post" action="{{ route('dashboard.class-groups.allowed-devices.update', $classGroup) }}" class="flex flex-wrap items-center gap-2 mt-1">
+                @csrf
+                @method('PUT')
+                <label for="allowed_devices" class="text-xs font-semibold text-gray-700">Allowed devices for quizzes:</label>
+                <select id="allowed_devices" name="allowed_devices" class="text-xs border-gray-300 rounded-md px-2 py-1 focus:ring-primary-500 focus:border-primary-500">
+                    @foreach($allowedOptions as $value => $label)
+                        <option value="{{ $value }}" {{ $allowedDevices === $value ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <button type="submit" class="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-primary-700">
+                    <i class="fas fa-save text-[10px]"></i> Save
+                </button>
+            </form>
         @endif
     </div>
 

@@ -53,8 +53,12 @@
 @endpush
 
 @section('content')
+@php
+    $quizDesktopOnly = ($allowedDevices ?? 'desktop') === 'desktop';
+@endphp
 <div class="min-h-screen min-w-0 w-full">
-    {{-- Phase 7: Clean desktop-only notice on mobile (quiz writing page only). Other student pages remain fully accessible on mobile. --}}
+    {{-- Show "use desktop" only when this quiz/group is desktop-only. When quiz allows mobile/both, do not show so mobile users see content. --}}
+    @if($quizDesktopOnly)
     <div class="quiz-desktop-only-notice block md:hidden min-h-screen flex flex-col items-center justify-center px-4 py-8 bg-gray-50">
         <div class="w-full max-w-md bg-white border border-[#e5e5e5] rounded-xl p-6 text-center" style="box-shadow: none;">
             <div class="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gray-100 text-gray-500 mb-4">
@@ -64,8 +68,9 @@
             <p class="text-sm text-gray-600">This quiz is designed for a desktop or laptop. Please use a computer to take it.</p>
         </div>
     </div>
+    @endif
 
-    <div class="quiz-writing-content hidden md:block min-h-screen min-w-0 w-full">
+    <div class="quiz-writing-content {{ $quizDesktopOnly ? 'hidden md:block' : 'block' }} min-h-screen min-w-0 w-full">
         {{-- Fixed header --}}
         <header class="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 h-16 flex items-center">
             <div class="w-full px-4 sm:px-6">

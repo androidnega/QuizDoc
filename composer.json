@@ -12,6 +12,7 @@
         "laravel/reverb": "^1.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.8",
+        "lbuchs/webauthn": "^2.2",
         "maatwebsite/excel": "^3.1",
         "minishlink/web-push": "^9.0",
         "openai-php/client": "^0.6",
@@ -45,7 +46,11 @@
             "@php artisan package:discover --ansi"
         ],
         "post-update-cmd": [
-            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
+            "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
+            "@php artisan migrate --force"
+        ],
+        "migrate": [
+            "@php artisan migrate --force"
         ],
         "post-root-package-install": [
             "@php -r \"file_exists('.env') || copy('env.example.dist', '.env');\""

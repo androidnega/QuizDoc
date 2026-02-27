@@ -112,6 +112,18 @@
             </div>
             @endif
 
+            @if(!empty($allowedDevicesOptions))
+            <div class="max-w-xs">
+                <label for="allowed_devices" class="block text-sm font-medium text-gray-700 mb-1.5">Allowed devices</label>
+                <select name="allowed_devices" id="allowed_devices" class="form-input">
+                    @foreach($allowedDevicesOptions as $value => $label)
+                        <option value="{{ $value }}" {{ old('allowed_devices', 'desktop') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Quizzes in this group can be taken on desktop only, mobile only, or both.</p>
+            </div>
+            @endif
+
             <div>
                 <div class="flex items-center justify-between gap-4 mb-2">
                     <label class="block text-sm font-medium text-gray-700">Courses & Lecturers *</label>

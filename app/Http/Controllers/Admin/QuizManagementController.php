@@ -178,6 +178,7 @@ class QuizManagementController extends Controller
                 'starts_at' => 'nullable|date',
                 'ends_at' => 'nullable|date|after_or_equal:starts_at',
                 'result_visibility' => 'nullable|in:score_only,full_review_after_end,disabled',
+                'allowed_devices' => 'nullable|in:desktop,mobile,both',
             ], [
                 'course_id.required' => 'Please select a course (from Class Group or QuizSnap section).',
                 'course_id.exists' => 'The selected course is invalid or no longer exists.',
@@ -258,6 +259,9 @@ class QuizManagementController extends Controller
             ];
             if (Schema::hasColumn('quizzes', 'questions_per_student')) {
                 $createData['questions_per_student'] = (int) $request->questions_per_student;
+            }
+            if (Schema::hasColumn('quizzes', 'allowed_devices')) {
+                $createData['allowed_devices'] = $request->input('allowed_devices', Quiz::ALLOWED_DEVICES_DESKTOP);
             }
 
             $aiService = app(AiQuestionService::class);
@@ -434,7 +438,11 @@ class QuizManagementController extends Controller
         $questionStats = $this->computeQuestionStats($quiz, $completedSessions);
 
         $liveProctorEnabled = Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') === '1';
-        $data = compact('quiz', 'unapprovedPools', 'unapprovedPoolsTotal', 'approvedQuestions', 'approvedQuestionsTotal', 'sessionsPaginator', 'sessionsStats', 'questionStats', 'liveProctorEnabled');
+        // Effective allowed devices: from class group (coordinator) then quiz then desktop
+        $allowedDevicesEffective = $quiz->classGroup?->getAttribute('allowed_devices')
+            ?? $quiz->getAttribute('allowed_devices')
+            ?? Quiz::ALLOWED_DEVICES_DESKTOP;
+        $data = compact('quiz', 'unapprovedPools', 'unapprovedPoolsTotal', 'approvedQuestions', 'approvedQuestionsTotal', 'sessionsPaginator', 'sessionsStats', 'questionStats', 'liveProctorEnabled', 'allowedDevicesEffective');
 
         // Live tab/pagination: return only the tab HTML fragment for AJAX requests
         if ($request->ajax()) {
@@ -1380,6 +1388,7 @@ class QuizManagementController extends Controller
             'starts_at' => 'nullable|date',
             'ends_at' => 'nullable|date',
             'result_visibility' => 'nullable|in:score_only,full_review_after_end,disabled',
+            'allowed_devices' => 'nullable|in:desktop,mobile,both',
         ]);
         $requestCourseId = (int) $request->course_id;
         $classGroup = $quiz->classGroup;
@@ -1432,6 +1441,13 @@ class QuizManagementController extends Controller
         ];
         if (Schema::hasColumn('quizzes', 'questions_per_student')) {
             $updateData['questions_per_student'] = (int) $request->questions_per_student;
+        }
+        if (Schema::hasColumn('quizzes', 'allowed_devices')) {
+            $reqAllowed = $request->input('allowed_devices');
+            $validDevices = [Quiz::ALLOWED_DEVICES_DESKTOP, Quiz::ALLOWED_DEVICES_MOBILE, Quiz::ALLOWED_DEVICES_BOTH];
+            $updateData['allowed_devices'] = in_array($reqAllowed, $validDevices, true)
+                ? $reqAllowed
+                : ($quiz->getAttribute('allowed_devices') ?? Quiz::ALLOWED_DEVICES_DESKTOP);
         }
         $quiz->update($updateData);
         broadcast(new DataUpdated('quizzes'))->toOthers();

@@ -32,6 +32,14 @@
                         @if(!$quiz->hasEnded() && $quiz->is_active && !$quiz->hasEnoughApprovedQuestions())
                             <span class="inline-flex px-1.5 py-0.5 text-xs font-medium rounded bg-warning-100 text-warning-700">Locked</span>
                         @endif
+                        @if(isset($allowedDevicesEffective))
+                            @php
+                                $dev = $allowedDevicesEffective;
+                                $devLabel = $dev === 'desktop' ? 'Desktop only' : ($dev === 'mobile' ? 'Mobile only' : 'Both');
+                                $devClass = $dev === 'mobile' ? 'bg-sky-100 text-sky-800' : ($dev === 'both' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600');
+                            @endphp
+                            <span class="inline-flex px-1.5 py-0.5 text-xs font-medium rounded {{ $devClass }}" title="Allowed devices: set by coordinator on class group">{{ $devLabel }}</span>
+                        @endif
                     </div>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">

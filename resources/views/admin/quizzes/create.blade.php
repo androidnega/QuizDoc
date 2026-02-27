@@ -324,6 +324,8 @@
                     <p class="text-xs text-gray-500 mt-1">What students see after the quiz ends.</p>
                 </div>
 
+                <p class="text-xs text-gray-500">Allowed devices (desktop / mobile / both) are set by the coordinator on the class group.</p>
+
                 <div class="flex flex-wrap items-center gap-3 mt-6 pt-5 border-t border-gray-200">
                     <button type="submit" class="btn px-6 py-3 rounded-lg font-semibold min-h-[48px] bg-yellow-400 hover:bg-yellow-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed" id="submit-btn" {{ $classGroups->isEmpty() && !isset($quizCategories) ? 'disabled' : '' }}>
                         Create Quiz

@@ -20,9 +20,14 @@ class Quiz extends Model
     public const EXAM_TYPE_MIDSEM = 'midsem';
     public const EXAM_TYPE_END_OF_SEMESTER = 'end_of_semester';
 
+    /** Allowed devices: desktop, mobile, both */
+    public const ALLOWED_DEVICES_DESKTOP = 'desktop';
+    public const ALLOWED_DEVICES_MOBILE = 'mobile';
+    public const ALLOWED_DEVICES_BOTH = 'both';
+
     protected $fillable = [
         'link_token', 'class_group_id', 'title', 'exam_type', 'topics', 'script_url', 'script_public_id', 'script_text',
-        'number_of_questions', 'questions_per_student', 'duration_minutes', 'course_id', 'is_active', 'is_published', 'starts_at', 'ends_at', 'result_visibility',
+        'number_of_questions', 'questions_per_student', 'duration_minutes', 'course_id', 'is_active', 'is_published', 'starts_at', 'ends_at', 'result_visibility', 'allowed_devices',
         'academic_year_id', 'quiz_category_id', 'level_id', 'semester_id', 'academic_class_id', 'examiner_id', 'status',
     ];
 
@@ -318,6 +323,29 @@ class Quiz extends Model
             self::EXAM_TYPE_QUIZ => 'Quiz',
             self::EXAM_TYPE_MIDSEM => 'Midsem',
             self::EXAM_TYPE_END_OF_SEMESTER => 'End of Semester',
+        ];
+    }
+
+    /** Whether students can take this quiz on desktop. */
+    public function allowsDesktop(): bool
+    {
+        $v = $this->getAttribute('allowed_devices') ?? self::ALLOWED_DEVICES_DESKTOP;
+        return $v === self::ALLOWED_DEVICES_DESKTOP || $v === self::ALLOWED_DEVICES_BOTH;
+    }
+
+    /** Whether students can take this quiz on mobile. */
+    public function allowsMobile(): bool
+    {
+        $v = $this->getAttribute('allowed_devices') ?? self::ALLOWED_DEVICES_DESKTOP;
+        return $v === self::ALLOWED_DEVICES_MOBILE || $v === self::ALLOWED_DEVICES_BOTH;
+    }
+
+    public static function allowedDevicesOptions(): array
+    {
+        return [
+            self::ALLOWED_DEVICES_DESKTOP => 'Desktop only',
+            self::ALLOWED_DEVICES_MOBILE => 'Mobile only',
+            self::ALLOWED_DEVICES_BOTH => 'Both (desktop and mobile)',
         ];
     }
 

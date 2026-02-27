@@ -95,6 +95,11 @@
             allowApp();
             return;
         }
+        // When this quiz/group allows mobile, do not block mobile devices (avoid white screen on /quiz/ready and quiz show).
+        if (document.body.getAttribute('data-quiz-allows-mobile') === 'true') {
+            allowApp();
+            return;
+        }
         document.body.classList.remove('quizsnap-nojs');
         document.body.classList.add('quizsnap-js');
 
@@ -108,8 +113,8 @@
     }
 
     function onResize() {
-        // If guard is skipped on this page (non-quiz pages), never block on resize.
         if (document.body.getAttribute('data-skip-guard') === 'true') return;
+        if (document.body.getAttribute('data-quiz-allows-mobile') === 'true') return;
         if (document.body.classList.contains('quizsnap-blocked')) return;
         if (isSmallScreen()) {
             var reason = { key: 'small', message: BLOCK_REASONS.small };

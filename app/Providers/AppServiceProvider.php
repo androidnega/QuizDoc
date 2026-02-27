@@ -73,6 +73,28 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
+        // When on quiz ready/show, allow mobile if the quiz/group allows it (so guard script doesn't white-screen mobile)
+        View::composer('layouts.app', function ($view): void {
+            if (! request()->routeIs('student.quiz.show') && ! request()->routeIs('student.quiz.ready')) {
+                $view->with('quizAllowsMobile', false);
+                return;
+            }
+            $token = session('quiz_session_token');
+            if (! $token) {
+                $view->with('quizAllowsMobile', false);
+                return;
+            }
+            $session = \App\Models\QuizSession::with(['quiz.classGroup'])->where('session_token', $token)->first();
+            if (! $session || ! $session->quiz) {
+                $view->with('quizAllowsMobile', false);
+                return;
+            }
+            $allowed = $session->quiz->classGroup?->getAttribute('allowed_devices')
+                ?? $session->quiz->getAttribute('allowed_devices')
+                ?? 'desktop';
+            $view->with('quizAllowsMobile', in_array($allowed, ['mobile', 'both'], true));
+        });
+
         View::composer('docu-mentor.layout', function ($view): void {
             $user = request()->attributes->get('dm_user') ?? auth()->user();
             $view->with('user', $user);

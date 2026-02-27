@@ -646,7 +646,16 @@
         if (c.proctoringTabSwitch === false) return;
         var NEW_TAB_ZONE_PX = 80;
         var showDelay = null;
+        function isInsideCameraOverlay(el) {
+            if (!el) return false;
+            return el.closest && (el.closest('.quiz-proctoring-camera-overlay') || el.closest('#live-camera-frame') || el.closest('#quiz-mobile-camera-overlay'));
+        }
         document.addEventListener('mousemove', function (e) {
+            if (isInsideCameraOverlay(e.target)) {
+                if (showDelay) { clearTimeout(showDelay); showDelay = null; }
+                if (window.QuizSnapQuiz && window.QuizSnapQuiz.hideNewTabZoneWarning) window.QuizSnapQuiz.hideNewTabZoneWarning();
+                return;
+            }
             if (e.clientY < NEW_TAB_ZONE_PX) {
                 if (showDelay) return;
                 showDelay = setTimeout(function () {
@@ -665,6 +674,27 @@
                 }
             }
         });
+        document.addEventListener('touchstart', function (e) {
+            if (isInsideCameraOverlay(e.target)) {
+                if (showDelay) { clearTimeout(showDelay); showDelay = null; }
+                if (window.QuizSnapQuiz && window.QuizSnapQuiz.hideNewTabZoneWarning) window.QuizSnapQuiz.hideNewTabZoneWarning();
+                return;
+            }
+            if (e.touches && e.touches[0] && e.touches[0].clientY < NEW_TAB_ZONE_PX) {
+                if (showDelay) return;
+                showDelay = setTimeout(function () {
+                    showDelay = null;
+                    if (window.QuizSnapQuiz && window.QuizSnapQuiz.showNewTabZoneWarning) {
+                        window.QuizSnapQuiz.showNewTabZoneWarning();
+                    }
+                }, 400);
+            } else {
+                if (showDelay) { clearTimeout(showDelay); showDelay = null; }
+                if (window.QuizSnapQuiz && window.QuizSnapQuiz.hideNewTabZoneWarning) {
+                    window.QuizSnapQuiz.hideNewTabZoneWarning();
+                }
+            }
+        }, { passive: true });
     })();
 
     document.addEventListener('copy', function (e) {
@@ -946,7 +976,7 @@
                     document.body.appendChild(monitorVideo);
                 }
             }
-            monitorVideo.classList.add('w-full', 'h-full', 'object-contain');
+            monitorVideo.classList.add('w-full', 'h-full', 'object-cover');
             monitorVideo.style.display = 'block';
             monitorVideo.setAttribute('playsinline', '');
             monitorVideo.srcObject = stream;
