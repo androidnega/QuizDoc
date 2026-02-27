@@ -6,7 +6,7 @@ return [
 
     'driver' => env('SESSION_DRIVER', 'file'),
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 180), // 180 minutes = 3 hours (student login session)
+    'lifetime' => (int) env('SESSION_LIFETIME', 45), // 45 minutes (student dashboard/session timeout)
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

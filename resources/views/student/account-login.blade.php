@@ -8,7 +8,7 @@
     <div class="max-w-md w-full">
         <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <h1 class="text-2xl font-bold text-gray-800 mb-2">Student login</h1>
-            <p class="text-gray-600 text-sm mb-6">First sign in with your index number and phone (we'll send a one-time code). After you sign in, <strong>register your fingerprint or Face ID</strong> for this device. Once registered, you can sign in next time with one tap—no index or code needed.</p>
+            <p class="text-gray-600 text-sm mb-6">Use your index number and phone to sign in. We'll send a one-time code by SMS. Keep this page open while you complete the steps.</p>
 
             {{-- Step 1: Index number (primary flow) --}}
             <div id="step-index" class="space-y-4">
@@ -23,18 +23,6 @@
                     </p>
                 </div>
                 <button type="button" id="btn-index" class="w-full py-2.5 px-4 text-sm font-semibold rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">Continue</button>
-            </div>
-
-            {{-- Passkey login: only for users who already registered their fingerprint on this device --}}
-            <div id="passkey-login-wrap" class="mt-6 pt-4 border-t border-gray-200 hidden">
-                <p class="text-center text-gray-500 text-sm mb-2">Already registered your fingerprint on this device?</p>
-                <button type="button" id="btn-passkey-login" class="w-full py-2.5 px-4 text-sm font-semibold rounded-lg border-2 border-primary-500 text-primary-600 bg-primary-50 hover:bg-primary-100 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 flex items-center justify-center gap-2">
-                    <i class="fas fa-fingerprint" aria-hidden="true"></i>
-                    Sign in with fingerprint or Face ID
-                </button>
-            </div>
-            <div id="passkey-login-error" class="hidden mt-4">
-                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800" id="passkey-login-error-text"></div>
             </div>
 
             {{-- Step 2: Phone (first-time or unregistered) --}}
@@ -99,42 +87,6 @@
     var currentIndexNumber = '';
     var lastPhoneUsed = '';
 
-    var passkeyLoginWrap = document.getElementById('passkey-login-wrap');
-    var deviceHasBiometric = false;
-    var isMobileDevice = /Android|iPhone|iPod/i.test((navigator.userAgent || ''));
-    function hasPasskeyCookie() {
-        try {
-            return document.cookie.split(';').some(function(c) {
-                return c.trim().indexOf('quizsnap_has_passkey=') === 0;
-            });
-        } catch (e) {
-            return false;
-        }
-    }
-    // Only show passkey option when device has a user-verifying platform authenticator (fingerprint / Face ID),
-    // the browser is on a mobile phone, and this device has previously registered a passkey.
-    if (typeof PublicKeyCredential !== 'undefined' && typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
-        PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function(available) {
-            deviceHasBiometric = !!available;
-            if (available && passkeyLoginWrap && isMobileDevice && hasPasskeyCookie()) {
-                passkeyLoginWrap.classList.remove('hidden');
-            }
-        }).catch(function() {});
-    }
-
-    function base64urlToBuffer(str) {
-        var bin = atob(str.replace(/-/g, '+').replace(/_/g, '/'));
-        var buf = new Uint8Array(bin.length);
-        for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-        return buf.buffer;
-    }
-    function bufferToBase64url(buf) {
-        var u8 = new Uint8Array(buf);
-        var bin = '';
-        for (var i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
-        return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    }
-
     function showStep(step) {
         stepIndex.classList.add('hidden');
         stepPhone.classList.add('hidden');
@@ -189,74 +141,6 @@
         btn.dataset.originalText = btn.dataset.originalText || btn.textContent;
         btn.textContent = loading ? 'Please wait…' : (btn.dataset.originalText || 'Continue');
     }
-
-    document.getElementById('btn-passkey-login').addEventListener('click', function() {
-        var btn = this;
-        var errWrap = document.getElementById('passkey-login-error');
-        var errText = document.getElementById('passkey-login-error-text');
-        if (errWrap) errWrap.classList.add('hidden');
-        btn.disabled = true;
-        fetch('{{ route("student.passkey.login-options") }}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-            body: JSON.stringify({})
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (!data.success || !data.options || !data.options.publicKey) {
-                if (errText) errText.textContent = data.message || 'Could not start passkey sign-in.';
-                if (errWrap) errWrap.classList.remove('hidden');
-                btn.disabled = false;
-                return;
-            }
-            var pk = data.options.publicKey;
-            var publicKey = {
-                challenge: base64urlToBuffer(pk.challenge),
-                timeout: pk.timeout || 60000,
-                rpId: pk.rpId || window.location.hostname,
-                userVerification: pk.userVerification || 'preferred'
-            };
-            if (pk.allowCredentials && pk.allowCredentials.length) {
-                publicKey.allowCredentials = pk.allowCredentials.map(function(c) {
-                    return { type: 'public-key', id: base64urlToBuffer(c.id), transports: c.transports || [] };
-                });
-            }
-            return navigator.credentials.get({ publicKey: publicKey });
-        })
-        .then(function(cred) {
-            btn.disabled = false;
-            if (!cred) return;
-            var r = cred.response;
-            var assertion = {
-                id: cred.id,
-                rawId: bufferToBase64url(cred.rawId),
-                response: {
-                    clientDataJSON: bufferToBase64url(r.clientDataJSON),
-                    authenticatorData: bufferToBase64url(r.authenticatorData),
-                    signature: bufferToBase64url(r.signature)
-                }
-            };
-            if (r.userHandle) assertion.response.userHandle = bufferToBase64url(r.userHandle);
-            return fetch('{{ route("student.passkey.login") }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-                body: JSON.stringify({ assertion: assertion })
-            });
-        })
-        .then(function(r) { return r && r.json ? r.json() : null; })
-        .then(function(data) {
-            if (data && data.success && data.redirect) window.location.href = data.redirect;
-            else if (data && !data.success && errText) {
-                errText.textContent = data.message || 'No passkey set up for this device yet. Sign in with your index number and code above first; after signing in you can add fingerprint or Face ID for next time.';
-                if (errWrap) errWrap.classList.remove('hidden');
-            }
-        })
-        .catch(function() {
-            btn.disabled = false;
-            if (errText) errText.textContent = 'No passkey set up for this device yet. Sign in with your index number and code above first; after signing in you can add fingerprint or Face ID for next time.';
-            if (errWrap) errWrap.classList.remove('hidden');
-        });
-    });
 
     document.getElementById('btn-index').addEventListener('click', function() {
         var index = (indexInput && indexInput.value) ? indexInput.value.trim().toUpperCase() : '';

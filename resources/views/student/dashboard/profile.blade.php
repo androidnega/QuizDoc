@@ -71,20 +71,8 @@
             @endif
         </dl>
     </div>
-</section>
+}</section>
 @endif
-
-<section class="mb-8 passkey-section" aria-label="Sign-in options">
-    <h2 class="text-sm font-medium text-slate-700 mb-3">Sign-in options</h2>
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5">
-        <p class="text-xs text-slate-500 mb-3">Add fingerprint or Face ID for this device to sign in quickly next time. Not available on this device? Use your index number and code from your phone instead.</p>
-        <button type="button" id="btn-profile-add-passkey" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border-2 border-primary-500 text-primary-600 bg-primary-50 hover:bg-primary-100 min-h-[44px] sm:min-h-0">
-            <i class="fas fa-fingerprint" aria-hidden="true"></i>
-            Add fingerprint or Face ID for this device
-        </button>
-        <p id="passkey-profile-message" class="text-sm mt-2 hidden" role="status"></p>
-    </div>
-</section>
 
 <section class="mb-8" aria-label="Account">
     <h2 class="text-sm font-medium text-slate-700 mb-3">Account</h2>
