@@ -421,7 +421,10 @@ class ClassGroupController extends Controller
     public function updateAllowedDevices(Request $request, ClassGroup $classGroup): RedirectResponse
     {
         $this->authorize('update', $classGroup);
-        if (!Schema::hasColumn('class_groups', 'allowed_devices')) {
+        $hasClassGroupColumn = Schema::hasColumn('class_groups', 'allowed_devices');
+        $hasQuizColumn = Schema::hasColumn('quizzes', 'allowed_devices');
+        // If neither table supports allowed_devices, keep old behaviour and show error.
+        if (! $hasClassGroupColumn && ! $hasQuizColumn) {
             return redirect()->route($this->staffRoutePrefix() . '.class-groups.show', $classGroup)
                 ->with('error', 'Device restrictions are not supported in this installation.');
         }
@@ -429,9 +432,17 @@ class ClassGroupController extends Controller
             'allowed_devices' => 'required|in:desktop,mobile,both',
         ]);
         $allowed = $request->input('allowed_devices');
-        $classGroup->update([
-            'allowed_devices' => $allowed,
-        ]);
+        // Persist setting at class-group level when column exists.
+        if ($hasClassGroupColumn) {
+            $classGroup->update([
+                'allowed_devices' => $allowed,
+            ]);
+        }
+        // Also cascade to quizzes for this class group when quizzes.allowed_devices exists,
+        // so device restrictions take effect even on installs without the class_groups column.
+        if ($hasQuizColumn) {
+            $classGroup->quizzes()->update(['allowed_devices' => $allowed]);
+        }
 
         return redirect()->route($this->staffRoutePrefix() . '.class-groups.show', $classGroup)
             ->with('success', 'Allowed devices updated for quizzes in this group.');
