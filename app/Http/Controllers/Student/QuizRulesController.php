@@ -9,10 +9,11 @@ use App\Models\QuizAcceptance;
 use App\Models\QuizSession;
 use App\Models\Setting;
 use App\Models\Student;
-use Illuminate\Http\Request;
-use Illuminate\View\View;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\View\View;
 
 class QuizRulesController extends Controller
 {
@@ -44,14 +45,22 @@ class QuizRulesController extends Controller
                 return redirect()->route('student.rules.show.quiz', ['token' => $quiz->link_token]);
             }
         }
-        // Resolve allowed devices from class group (coordinator setting), fallback to quiz then desktop
+        // Resolve allowed devices from class group (coordinator setting), fallback to quiz.
+        // On installations without the allowed_devices columns, do NOT restrict by device at all.
         $allowedDevices = 'desktop';
-        if ($quiz && \Illuminate\Support\Facades\Schema::hasColumn('class_groups', 'allowed_devices')) {
-            $allowedDevices = $quiz->classGroup?->getAttribute('allowed_devices')
-                ?? $quiz->getAttribute('allowed_devices')
-                ?? 'desktop';
-        } elseif ($quiz) {
-            $allowedDevices = $quiz->getAttribute('allowed_devices') ?? 'desktop';
+        if ($quiz) {
+            $hasClassGroupColumn = Schema::hasColumn('class_groups', 'allowed_devices');
+            $hasQuizColumn = Schema::hasColumn('quizzes', 'allowed_devices');
+            if (! $hasClassGroupColumn && ! $hasQuizColumn) {
+                // Older installations without device columns: treat as both (desktop + mobile).
+                $allowedDevices = 'both';
+            } else {
+                $allowedDevices = $quiz->getAttribute('allowed_devices');
+                if ($hasClassGroupColumn) {
+                    $allowedDevices = $quiz->classGroup?->getAttribute('allowed_devices') ?? $allowedDevices;
+                }
+                $allowedDevices = $allowedDevices ?? 'desktop';
+            }
         }
         $mobileAllowed = in_array($allowedDevices, ['mobile', 'both'], true);
         return view('student.quiz-rules', compact('quiz', 'mobileAllowed'));

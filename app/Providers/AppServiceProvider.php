@@ -15,6 +15,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -73,7 +74,8 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-        // When on quiz ready/show, allow mobile if the quiz/group allows it (so guard script doesn't white-screen mobile)
+        // When on quiz ready/show, allow mobile if the quiz/group allows it (so guard script doesn't white-screen mobile).
+        // On installations without allowed_devices columns, do not restrict by device at all.
         View::composer('layouts.app', function ($view): void {
             if (! request()->routeIs('student.quiz.show') && ! request()->routeIs('student.quiz.ready')) {
                 $view->with('quizAllowsMobile', false);
@@ -89,9 +91,16 @@ class AppServiceProvider extends ServiceProvider
                 $view->with('quizAllowsMobile', false);
                 return;
             }
-            $allowed = $session->quiz->classGroup?->getAttribute('allowed_devices')
-                ?? $session->quiz->getAttribute('allowed_devices')
-                ?? 'desktop';
+            $hasClassGroupColumn = Schema::hasColumn('class_groups', 'allowed_devices');
+            $hasQuizColumn = Schema::hasColumn('quizzes', 'allowed_devices');
+            if (! $hasClassGroupColumn && ! $hasQuizColumn) {
+                // Older installations without device columns: always allow both (desktop + mobile).
+                $allowed = 'both';
+            } else {
+                $allowed = $session->quiz->classGroup?->getAttribute('allowed_devices')
+                    ?? $session->quiz->getAttribute('allowed_devices')
+                    ?? 'desktop';
+            }
             $view->with('quizAllowsMobile', in_array($allowed, ['mobile', 'both'], true));
         });
 
