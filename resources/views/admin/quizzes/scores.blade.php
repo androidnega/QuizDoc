@@ -124,8 +124,7 @@
                         <tr>
                             <th scope="col" class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Index</th>
                             <th scope="col" class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mark</th>
-                            <th scope="col" class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Violations</th>
-                            <th scope="col" class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
+                            <th scope="col" class="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Violation</th>
                             <th scope="col" class="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
@@ -157,28 +156,21 @@
                                     @endif
                                 </td>
                                 <td class="px-3 py-1.5 whitespace-nowrap">
-                                    @php $violationCount = $session->violations->count(); @endphp
-                                    @if($violationCount > 0)
+                                    @php $violationLabel = $session->getFirstCriticalViolationLabel(); @endphp
+                                    @if($violationLabel)
                                         <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-danger-100 text-danger-700">
                                             <svg class="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                             </svg>
-                                            {{ $violationCount }}
+                                            {{ $violationLabel }}
                                         </span>
                                     @else
                                         <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-success-100 text-success-700">
                                             <svg class="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                             </svg>
-                                            Clean
+                                            —
                                         </span>
-                                    @endif
-                                </td>
-                                <td class="px-3 py-1.5 whitespace-nowrap">
-                                    @if($session->result)
-                                        <span class="text-xs text-gray-600">{{ $session->result->submitted_at->format('M d, Y H:i') }}</span>
-                                    @else
-                                        <span class="text-xs text-gray-400">—</span>
                                     @endif
                                 </td>
                                 <td class="px-3 py-1.5 whitespace-nowrap text-right">

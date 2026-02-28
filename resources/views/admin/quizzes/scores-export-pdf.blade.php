@@ -1,4 +1,4 @@
-{{-- PDF score report: clean design, no violations column, title with group name --}}
+{{-- PDF score report: clean design, Violation column (one critical type per student), title with group name --}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -54,7 +54,7 @@
                 <th style="width:36px">No.</th>
                 <th>Student Index</th>
                 <th class="num" style="width:72px">Mark</th>
-                <th style="width:100px">Submitted</th>
+                <th style="width:120px">Violation</th>
             </tr>
         </thead>
         <tbody>
@@ -77,7 +77,7 @@
                         —
                     @endif
                 </td>
-                <td>{{ $session->result && $session->result->submitted_at ? $session->result->submitted_at->format('M d, Y H:i') : '—' }}</td>
+                <td>{{ $session->getFirstCriticalViolationLabel() ?? '—' }}</td>
             </tr>
             @endforeach
         </tbody>

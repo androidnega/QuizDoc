@@ -68,4 +68,18 @@ class QuizSession extends Model
             'critical_violation',
         ], true);
     }
+
+    /**
+     * First critical violation label for lecturer preview/PDF (one only).
+     * Returns human-readable label or null if no critical violation.
+     */
+    public function getFirstCriticalViolationLabel(): ?string
+    {
+        $critical = QuizViolation::criticalTypes();
+        $first = $this->violations
+            ->filter(fn ($v) => in_array($v->type ?? '', $critical, true) || ($v->severity ?? '') === QuizViolation::SEVERITY_CRITICAL)
+            ->sortBy('occurred_at')
+            ->first();
+        return $first ? QuizViolation::labelForType($first->type ?? 'other') : null;
+    }
 }
