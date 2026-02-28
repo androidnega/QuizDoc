@@ -15,11 +15,13 @@
         .meta { margin: 16px 0 18px 0; padding: 12px 14px; background: #f8fafc; border-radius: 6px; font-size: 9pt; color: #475569; }
         .meta-row { margin: 4px 0; }
         .meta-label { font-weight: bold; color: #334155; }
-        table.scores { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 9pt; line-height: 1.2; }
-        table.scores th, table.scores td { border: 1px solid #cbd5e1; padding: 4px 8px; text-align: left; }
+        table.scores { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 9pt; line-height: 1.15; }
+        table.scores th, table.scores td { border: 1px solid #cbd5e1; padding: 2px 6px; text-align: left; vertical-align: middle; }
         table.scores th { background: #1e40af; color: #fff; font-weight: 600; }
         table.scores tr:nth-child(even) { background: #f1f5f9; }
         table.scores tr:hover { background: #e2e8f0; }
+        table.scores td.violation-yes { background: #fef2f2; color: #b91c1c; font-weight: 600; }
+        table.scores tr:nth-child(even) td.violation-yes { background: #fee2e2; color: #b91c1c; }
         .num { text-align: right; }
         .footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 8pt; color: #64748b; }
     </style>
@@ -64,20 +66,17 @@
                 <td>{{ $session->student_index }}</td>
                 <td class="num">
                     @if($session->result)
-                        @if(!empty($forClassRep))
-                            @if($session->isResultWithheld())
-                                On hold – see lecturer
-                            @else
-                                {{ $session->result->correct_count }}/{{ $session->result->total_questions }}
-                            @endif
+                        @if($session->isResultWithheld())
+                            On hold – see lecturer
                         @else
-                            {{ number_format((float) $session->result->score, 1) }}% ({{ $session->result->correct_count }}/{{ $session->result->total_questions }}){{ $session->isResultWithheld() ? ' - Result on hold' : '' }}
+                            {{ $session->result->correct_count }}/{{ $session->result->total_questions }}
                         @endif
                     @else
                         —
                     @endif
                 </td>
-                <td>{{ $session->getFirstCriticalViolationLabel() ?? '—' }}</td>
+                @php $violLabel = $session->getFirstCriticalViolationLabel(); @endphp
+                <td class="{{ $violLabel ? 'violation-yes' : '' }}">{{ $violLabel ?? '—' }}</td>
             </tr>
             @endforeach
         </tbody>
