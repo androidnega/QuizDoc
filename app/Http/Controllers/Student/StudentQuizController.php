@@ -27,6 +27,8 @@ class StudentQuizController extends Controller
     private const MAX_QUIZ_VIOLATION_CAPTURES = 5;
     private const NORMAL_VIOLATION_LIMIT = 10;
     private const HEAD_DIRECTION_LIMIT = 12;
+    /** Out-of-frame duration (ms) above which we auto-submit immediately (e.g. 15+ seconds). */
+    private const OUT_OF_FRAME_CRITICAL_DURATION_MS = 15000;
     /**
      * System readiness screen after pre-quiz face capture.
      */
@@ -591,7 +593,7 @@ class StudentQuizController extends Controller
             'copy_paste',
             'multiple_ip',
         ];
-        // Critical violations: immediate auto-submit on first occurrence.
+        // Critical violations: immediate auto-submit on first occurrence (mobile & desktop).
         if (in_array($type, $criticalAutoSubmitTypes, true)) {
             $session->update([
                 'post_face_skipped_at' => now(),
@@ -603,7 +605,25 @@ class StudentQuizController extends Controller
             $this->finalizeQuiz($session);
             $autoSubmitted = true;
         }
-        // Out-of-frame: auto-submit only after 10 valid face_out_of_frame events.
+        // Out-of-frame 15+ seconds continuously: treat as critical, immediate auto-submit (e.g. on mobile).
+        if (!$autoSubmitted && $type === 'face_out_of_frame') {
+            $durationMs = (int) ($metadata['out_of_frame_duration_ms'] ?? $metadata['out_of_frame_duration'] ?? 0);
+            if ($durationMs > 0 && $durationMs < 1000) {
+                $durationMs *= 1000; // value was in seconds
+            }
+            if ($durationMs >= self::OUT_OF_FRAME_CRITICAL_DURATION_MS) {
+                $session->update([
+                    'post_face_skipped_at' => now(),
+                    'post_face_skipped_reason' => 'auto_submit',
+                    'auto_submit_after' => null,
+                    'auto_submitted' => true,
+                    'submission_reason' => 'critical_violation_auto_submit',
+                ]);
+                $this->finalizeQuiz($session);
+                $autoSubmitted = true;
+            }
+        }
+        // Out-of-frame: auto-submit after 10 face_out_of_frame events (when duration < 15s each).
         if (!$autoSubmitted && $type === 'face_out_of_frame') {
             $outOfFrameCount = $session->violations()->where('type', 'face_out_of_frame')->count();
             if ($outOfFrameCount >= self::NORMAL_VIOLATION_LIMIT) {
