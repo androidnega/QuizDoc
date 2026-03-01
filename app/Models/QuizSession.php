@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class QuizSession extends Model
 {
     protected $fillable = [
-        'quiz_id', 'student_index', 'ip_address', 'start_time', 'ended_at', 'last_heartbeat_at',
+        'quiz_id', 'student_index', 'ip_address', 'user_agent', 'device_type', 'device_name', 'start_time', 'ended_at', 'last_heartbeat_at',
         'pre_face_image', 'pre_face_image_hash', 'post_face_image', 'post_face_image_hash', 'post_face_captured_at',
         'post_face_skipped_at', 'post_face_skipped_reason', 'auto_submit_after',
         'assigned_question_ids', 'assigned_correct_answers', 'shuffled_question_options', 'session_token',
@@ -81,5 +81,70 @@ class QuizSession extends Model
             ->sortBy('occurred_at')
             ->first();
         return $first ? QuizViolation::labelForType($first->type ?? 'other') : null;
+    }
+
+    /**
+     * Parse User-Agent and return device_type (desktop|mobile|tablet) and optional device_name.
+     * Used to show "Laptop" vs "Mobile phone (iPhone 14)" on session detail page.
+     */
+    public static function parseUserAgent(?string $userAgent): array
+    {
+        $ua = $userAgent ?? '';
+        $deviceType = 'desktop';
+        $deviceName = null;
+
+        if (preg_match('/iPad|Tablet|PlayBook|Silk\/|KFAPWI|GT-P|SM-T|Tab\b/i', $ua)) {
+            $deviceType = 'tablet';
+            if (preg_match('/iPad.*OS (\d+)[_\d]*/i', $ua, $m)) {
+                $deviceName = 'iPad' . (isset($m[1]) ? ' (iOS ' . $m[1] . ')' : '');
+            } elseif (preg_match('/Android/i', $ua)) {
+                $deviceName = 'Android tablet';
+            } else {
+                $deviceName = 'Tablet';
+            }
+        } elseif (preg_match('/Mobile|Android|iPhone|iPod|webOS|BlackBerry|IEMobile|Opera Mini|MiuiBrowser|SamsungBrowser/i', $ua)) {
+            $deviceType = 'mobile';
+            if (preg_match('/iPhone(?: OS (\d+)[_\d]*)?/i', $ua, $m)) {
+                $deviceName = 'iPhone' . (isset($m[1]) ? ' (iOS ' . $m[1] . ')' : '');
+            } elseif (preg_match('/iPod/i', $ua)) {
+                $deviceName = 'iPod touch';
+            } elseif (preg_match('/Android[^;]*;(?: [^;]*)?\s*([A-Za-z0-9\-]+(?:\s+[A-Za-z0-9\-]+)?)\s*Build/i', $ua, $m)) {
+                $model = trim($m[1] ?? '');
+                if (strlen($model) <= 40) {
+                    $deviceName = $model;
+                } else {
+                    $deviceName = 'Android phone';
+                }
+            } elseif (preg_match('/Samsung[^\/]*\/([A-Za-z0-9\-]+)/i', $ua, $m) && strlen($m[1] ?? '') <= 30) {
+                $deviceName = 'Samsung ' . ($m[1] ?? '');
+            } elseif (preg_match('/Pixel\s*(\d+)/i', $ua, $m)) {
+                $deviceName = 'Google Pixel ' . ($m[1] ?? '');
+            } elseif (preg_match('/Android/i', $ua)) {
+                $deviceName = 'Android phone';
+            } else {
+                $deviceName = 'Mobile phone';
+            }
+        }
+
+        return [
+            'device_type' => $deviceType,
+            'device_name' => $deviceName,
+        ];
+    }
+
+    /** Human-readable device label for session detail (e.g. "Laptop", "Mobile phone (iPhone)"). */
+    public function getDeviceLabelAttribute(): string
+    {
+        $type = $this->device_type ?? 'desktop';
+        $name = trim((string) ($this->device_name ?? ''));
+        if ($type === 'mobile') {
+            $base = 'Mobile phone';
+            return $name !== '' ? $base . ' (' . $name . ')' : $base;
+        }
+        if ($type === 'tablet') {
+            $base = 'Tablet';
+            return $name !== '' ? $base . ' (' . $name . ')' : $base;
+        }
+        return 'Laptop';
     }
 }

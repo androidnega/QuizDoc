@@ -99,10 +99,15 @@ class ProctoringCaptureController extends Controller
                     ->with('error', 'Not enough questions are ready for this quiz yet.');
             }
 
+            $ua = $request->userAgent();
+            $device = QuizSession::parseUserAgent($ua);
             $session = QuizSession::create([
                 'quiz_id' => $quiz->id,
                 'student_index' => $studentIndex,
                 'ip_address' => $ip,
+                'user_agent' => $ua ? substr($ua, 0, 1024) : null,
+                'device_type' => $device['device_type'],
+                'device_name' => $device['device_name'],
                 'start_time' => null,
                 'camera_verified' => true,
                 'camera_started_at' => now(),
@@ -225,11 +230,16 @@ class ProctoringCaptureController extends Controller
         $correctAnswersSnapshot = $assignment['correct_answers'] ?? [];
         $shuffledOptions = $assignment['shuffled_options'] ?? [];
 
+        $ua = $request->userAgent();
+        $device = QuizSession::parseUserAgent($ua);
         try {
             $session = QuizSession::create([
                 'quiz_id' => $quiz->id,
                 'student_index' => $studentIndex,
                 'ip_address' => $ip,
+                'user_agent' => $ua ? substr($ua, 0, 1024) : null,
+                'device_type' => $device['device_type'],
+                'device_name' => $device['device_name'],
                 'start_time' => null,
                 'camera_verified' => true,
                 'camera_started_at' => now(),

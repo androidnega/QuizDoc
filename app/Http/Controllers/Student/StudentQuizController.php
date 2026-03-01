@@ -119,6 +119,15 @@ class StudentQuizController extends Controller
         if ($session->ended_at) {
             return redirect()->to($this->quizCompleteUrl());
         }
+        if ($session->device_type === null && $session->user_agent === null) {
+            $ua = $request->userAgent();
+            $device = QuizSession::parseUserAgent($ua);
+            $session->update([
+                'user_agent' => $ua ? substr($ua, 0, 1024) : null,
+                'device_type' => $device['device_type'],
+                'device_name' => $device['device_name'],
+            ]);
+        }
         // Enforce pre-capture gate only when camera is required by settings.
         if (!$session->camera_verified && $this->isProctoringCameraRequired()) {
             return redirect()->route('student.proctoring.capture')->with('error', 'Error');

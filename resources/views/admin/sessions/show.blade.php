@@ -38,6 +38,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
             <div><span class="text-gray-500 block">Index</span><span class="font-medium text-gray-900">{{ $session->student_index }}</span></div>
             <div><span class="text-gray-500 block">IP</span><span class="font-mono text-gray-900 truncate block" title="{{ $session->ip_address }}">{{ $session->ip_address }}</span></div>
+            <div><span class="text-gray-500 block">Device</span><span class="text-gray-900" title="{{ $session->user_agent ?? '' }}">{{ $session->device_label ?? 'Laptop' }}</span></div>
             <div><span class="text-gray-500 block">Started</span><span class="text-gray-900">{{ $session->start_time?->format('M d, H:i') ?? '-' }}</span></div>
             <div><span class="text-gray-500 block">Ended</span><span class="text-gray-900">{{ $session->ended_at?->format('M d, H:i') ?? '-' }}</span></div>
             <div><span class="text-gray-500 block">Mark</span>
