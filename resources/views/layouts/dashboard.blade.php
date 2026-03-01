@@ -209,13 +209,13 @@
                     <button type="button" class="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-full p-0.5 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 touch-manipulation" aria-expanded="false" aria-haspopup="true" id="profile-menu-btn" title="Profile">
                         @php $user = auth()->user(); @endphp
                         @if($user && $user->avatar_url)
-                            <img src="{{ $user->avatar_url }}" alt="Profile" class="h-9 w-9 sm:h-9 sm:w-9 rounded-full object-cover flex-shrink-0 border border-gray-200" />
+                            <img src="{{ $user->avatar_url }}" alt="Profile" class="h-9 w-9 rounded-full object-cover flex-shrink-0 border border-gray-200" />
                         @else
-                            <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-gray-600 text-sm font-semibold border border-gray-200">{{ $user ? strtoupper(substr($user->name ?? $user->username ?? 'U', 0, 1)) : 'U' }}</span>
+                            <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-gray-600 text-sm font-semibold border border-gray-200 leading-none select-none text-center" style="aspect-ratio: 1; line-height: 2.25rem;">{{ $user ? strtoupper(substr($user->name ?? $user->username ?? 'U', 0, 1)) : 'U' }}</span>
                         @endif
                         <svg class="h-4 w-4 flex-shrink-0 text-gray-500 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
-                    <div id="profile-menu-dropdown" class="absolute right-0 top-full z-50 mt-1.5 w-48 sm:w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg hidden">
+                    <div id="profile-menu-dropdown" class="absolute right-0 top-full z-[100] mt-1.5 w-48 sm:w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg hidden">
                         <a href="{{ route('dashboard.profile.show') }}" class="block px-4 py-3 sm:py-2.5 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap touch-manipulation">Profile &amp; info</a>
                         <a href="{{ route('dashboard.profile.password') }}" class="block px-4 py-3 sm:py-2.5 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap touch-manipulation">Reset password</a>
                         <form action="{{ route('logout') }}" method="post" class="border-t border-gray-100 mt-1">
@@ -306,9 +306,34 @@
     var profileDropdown = document.getElementById('profile-menu-dropdown');
     var profileWrap = document.getElementById('profile-menu-wrap');
     if (profileBtn && profileDropdown) {
-        profileBtn.addEventListener('click', function(e) { e.stopPropagation(); var open = !profileDropdown.classList.contains('hidden'); profileDropdown.classList.toggle('hidden', open); profileBtn.setAttribute('aria-expanded', !open); });
-        document.addEventListener('click', function() { profileDropdown.classList.add('hidden'); profileBtn.setAttribute('aria-expanded', 'false'); });
-        if (profileWrap) profileWrap.addEventListener('click', function(e) { e.stopPropagation(); });
+        function toggleProfileMenu(e) {
+            if (e) { e.stopPropagation(); if (e.cancelable) e.preventDefault(); }
+            var open = profileDropdown.classList.contains('hidden');
+            profileDropdown.classList.toggle('hidden', !open);
+            profileBtn.setAttribute('aria-expanded', open);
+        }
+        function closeProfileMenu() {
+            profileDropdown.classList.add('hidden');
+            profileBtn.setAttribute('aria-expanded', 'false');
+        }
+        profileBtn.addEventListener('click', toggleProfileMenu);
+        profileBtn.addEventListener('touchend', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            toggleProfileMenu(e);
+        }, { passive: false });
+        document.addEventListener('click', function(e) {
+            if (profileWrap && profileWrap.contains(e.target)) return;
+            closeProfileMenu();
+        });
+        document.addEventListener('touchend', function(e) {
+            if (profileWrap && profileWrap.contains(e.target)) return;
+            closeProfileMenu();
+        }, true);
+        if (profileWrap) {
+            profileWrap.addEventListener('click', function(e) { e.stopPropagation(); });
+            profileWrap.addEventListener('touchend', function(e) { e.stopPropagation(); }, true);
+        }
     }
 })();
 </script>
