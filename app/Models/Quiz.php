@@ -326,17 +326,31 @@ class Quiz extends Model
         ];
     }
 
+    /**
+     * Single source of truth: effective allowed_devices for this quiz.
+     * Class group (coordinator) overrides; then quiz column; then desktop.
+     * Use this everywhere instead of reading allowed_devices from different places.
+     */
+    public function getEffectiveAllowedDevices(): string
+    {
+        $valid = [self::ALLOWED_DEVICES_DESKTOP, self::ALLOWED_DEVICES_MOBILE, self::ALLOWED_DEVICES_BOTH];
+        $v = $this->classGroup?->getEffectiveAllowedDevices()
+            ?? $this->getAttribute('allowed_devices')
+            ?? self::ALLOWED_DEVICES_DESKTOP;
+        return in_array($v, $valid, true) ? $v : self::ALLOWED_DEVICES_DESKTOP;
+    }
+
     /** Whether students can take this quiz on desktop. */
     public function allowsDesktop(): bool
     {
-        $v = $this->getAttribute('allowed_devices') ?? self::ALLOWED_DEVICES_DESKTOP;
+        $v = $this->getEffectiveAllowedDevices();
         return $v === self::ALLOWED_DEVICES_DESKTOP || $v === self::ALLOWED_DEVICES_BOTH;
     }
 
     /** Whether students can take this quiz on mobile. */
     public function allowsMobile(): bool
     {
-        $v = $this->getAttribute('allowed_devices') ?? self::ALLOWED_DEVICES_DESKTOP;
+        $v = $this->getEffectiveAllowedDevices();
         return $v === self::ALLOWED_DEVICES_MOBILE || $v === self::ALLOWED_DEVICES_BOTH;
     }
 

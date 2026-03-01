@@ -311,7 +311,7 @@ class ClassGroupController extends Controller
         $examinersMap = $examinerIds ? User::whereIn('id', $examinerIds)->get(['id', 'username', 'name'])->keyBy('id') : collect();
 
         $showAllowedDevices = true; // Always show device dropdown; value is enforced via DB or settings.
-        $allowedDevicesForForm = $this->effectiveAllowedDevicesForClassGroup($classGroup);
+        $allowedDevicesForForm = $classGroup->getEffectiveAllowedDevices();
 
         return view('admin.class-groups.show', compact('classGroup', 'students', 'availableCourses', 'examinersMap', 'visibleCourses', 'visibleQuizzes', 'showAllowedDevices', 'allowedDevicesForForm'));
     }
@@ -410,6 +410,15 @@ class ClassGroupController extends Controller
         }
         $classGroup->update($updateData);
 
+        // Keep single source of truth: when coordinator changes allowed_devices on edit, sync to settings and quizzes (same as show-page update).
+        if (array_key_exists('allowed_devices', $updateData)) {
+            $allowed = $updateData['allowed_devices'];
+            Setting::setValue('class_group_allowed_devices_' . $classGroup->id, $allowed);
+            if (Schema::hasColumn('quizzes', 'allowed_devices')) {
+                $classGroup->quizzes()->update(['allowed_devices' => $allowed]);
+            }
+        }
+
         $syncData = [];
         foreach ($assignments as $a) {
             $syncData[(int) $a['course_id']] = ['examiner_id' => (int) $a['examiner_id']];
@@ -446,23 +455,6 @@ class ClassGroupController extends Controller
 
         return redirect()->route($this->staffRoutePrefix() . '.class-groups.show', $classGroup)
             ->with('success', 'Allowed devices updated for quizzes in this group.');
-    }
-
-    /**
-     * Effective allowed_devices for a class group: from DB column or from settings (coordinator choice).
-     */
-    private function effectiveAllowedDevicesForClassGroup(ClassGroup $classGroup): string
-    {
-        if (Schema::hasColumn('class_groups', 'allowed_devices')) {
-            $v = $classGroup->getAttribute('allowed_devices');
-            if (in_array($v, [ClassGroup::ALLOWED_DEVICES_DESKTOP, ClassGroup::ALLOWED_DEVICES_MOBILE, ClassGroup::ALLOWED_DEVICES_BOTH], true)) {
-                return $v;
-            }
-        }
-        $fromSettings = Setting::getValue('class_group_allowed_devices_' . $classGroup->id, ClassGroup::ALLOWED_DEVICES_DESKTOP);
-        return in_array($fromSettings, [ClassGroup::ALLOWED_DEVICES_DESKTOP, ClassGroup::ALLOWED_DEVICES_MOBILE, ClassGroup::ALLOWED_DEVICES_BOTH], true)
-            ? $fromSettings
-            : ClassGroup::ALLOWED_DEVICES_DESKTOP;
     }
 
     public function destroy(ClassGroup $classGroup): RedirectResponse

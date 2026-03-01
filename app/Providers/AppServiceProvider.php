@@ -15,7 +15,6 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -91,19 +90,7 @@ class AppServiceProvider extends ServiceProvider
                 $view->with('quizAllowsMobile', false);
                 return;
             }
-            $hasClassGroupColumn = Schema::hasColumn('class_groups', 'allowed_devices');
-            $hasQuizColumn = Schema::hasColumn('quizzes', 'allowed_devices');
-            if (! $hasClassGroupColumn && ! $hasQuizColumn) {
-                $classGroupId = $session->quiz->class_group_id ?? 0;
-                $allowed = $classGroupId ? \App\Models\Setting::getValue('class_group_allowed_devices_' . $classGroupId, 'desktop') : 'desktop';
-            } else {
-                $allowed = $session->quiz->classGroup?->getAttribute('allowed_devices')
-                    ?? $session->quiz->getAttribute('allowed_devices')
-                    ?? \App\Models\Setting::getValue('class_group_allowed_devices_' . ($session->quiz->class_group_id ?? 0), 'desktop');
-            }
-            if (! in_array($allowed, ['desktop', 'mobile', 'both'], true)) {
-                $allowed = 'desktop';
-            }
+            $allowed = $session->quiz->getEffectiveAllowedDevices();
             $view->with('quizAllowsMobile', in_array($allowed, ['mobile', 'both'], true));
         });
 

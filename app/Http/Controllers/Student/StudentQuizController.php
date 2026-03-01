@@ -18,7 +18,6 @@ use App\Services\AiQuestionService;
 use App\Services\CloudinaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -186,20 +185,9 @@ class StudentQuizController extends Controller
         $headTurnCount = $session->violations()->where('type', 'head_turn')->count();
         $normalViolationCount = $this->countNormalViolations($session);
 
-        // Resolve allowed devices from class group (coordinator setting), then quiz, then settings.
-        $hasClassGroupColumn = Schema::hasColumn('class_groups', 'allowed_devices');
-        $hasQuizColumn = Schema::hasColumn('quizzes', 'allowed_devices');
-        if (! $hasClassGroupColumn && ! $hasQuizColumn) {
-            $classGroupId = $session->quiz->class_group_id ?? 0;
-            $allowedDevices = $classGroupId ? Setting::getValue('class_group_allowed_devices_' . $classGroupId, Quiz::ALLOWED_DEVICES_DESKTOP) : Quiz::ALLOWED_DEVICES_DESKTOP;
-        } else {
-            $allowedDevices = $session->quiz->classGroup?->getAttribute('allowed_devices')
-                ?? $session->quiz->getAttribute('allowed_devices')
-                ?? Setting::getValue('class_group_allowed_devices_' . ($session->quiz->class_group_id ?? 0), Quiz::ALLOWED_DEVICES_DESKTOP);
-        }
-        if (! in_array($allowedDevices, [Quiz::ALLOWED_DEVICES_DESKTOP, Quiz::ALLOWED_DEVICES_MOBILE, Quiz::ALLOWED_DEVICES_BOTH], true)) {
-            $allowedDevices = Quiz::ALLOWED_DEVICES_DESKTOP;
-        }
+        // Single source of truth: quiz effective allowed devices (class group → quiz → desktop).
+        $session->quiz->loadMissing('classGroup');
+        $allowedDevices = $session->quiz->getEffectiveAllowedDevices();
         $isMobile = $this->isMobileRequest($request);
 
         // Mobile-only quiz opened on desktop: show notice to use phone

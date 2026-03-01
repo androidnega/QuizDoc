@@ -12,7 +12,6 @@ use App\Models\Student;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class QuizRulesController extends Controller
@@ -45,25 +44,11 @@ class QuizRulesController extends Controller
                 return redirect()->route('student.rules.show.quiz', ['token' => $quiz->link_token]);
             }
         }
-        // Resolve allowed devices from class group (coordinator setting), then quiz, then settings fallback.
-        $allowedDevices = 'desktop';
-        if ($quiz) {
-            $hasClassGroupColumn = Schema::hasColumn('class_groups', 'allowed_devices');
-            $hasQuizColumn = Schema::hasColumn('quizzes', 'allowed_devices');
-            if (! $hasClassGroupColumn && ! $hasQuizColumn) {
-                $classGroupId = $quiz->class_group_id ?? 0;
-                $allowedDevices = $classGroupId ? \App\Models\Setting::getValue('class_group_allowed_devices_' . $classGroupId, 'desktop') : 'desktop';
-            } else {
-                $allowedDevices = $quiz->getAttribute('allowed_devices');
-                if ($hasClassGroupColumn) {
-                    $allowedDevices = $quiz->classGroup?->getAttribute('allowed_devices') ?? $allowedDevices;
-                }
-                $allowedDevices = $allowedDevices ?? \App\Models\Setting::getValue('class_group_allowed_devices_' . ($quiz->class_group_id ?? 0), 'desktop');
-            }
-            if (! in_array($allowedDevices, ['desktop', 'mobile', 'both'], true)) {
-                $allowedDevices = 'desktop';
-            }
-        }
+        // Single source of truth: quiz effective allowed devices (class group → quiz → desktop).
+        $allowedDevices = $quiz ? (function () use ($quiz) {
+            $quiz->loadMissing('classGroup');
+            return $quiz->getEffectiveAllowedDevices();
+        })() : 'desktop';
         $mobileAllowed = in_array($allowedDevices, ['mobile', 'both'], true);
         return view('student.quiz-rules', compact('quiz', 'mobileAllowed'));
     }

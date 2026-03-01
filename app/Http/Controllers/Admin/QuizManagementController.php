@@ -261,7 +261,13 @@ class QuizManagementController extends Controller
                 $createData['questions_per_student'] = (int) $request->questions_per_student;
             }
             if (Schema::hasColumn('quizzes', 'allowed_devices')) {
-                $createData['allowed_devices'] = $request->input('allowed_devices', Quiz::ALLOWED_DEVICES_DESKTOP);
+                // Single source of truth: new quiz inherits from class group when present.
+                $defaultAllowed = $requestClassGroupId
+                    ? \App\Models\ClassGroup::find($requestClassGroupId)?->getEffectiveAllowedDevices()
+                    : Quiz::ALLOWED_DEVICES_DESKTOP;
+                $createData['allowed_devices'] = in_array($request->input('allowed_devices'), [Quiz::ALLOWED_DEVICES_DESKTOP, Quiz::ALLOWED_DEVICES_MOBILE, Quiz::ALLOWED_DEVICES_BOTH], true)
+                    ? $request->input('allowed_devices')
+                    : $defaultAllowed;
             }
 
             $aiService = app(AiQuestionService::class);
@@ -438,10 +444,7 @@ class QuizManagementController extends Controller
         $questionStats = $this->computeQuestionStats($quiz, $completedSessions);
 
         $liveProctorEnabled = Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') === '1';
-        // Effective allowed devices: from class group (coordinator) then quiz then desktop
-        $allowedDevicesEffective = $quiz->classGroup?->getAttribute('allowed_devices')
-            ?? $quiz->getAttribute('allowed_devices')
-            ?? Quiz::ALLOWED_DEVICES_DESKTOP;
+        $allowedDevicesEffective = $quiz->getEffectiveAllowedDevices();
         $data = compact('quiz', 'unapprovedPools', 'unapprovedPoolsTotal', 'approvedQuestions', 'approvedQuestionsTotal', 'sessionsPaginator', 'sessionsStats', 'questionStats', 'liveProctorEnabled', 'allowedDevicesEffective');
 
         // Live tab/pagination: return only the tab HTML fragment for AJAX requests

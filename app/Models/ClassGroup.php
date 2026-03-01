@@ -76,6 +76,24 @@ class ClassGroup extends Model
         ];
     }
 
+    /**
+     * Effective allowed_devices for this class group: from DB column or from settings (coordinator choice).
+     * Use this when displaying or enforcing device rules so coordinator and examiner see the same value.
+     */
+    public function getEffectiveAllowedDevices(): string
+    {
+        if (\Illuminate\Support\Facades\Schema::hasColumn('class_groups', 'allowed_devices')) {
+            $v = $this->getAttribute('allowed_devices');
+            if (in_array($v, [self::ALLOWED_DEVICES_DESKTOP, self::ALLOWED_DEVICES_MOBILE, self::ALLOWED_DEVICES_BOTH], true)) {
+                return $v;
+            }
+        }
+        $fromSettings = \App\Models\Setting::getValue('class_group_allowed_devices_' . $this->id, self::ALLOWED_DEVICES_DESKTOP);
+        return in_array($fromSettings, [self::ALLOWED_DEVICES_DESKTOP, self::ALLOWED_DEVICES_MOBILE, self::ALLOWED_DEVICES_BOTH], true)
+            ? $fromSettings
+            : self::ALLOWED_DEVICES_DESKTOP;
+    }
+
     public function examiner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'examiner_id');
