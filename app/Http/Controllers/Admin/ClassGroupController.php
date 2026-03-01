@@ -342,7 +342,8 @@ class ClassGroupController extends Controller
         $academicClasses = AcademicClass::orderBy('name')->get();
         $accentColors = ClassGroup::ACCENT_COLORS;
         $allowedDevicesOptions = Schema::hasColumn('class_groups', 'allowed_devices') ? ClassGroup::allowedDevicesOptions() : [];
-        return view('admin.class-groups.edit', compact('classGroup', 'courses', 'examiners', 'levels', 'semesters', 'academicYears', 'academicClasses', 'accentColors', 'allowedDevicesOptions'));
+        $allowedDevicesForForm = $classGroup->getEffectiveAllowedDevices();
+        return view('admin.class-groups.edit', compact('classGroup', 'courses', 'examiners', 'levels', 'semesters', 'academicYears', 'academicClasses', 'accentColors', 'allowedDevicesOptions', 'allowedDevicesForForm'));
     }
 
     public function update(Request $request, ClassGroup $classGroup): RedirectResponse
@@ -441,20 +442,22 @@ class ClassGroupController extends Controller
             'allowed_devices' => 'required|in:desktop,mobile,both',
         ]);
         $allowed = $request->input('allowed_devices');
+        $current = $classGroup->getEffectiveAllowedDevices();
 
-        // Always persist coordinator choice in settings (so it is enforced even when DB columns are missing).
-        $settingsKey = 'class_group_allowed_devices_' . $classGroup->id;
-        Setting::setValue($settingsKey, $allowed);
-
-        if ($hasClassGroupColumn) {
-            $classGroup->update(['allowed_devices' => $allowed]);
-        }
-        if ($hasQuizColumn) {
-            $classGroup->quizzes()->update(['allowed_devices' => $allowed]);
+        // Only persist when the user actually changed the value; do not overwrite otherwise.
+        if ($allowed !== $current) {
+            $settingsKey = 'class_group_allowed_devices_' . $classGroup->id;
+            Setting::setValue($settingsKey, $allowed);
+            if ($hasClassGroupColumn) {
+                $classGroup->update(['allowed_devices' => $allowed]);
+            }
+            if ($hasQuizColumn) {
+                $classGroup->quizzes()->update(['allowed_devices' => $allowed]);
+            }
         }
 
         return redirect()->route($this->staffRoutePrefix() . '.class-groups.show', $classGroup)
-            ->with('success', 'Allowed devices updated for quizzes in this group.');
+            ->with('success', $allowed !== $current ? 'Allowed devices updated for quizzes in this group.' : 'No change to allowed devices.');
     }
 
     public function destroy(ClassGroup $classGroup): RedirectResponse
