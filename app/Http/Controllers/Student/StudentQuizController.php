@@ -549,6 +549,15 @@ class StudentQuizController extends Controller
         if ($session->ended_at) {
             return response()->json(['success' => true]);
         }
+        if ($session->device_type === null || $session->user_agent === null) {
+            $ua = $request->userAgent();
+            $device = QuizSession::parseUserAgent($ua);
+            $session->update([
+                'user_agent' => $ua ? substr($ua, 0, 1024) : null,
+                'device_type' => $device['device_type'],
+                'device_name' => $device['device_name'],
+            ]);
+        }
         $type = $request->type;
         if (!$this->isProctoringTypeEnabled($type)) {
             return response()->json([
@@ -793,10 +802,18 @@ class StudentQuizController extends Controller
             return response()->json(['success' => true]);
         }
         $hadScheduledSubmit = $session->auto_submit_after !== null;
-        $session->update([
+        $updatePayload = [
             'auto_submit_after' => null,
             'last_heartbeat_at' => now(),
-        ]);
+        ];
+        if ($session->device_type === null || $session->user_agent === null) {
+            $ua = $request->userAgent();
+            $device = QuizSession::parseUserAgent($ua);
+            $updatePayload['user_agent'] = $ua ? substr($ua, 0, 1024) : null;
+            $updatePayload['device_type'] = $device['device_type'];
+            $updatePayload['device_name'] = $device['device_name'];
+        }
+        $session->update($updatePayload);
         return response()->json([
             'success' => true,
             'show_tab_switch_warning' => $hadScheduledSubmit,

@@ -102,7 +102,7 @@ class QuizSession extends Model
             } else {
                 $deviceName = 'Tablet';
             }
-        } elseif (preg_match('/Mobile|Android|iPhone|iPod|webOS|BlackBerry|IEMobile|Opera Mini|MiuiBrowser|SamsungBrowser/i', $ua)) {
+        } elseif (preg_match('/Mobile|Android|iPhone|iPod|webOS|BlackBerry|IEMobile|Opera Mini|Opera Mobi|MiuiBrowser|SamsungBrowser|CriOS|FxiOS|EdgA|EdgiOS|\bwv\b|Mobile Safari/i', $ua)) {
             $deviceType = 'mobile';
             if (preg_match('/iPhone(?: OS (\d+)[_\d]*)?/i', $ua, $m)) {
                 $deviceName = 'iPhone' . (isset($m[1]) ? ' (iOS ' . $m[1] . ')' : '');
@@ -135,8 +135,14 @@ class QuizSession extends Model
     /** Human-readable device label for session detail (e.g. "Laptop", "Mobile phone (iPhone)"). */
     public function getDeviceLabelAttribute(): string
     {
-        $type = $this->device_type ?? 'desktop';
+        $type = $this->device_type;
         $name = trim((string) ($this->device_name ?? ''));
+        if ($type === null && ! empty(trim((string) ($this->user_agent ?? '')))) {
+            $parsed = static::parseUserAgent($this->user_agent);
+            $type = $parsed['device_type'];
+            $name = trim((string) ($parsed['device_name'] ?? ''));
+        }
+        $type = $type ?? 'desktop';
         if ($type === 'mobile') {
             $base = 'Mobile phone';
             return $name !== '' ? $base . ' (' . $name . ')' : $base;
