@@ -186,16 +186,19 @@ class StudentQuizController extends Controller
         $headTurnCount = $session->violations()->where('type', 'head_turn')->count();
         $normalViolationCount = $this->countNormalViolations($session);
 
-        // Resolve allowed devices from class group (coordinator setting), then quiz.
-        // On installations without the allowed_devices columns, do NOT restrict by device at all.
+        // Resolve allowed devices from class group (coordinator setting), then quiz, then settings.
         $hasClassGroupColumn = Schema::hasColumn('class_groups', 'allowed_devices');
         $hasQuizColumn = Schema::hasColumn('quizzes', 'allowed_devices');
         if (! $hasClassGroupColumn && ! $hasQuizColumn) {
-            $allowedDevices = Quiz::ALLOWED_DEVICES_BOTH;
+            $classGroupId = $session->quiz->class_group_id ?? 0;
+            $allowedDevices = $classGroupId ? Setting::getValue('class_group_allowed_devices_' . $classGroupId, Quiz::ALLOWED_DEVICES_DESKTOP) : Quiz::ALLOWED_DEVICES_DESKTOP;
         } else {
             $allowedDevices = $session->quiz->classGroup?->getAttribute('allowed_devices')
                 ?? $session->quiz->getAttribute('allowed_devices')
-                ?? Quiz::ALLOWED_DEVICES_DESKTOP;
+                ?? Setting::getValue('class_group_allowed_devices_' . ($session->quiz->class_group_id ?? 0), Quiz::ALLOWED_DEVICES_DESKTOP);
+        }
+        if (! in_array($allowedDevices, [Quiz::ALLOWED_DEVICES_DESKTOP, Quiz::ALLOWED_DEVICES_MOBILE, Quiz::ALLOWED_DEVICES_BOTH], true)) {
+            $allowedDevices = Quiz::ALLOWED_DEVICES_DESKTOP;
         }
         $isMobile = $this->isMobileRequest($request);
 

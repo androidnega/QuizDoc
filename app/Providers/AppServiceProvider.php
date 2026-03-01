@@ -94,12 +94,15 @@ class AppServiceProvider extends ServiceProvider
             $hasClassGroupColumn = Schema::hasColumn('class_groups', 'allowed_devices');
             $hasQuizColumn = Schema::hasColumn('quizzes', 'allowed_devices');
             if (! $hasClassGroupColumn && ! $hasQuizColumn) {
-                // Older installations without device columns: always allow both (desktop + mobile).
-                $allowed = 'both';
+                $classGroupId = $session->quiz->class_group_id ?? 0;
+                $allowed = $classGroupId ? \App\Models\Setting::getValue('class_group_allowed_devices_' . $classGroupId, 'desktop') : 'desktop';
             } else {
                 $allowed = $session->quiz->classGroup?->getAttribute('allowed_devices')
                     ?? $session->quiz->getAttribute('allowed_devices')
-                    ?? 'desktop';
+                    ?? \App\Models\Setting::getValue('class_group_allowed_devices_' . ($session->quiz->class_group_id ?? 0), 'desktop');
+            }
+            if (! in_array($allowed, ['desktop', 'mobile', 'both'], true)) {
+                $allowed = 'desktop';
             }
             $view->with('quizAllowsMobile', in_array($allowed, ['mobile', 'both'], true));
         });

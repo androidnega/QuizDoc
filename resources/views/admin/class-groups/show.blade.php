@@ -48,10 +48,10 @@
             <p class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5"><strong>No students yet.</strong> Add indices in Student index list below before creating a quiz.</p>
         @endif
 
-        {{-- Coordinator: Allowed devices toggle (always visible for coordinators) --}}
+        {{-- Coordinator: Allowed devices toggle (always visible for coordinators; value enforced via DB or settings) --}}
         @if(!$isExaminer)
             @php
-                $allowedDevices = $classGroup->allowed_devices ?? \App\Models\ClassGroup::ALLOWED_DEVICES_DESKTOP;
+                $allowedDevices = $allowedDevicesForForm ?? $classGroup->allowed_devices ?? \App\Models\ClassGroup::ALLOWED_DEVICES_DESKTOP;
                 $allowedOptions = \App\Models\ClassGroup::allowedDevicesOptions();
             @endphp
             <form method="post" action="{{ route('dashboard.class-groups.allowed-devices.update', $classGroup) }}" class="flex flex-wrap items-center gap-2 mt-1">

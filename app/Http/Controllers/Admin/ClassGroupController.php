@@ -12,6 +12,7 @@ use App\Models\Semester;
 use App\Models\ClassGroupStudent;
 use App\Models\Course;
 use App\Models\Otp;
+use App\Models\Setting;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\ArkeselService;
@@ -309,9 +310,10 @@ class ClassGroupController extends Controller
         $examinerIds = $visibleCourses->pluck('pivot.examiner_id')->filter()->unique()->values()->all();
         $examinersMap = $examinerIds ? User::whereIn('id', $examinerIds)->get(['id', 'username', 'name'])->keyBy('id') : collect();
 
-        $showAllowedDevices = Schema::hasColumn('class_groups', 'allowed_devices') || Schema::hasColumn('quizzes', 'allowed_devices');
+        $showAllowedDevices = true; // Always show device dropdown; value is enforced via DB or settings.
+        $allowedDevicesForForm = $this->effectiveAllowedDevicesForClassGroup($classGroup);
 
-        return view('admin.class-groups.show', compact('classGroup', 'students', 'availableCourses', 'examinersMap', 'visibleCourses', 'visibleQuizzes', 'showAllowedDevices'));
+        return view('admin.class-groups.show', compact('classGroup', 'students', 'availableCourses', 'examinersMap', 'visibleCourses', 'visibleQuizzes', 'showAllowedDevices', 'allowedDevicesForForm'));
     }
 
     public function edit(ClassGroup $classGroup): View|RedirectResponse
@@ -419,6 +421,7 @@ class ClassGroupController extends Controller
 
     /**
      * Update allowed_devices for a class group (coordinator toggle on show page).
+     * Always persist to settings so the choice is enforced even when DB columns are missing.
      */
     public function updateAllowedDevices(Request $request, ClassGroup $classGroup): RedirectResponse
     {
@@ -429,24 +432,37 @@ class ClassGroupController extends Controller
             'allowed_devices' => 'required|in:desktop,mobile,both',
         ]);
         $allowed = $request->input('allowed_devices');
-        // Persist setting at class-group level when column exists.
+
+        // Always persist coordinator choice in settings (so it is enforced even when DB columns are missing).
+        $settingsKey = 'class_group_allowed_devices_' . $classGroup->id;
+        Setting::setValue($settingsKey, $allowed);
+
         if ($hasClassGroupColumn) {
-            $classGroup->update([
-                'allowed_devices' => $allowed,
-            ]);
+            $classGroup->update(['allowed_devices' => $allowed]);
         }
-        // Also cascade to quizzes for this class group when quizzes.allowed_devices exists,
-        // so device restrictions take effect even on installs without the class_groups column.
         if ($hasQuizColumn) {
             $classGroup->quizzes()->update(['allowed_devices' => $allowed]);
         }
 
-        $message = (! $hasClassGroupColumn && ! $hasQuizColumn)
-            ? 'Saved. Device restrictions are not enforced on this installation, so this choice is informational only.'
-            : 'Allowed devices updated for quizzes in this group.';
-
         return redirect()->route($this->staffRoutePrefix() . '.class-groups.show', $classGroup)
-            ->with('success', $message);
+            ->with('success', 'Allowed devices updated for quizzes in this group.');
+    }
+
+    /**
+     * Effective allowed_devices for a class group: from DB column or from settings (coordinator choice).
+     */
+    private function effectiveAllowedDevicesForClassGroup(ClassGroup $classGroup): string
+    {
+        if (Schema::hasColumn('class_groups', 'allowed_devices')) {
+            $v = $classGroup->getAttribute('allowed_devices');
+            if (in_array($v, [ClassGroup::ALLOWED_DEVICES_DESKTOP, ClassGroup::ALLOWED_DEVICES_MOBILE, ClassGroup::ALLOWED_DEVICES_BOTH], true)) {
+                return $v;
+            }
+        }
+        $fromSettings = Setting::getValue('class_group_allowed_devices_' . $classGroup->id, ClassGroup::ALLOWED_DEVICES_DESKTOP);
+        return in_array($fromSettings, [ClassGroup::ALLOWED_DEVICES_DESKTOP, ClassGroup::ALLOWED_DEVICES_MOBILE, ClassGroup::ALLOWED_DEVICES_BOTH], true)
+            ? $fromSettings
+            : ClassGroup::ALLOWED_DEVICES_DESKTOP;
     }
 
     public function destroy(ClassGroup $classGroup): RedirectResponse
