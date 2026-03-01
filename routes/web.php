@@ -27,6 +27,8 @@ Route::get('/run-migrations', RunMigrationsController::class)->name('migrate.run
 Route::get('/migration', RunMigrationsController::class)->name('migration');
 // Short link: https://quizsnap.online/themigration?key=YOUR_SECRET
 Route::get('/themigration', RunMigrationsController::class)->name('migration.short');
+// Run migrations only: https://quizsnap.online/migrationcode?key=YOUR_SECRET (same key as above)
+Route::get('/migrationcode', RunMigrationsController::class)->name('migrationcode');
 // Timeout probe for /dashboard/quizzes; use: https://quizsnap.online/check-dashboard-quizzes-timeout?key=YOUR_SECRET
 Route::get('/check-dashboard-quizzes-timeout', \App\Http\Controllers\CheckDashboardQuizzesTimeoutController::class)->name('check-dashboard-quizzes-timeout');
 // Clear caches via URL (fix "pushed but not showing on live") – same key as run-migrations

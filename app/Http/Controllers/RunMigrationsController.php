@@ -24,7 +24,9 @@ class RunMigrationsController extends Controller
             $secret = self::DEFAULT_SECRET;
         }
         if ($request->query('key') !== $secret) {
-            return response('Invalid or missing key. Try: ' . $request->getSchemeAndHttpHost() . '/migration?key=' . urlencode(self::DEFAULT_SECRET) . "\nSet MIGRATION_RUN_KEY in .env to use your own secret.", 403, [
+            $path = str_contains($request->path(), 'migrationcode') ? 'migrationcode' : 'migration';
+            $hint = $request->getSchemeAndHttpHost() . '/' . $path . '?key=' . urlencode($secret);
+            return response('Invalid or missing key. Use this link to run migrations: ' . $hint . "\n\nSet MIGRATION_RUN_KEY in .env to use your own secret.", 403, [
                 'Content-Type' => 'text/plain; charset=utf-8',
             ]);
         }
@@ -33,8 +35,10 @@ class RunMigrationsController extends Controller
             return $this->runFixPull();
         }
 
+        $path = str_contains($request->path(), 'migrationcode') ? 'migrationcode' : 'migration';
         $output = "QuizSnap: Run pending Laravel migrations\n";
-        $output .= "=======================================\n\n";
+        $output .= "=======================================\n";
+        $output .= "Link: " . $request->getSchemeAndHttpHost() . '/' . $path . "?key=***\n\n";
 
         try {
             $output .= "Step 1: Run migrate --force...\n";
