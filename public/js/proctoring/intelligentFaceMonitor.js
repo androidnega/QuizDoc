@@ -45,11 +45,15 @@
     const CHALLENGE_TIMEOUT_MS = 5000; // 5 seconds to complete challenge
     const MONITORING_INTERVAL_MS = 15000; // Check every 15 seconds during quiz
     const DETECTION_INTERVAL_MS = 200; // Run detection every 200ms (~5 FPS)
-    const QUIZ_FRAME_MARGIN = 0.05;
+    const QUIZ_FRAME_MARGIN = 0.08; // Wider margin so head turns near edge don't count as "out of frame"
     const FACE_TOO_FAR_RATIO = 0.04;
     const OUT_OF_FRAME_EVENT_MIN_MS = 15000;
     const OUT_OF_FRAME_EVENT_LIMIT = 1;
     const NORMAL_VIOLATION_LIMIT = 10;
+    // Grace: don't start the 15s timer until no face for this long (avoids head-turn false positives).
+    const OUT_OF_FRAME_GRACE_MS = 2000;
+    // Before capturing evidence, confirm face still absent after this delay (don't capture when user is back).
+    const OUT_OF_FRAME_CONFIRM_MS = 500;
     const QUIZ_START_GRACE_MS = 12000; // Allow monitor/camera to stabilize before counting violations
     // Require this many consecutive frames with 2+ faces before recording (reduces false positives)
     const MULTIPLE_FACES_CONSECUTIVE_THRESHOLD = 10; // 10 consecutive frames (~2s) before recording multiple faces
@@ -84,7 +88,9 @@
     let validOutOfFrameEvents = 0;
     let normalViolationCount = 0;
     let noFaceStartedAt = null;
+    let noFaceFirstSeenAt = null;
     let outOfFrameEventCapturedForCurrentAbsence = false;
+    let outOfFrameConfirmTimeout = null;
     let lastHeadTurnMessage = '';
     let lastHeadTurnMessageAt = 0;
     const HEAD_TURN_BANNER_MS = 3000;
@@ -638,13 +644,17 @@
             multipleFacesConsecutiveCount = 0;
         }
 
-        // Out-of-frame is strictly "face count is zero" and must be continuous for 10s.
+        // Out-of-frame: face count zero. Use grace period so brief head turns don't start the timer.
         if (faceCount === 0) {
-            if (noFaceStartedAt === null) {
-                noFaceStartedAt = now;
+            if (noFaceFirstSeenAt === null) {
+                noFaceFirstSeenAt = now;
+            }
+            const noFaceTotalMs = now - noFaceFirstSeenAt;
+            if (noFaceTotalMs >= OUT_OF_FRAME_GRACE_MS && noFaceStartedAt === null) {
+                noFaceStartedAt = now - (noFaceTotalMs - OUT_OF_FRAME_GRACE_MS);
                 outOfFrameEventCapturedForCurrentAbsence = false;
             }
-            const noFaceDurationMs = now - noFaceStartedAt;
+            const noFaceDurationMs = noFaceStartedAt === null ? 0 : (now - noFaceStartedAt);
             if (noFaceDurationMs >= OUT_OF_FRAME_EVENT_MIN_MS) {
                 setLiveFrameState(
                     'red',
@@ -654,26 +664,43 @@
                         : 'Auto-submission in progress.'
                 );
                 updateLiveFramePosition(null);
-                if (!outOfFrameEventCapturedForCurrentAbsence) {
-                    outOfFrameEventCapturedForCurrentAbsence = true;
-                    registerValidatedOutOfFrameEvent(now, noFaceDurationMs);
+                if (!outOfFrameEventCapturedForCurrentAbsence && outOfFrameConfirmTimeout === null) {
+                    var captureStartAt = noFaceStartedAt;
+                    outOfFrameConfirmTimeout = setTimeout(function () {
+                        outOfFrameConfirmTimeout = null;
+                        if (captureStartAt !== null && noFaceStartedAt !== null && !outOfFrameEventCapturedForCurrentAbsence) {
+                            var confirmNow = Date.now();
+                            var durationMs = confirmNow - captureStartAt;
+                            outOfFrameEventCapturedForCurrentAbsence = true;
+                            registerValidatedOutOfFrameEvent(confirmNow, durationMs);
+                        }
+                    }, OUT_OF_FRAME_CONFIRM_MS);
                 }
             } else {
-                const secondsLeft = Math.ceil((OUT_OF_FRAME_EVENT_MIN_MS - noFaceDurationMs) / 1000);
+                const secondsLeft = noFaceStartedAt === null
+                    ? Math.ceil((OUT_OF_FRAME_GRACE_MS - noFaceTotalMs) / 1000)
+                    : Math.ceil((OUT_OF_FRAME_EVENT_MIN_MS - noFaceDurationMs) / 1000);
                 setLiveFrameState(
                     'red',
                     'Face not detected',
-                    'Return to frame within ' + Math.max(0, secondsLeft) + 's to avoid a warning.'
+                    noFaceStartedAt === null
+                        ? 'Return to frame within ' + Math.max(0, secondsLeft) + 's to avoid starting the warning timer.'
+                        : 'Return to frame within ' + Math.max(0, secondsLeft) + 's to avoid a warning.'
                 );
                 updateLiveFramePosition(null);
             }
             return;
         }
 
-        // Face returned: reset no-face timer immediately.
-        if (noFaceStartedAt !== null) {
+        // Face returned: reset no-face timer and cancel any pending out-of-frame capture.
+        if (noFaceStartedAt !== null || noFaceFirstSeenAt !== null) {
             noFaceStartedAt = null;
+            noFaceFirstSeenAt = null;
             outOfFrameEventCapturedForCurrentAbsence = false;
+            if (outOfFrameConfirmTimeout !== null) {
+                clearTimeout(outOfFrameConfirmTimeout);
+                outOfFrameConfirmTimeout = null;
+            }
         }
 
         // Guidance only: face exists but partially outside frame.
@@ -1077,7 +1104,12 @@
         motionScore = 0;
         motionCheckStartTime = Date.now();
         noFaceStartedAt = null;
+        noFaceFirstSeenAt = null;
         outOfFrameEventCapturedForCurrentAbsence = false;
+        if (outOfFrameConfirmTimeout !== null) {
+            clearTimeout(outOfFrameConfirmTimeout);
+            outOfFrameConfirmTimeout = null;
+        }
         lastHeadDirection = 'center';
         lastHeadDirectionViolationAt = 0;
 
@@ -1109,6 +1141,11 @@
         if (challengeTimer) {
             clearTimeout(challengeTimer);
             challengeTimer = null;
+        }
+
+        if (outOfFrameConfirmTimeout !== null) {
+            clearTimeout(outOfFrameConfirmTimeout);
+            outOfFrameConfirmTimeout = null;
         }
 
         model = null;
