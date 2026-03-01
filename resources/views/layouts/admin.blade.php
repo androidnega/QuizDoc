@@ -14,13 +14,15 @@
             </a>
             <h1 class="min-w-0 flex-1 truncate text-lg font-semibold text-gray-900">@yield('admin_heading', 'Admin')</h1>
             <div class="relative flex flex-shrink-0 items-center" id="admin-profile-wrap">
-                <button type="button" class="flex items-center gap-2 rounded-full p-0.5 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2" aria-expanded="false" aria-haspopup="true" id="admin-profile-btn" title="Profile">
+                <button type="button" class="flex h-11 min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded-full pl-0.5 pr-2 py-0.5 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 overflow-hidden" aria-expanded="false" aria-haspopup="true" id="admin-profile-btn" title="Profile">
                     @php $user = auth()->user(); @endphp
+                    <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full overflow-hidden border border-primary-200 bg-primary-50">
                     @if($user && $user->avatar_url)
-                        <img src="{{ $user->avatar_url }}" alt="Profile" class="h-9 w-9 rounded-full object-cover flex-shrink-0 border border-gray-200" />
+                        <img src="{{ $user->avatar_url }}" alt="Profile" class="h-full w-full object-cover" />
                     @else
-                        <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-600 text-sm font-semibold border border-primary-200">{{ $user ? strtoupper(substr($user->name ?? $user->username ?? 'A', 0, 1)) : 'A' }}</span>
+                        <span class="flex h-full w-full items-center justify-center text-primary-600 text-sm font-semibold leading-none" style="line-height: 2.25rem;">{{ $user ? strtoupper(substr($user->name ?? $user->username ?? 'A', 0, 1)) : 'A' }}</span>
                     @endif
+                    </span>
                     <svg class="h-4 w-4 flex-shrink-0 text-gray-500 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
                 <div id="admin-profile-dropdown" class="absolute right-0 top-full z-50 mt-1.5 w-48 sm:w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg hidden">
