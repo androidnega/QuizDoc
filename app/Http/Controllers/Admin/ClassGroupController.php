@@ -155,13 +155,14 @@ class ClassGroupController extends Controller
         $quizCategories = \App\Models\QuizCategory::ordered();
         $academicYears = \App\Models\DocuMentor\AcademicYear::orderBy('year', 'desc')->get(['id', 'year']);
 
-        // Class groups that have at least one session with recent activity (same criteria as live proctor: heartbeat in last 2 min or started in last 5 min)
+        // Class groups that have at least one session with recent activity (same criteria as live proctor: heartbeat in last 2 min or started in last 5 min).
+        // For examiners: only show "Live" for class groups where the live quiz is in a course assigned to this examiner (so examiner B does not see examiner A's live quiz).
         $classGroupIdsWithLiveSessions = [];
         if ($classGroups->isNotEmpty()) {
             $pageIds = $classGroups->pluck('id')->all();
             $heartbeatCutoff = now()->subSeconds(120);
             $startedCutoff = now()->subMinutes(5);
-            $classGroupIdsWithLiveSessions = \Illuminate\Support\Facades\DB::table('quiz_sessions')
+            $query = DB::table('quiz_sessions')
                 ->join('quizzes', 'quizzes.id', '=', 'quiz_sessions.quiz_id')
                 ->whereNotNull('quiz_sessions.start_time')
                 ->whereNull('quiz_sessions.ended_at')
@@ -172,10 +173,15 @@ class ClassGroupController extends Controller
                             $q2->whereNull('quiz_sessions.last_heartbeat_at')
                                 ->where('quiz_sessions.start_time', '>=', $startedCutoff);
                         });
-                })
-                ->distinct()
-                ->pluck('quizzes.class_group_id')
-                ->all();
+                });
+            if ($user?->isExaminer() && Schema::hasColumn('class_group_course', 'examiner_id')) {
+                $query->join('class_group_course', function ($join) use ($user) {
+                    $join->on('class_group_course.class_group_id', '=', 'quizzes.class_group_id')
+                        ->on('class_group_course.course_id', '=', 'quizzes.course_id')
+                        ->where('class_group_course.examiner_id', '=', $user->id);
+                });
+            }
+            $classGroupIdsWithLiveSessions = $query->distinct()->pluck('quizzes.class_group_id')->all();
         }
 
         $primarySuperAdminId = \App\Models\User::where('role', \App\Models\User::ROLE_SUPER_ADMIN)->min('id');
