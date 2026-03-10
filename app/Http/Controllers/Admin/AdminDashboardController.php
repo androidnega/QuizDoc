@@ -54,32 +54,13 @@ class AdminDashboardController extends Controller
     {
         $user = $this->adminUser();
         $classGroupIds = $user ? $user->classGroupIds() : [];
+        // For examiners/coordinators, only consider quizzes they actually own (examiner_id = user id).
         $quizQuery = Quiz::query();
         if ($user && !$user->isSuperAdmin()) {
-            $quizQuery->where(function ($q) use ($classGroupIds, $user) {
-                if (!empty($classGroupIds)) {
-                    $q->whereIn('class_group_id', $classGroupIds);
-                }
-                if ($user->id) {
-                    $q->orWhere('examiner_id', $user->id);
-                }
-                if (empty($classGroupIds) && !$user->id) {
-                    $q->whereRaw('1=0');
-                }
-            });
+            $quizQuery->where('examiner_id', $user->id);
         }
         $quizzes = Quiz::with(['course', 'classGroup'])
-            ->when($user && !$user->isSuperAdmin(), fn ($q) => $q->where(function ($q2) use ($classGroupIds, $user) {
-                if (!empty($classGroupIds)) {
-                    $q2->whereIn('class_group_id', $classGroupIds);
-                }
-                if ($user->id) {
-                    $q2->orWhere('examiner_id', $user->id);
-                }
-                if (empty($classGroupIds) && !$user->id) {
-                    $q2->whereRaw('1=0');
-                }
-            }))
+            ->when($user && !$user->isSuperAdmin(), fn ($q) => $q->where('examiner_id', $user->id))
             ->orderByDesc('created_at')
             ->paginate(10);
         // Load class groups with courses that this examiner teaches in each group
