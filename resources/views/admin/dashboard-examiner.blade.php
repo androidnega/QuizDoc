@@ -74,7 +74,7 @@
             <div class="flex flex-1 items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
                     <p class="text-sm font-medium text-action-800">Class Groups</p>
-                    <p class="mt-1 text-2xl font-bold tabular-nums text-action-900 sm:text-3xl">{{ $classGroups->count() }}</p>
+                    <p class="mt-1 text-2xl font-bold tabular-nums text-action-900 sm:text-3xl">{{ $classGroupsCount }}</p>
                 </div>
                 <span class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-action-200 text-action-700">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>

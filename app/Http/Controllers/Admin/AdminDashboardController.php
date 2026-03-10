@@ -98,6 +98,10 @@ class AdminDashboardController extends Controller
                 ->orderBy('name')
                 ->get()
             : collect();
+        // Class groups count: only groups where this examiner actually has at least one active course
+        $classGroupsCount = $classGroups->filter(function ($g) {
+            return $g->relationLoaded('courses') && $g->courses->isNotEmpty();
+        })->count();
         $quizIds = (clone $quizQuery)->pluck('id');
         $sessionsWithResults = $quizIds->isEmpty()
             ? 0
@@ -116,6 +120,6 @@ class AdminDashboardController extends Controller
         // Check if examiner needs to set faculty/department
         $needsFacultyDepartment = $user && $user->isExaminer() && (!$user->faculty_id || !$user->department_id);
         
-        return view('admin.dashboard-examiner', compact('quizzes', 'classGroups', 'recentSessions', 'stats', 'needsFacultyDepartment'));
+        return view('admin.dashboard-examiner', compact('quizzes', 'classGroups', 'classGroupsCount', 'recentSessions', 'stats', 'needsFacultyDepartment'));
     }
 }
