@@ -238,11 +238,6 @@
                             <div class="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden"><div id="live-bar-size" class="h-full bg-emerald-500 rounded-full transition-all duration-200" style="width: 50%;"></div></div>
                         </div>
                     </div>
-                    {{-- Violations / errors list under live camera --}}
-                    <div id="live-camera-violations-wrap" class="mt-3 rounded-xl overflow-hidden border border-gray-300 bg-gray-50 max-h-24 overflow-y-auto">
-                        <p class="text-xs font-semibold text-gray-600 px-3 py-1.5 border-b border-gray-200 bg-gray-100">Violations &amp; alerts</p>
-                        <ul id="live-camera-violations-list" class="text-xs text-gray-700 px-3 py-2 space-y-0.5 list-none"></ul>
-                    </div>
                 </div>
             </div>
             @if($remainingSeconds > 0)
