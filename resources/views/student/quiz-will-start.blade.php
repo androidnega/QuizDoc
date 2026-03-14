@@ -26,7 +26,7 @@
         </div>
         <div id="proceed-block" class="hidden">
             <p class="text-success-600 text-sm font-medium mb-4">The quiz is now open. Click below to continue.</p>
-            <a href="{{ route('student.rules.show.quiz', ['token' => $quiz->link_token]) }}" class="btn btn-action w-full py-2.5 text-sm font-semibold">
+            <a href="{{ route('student.rules.show.quiz', ['token' => $quiz->link_token]) }}" class="js-quiz-start-require-fullscreen btn btn-action w-full py-2.5 text-sm font-semibold" data-quiz-rules-url="{{ route('student.rules.show.quiz', ['token' => $quiz->link_token]) }}">
                 Proceed to rules
             </a>
         </div>
@@ -67,4 +67,5 @@
     timerInterval = setInterval(update, 1000);
 })();
 </script>
+<script src="{{ asset('js/quiz-start-fullscreen.js') }}" defer></script>
 @endpush

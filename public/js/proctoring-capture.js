@@ -1,8 +1,10 @@
 /**
  * ProctoringCapture: WebRTC face capture, then POST to backend.
- * Fullscreen (F11-style) required before quiz start. Camera must be ready before capture is allowed.
+ * Fullscreen required before camera step; gate and camera are on the same page.
+ * Uses a single root element as fullscreen target for stable behavior on Safari/macOS.
  */
 (function () {
+    const root = document.getElementById('proctoring-capture-root');
     const fullscreenGate = document.getElementById('fullscreen-gate');
     const captureMain = document.getElementById('proctoring-capture-main');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
@@ -10,32 +12,43 @@
     const fullscreenHintText = fullscreenGate ? fullscreenGate.querySelector('[data-fullscreen-hint]') : null;
 
     function isFullscreen() {
-        return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+        const el = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+        if (!el) return false;
+        return el === root || el === document.documentElement;
     }
 
     function applyFullscreenState() {
-        if (isFullscreen()) {
-            if (fullscreenGate) { fullscreenGate.classList.add('hidden'); fullscreenGate.style.display = 'none'; }
-            if (captureMain) { captureMain.classList.remove('hidden'); captureMain.style.display = 'flex'; }
-        } else {
-            if (fullscreenGate) { fullscreenGate.classList.remove('hidden'); fullscreenGate.style.display = 'flex'; }
-            if (captureMain) { captureMain.classList.add('hidden'); captureMain.style.display = 'none'; }
+        const fullscreen = isFullscreen();
+        if (root) {
+            root.classList.toggle('bg-gray-900', !fullscreen);
+            root.classList.toggle('bg-gray-50', fullscreen);
+        }
+        if (fullscreenGate) {
+            fullscreenGate.classList.toggle('hidden', fullscreen);
+        }
+        if (captureMain) {
+            captureMain.classList.toggle('hidden', !fullscreen);
         }
     }
 
     function requestFullscreen() {
-        const el = document.documentElement;
+        const el = root || document.documentElement;
+        function onEnter() {
+            applyFullscreenState();
+        }
         if (el.requestFullscreen) {
-            el.requestFullscreen().then(applyFullscreenState).catch(function (err) { console.warn('Fullscreen request failed:', err); });
+            el.requestFullscreen().then(onEnter).catch(function (err) { console.warn('Fullscreen request failed:', err); });
         } else if (el.webkitRequestFullscreen) {
             el.webkitRequestFullscreen();
-            applyFullscreenState();
+            setTimeout(onEnter, 100);
         } else if (el.mozRequestFullScreen) {
             el.mozRequestFullScreen();
-            applyFullscreenState();
+            setTimeout(onEnter, 100);
         } else if (el.msRequestFullscreen) {
             el.msRequestFullscreen();
-            applyFullscreenState();
+            setTimeout(onEnter, 100);
+        } else {
+            onEnter();
         }
     }
 
@@ -64,7 +77,17 @@
     }
     document.addEventListener('fullscreenchange', applyFullscreenState);
     document.addEventListener('webkitfullscreenchange', applyFullscreenState);
-    applyFullscreenState();
+    // Apply once on load: if already fullscreen, skip gate silently (no prompt); else show gate.
+    function initFullscreenState() {
+        applyFullscreenState();
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(initFullscreenState, 0);
+        });
+    } else {
+        setTimeout(initFullscreenState, 0);
+    }
 
     const video = document.getElementById('camera-video');
     const canvas = document.getElementById('capture-canvas');

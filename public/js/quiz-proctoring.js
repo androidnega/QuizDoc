@@ -980,7 +980,14 @@
                 };
             }
 
-            let monitorVideo = document.getElementById('face-monitor-video');
+            // Single live camera frame: use first slot only, ensure only one video in the slot
+            var frameSlot = document.querySelector('#live-camera-video-slot');
+            if (frameSlot) {
+                frameSlot.querySelectorAll('video').forEach(function (v) {
+                    v.remove();
+                });
+            }
+            var monitorVideo = document.getElementById('face-monitor-video');
             if (!monitorVideo) {
                 monitorVideo = document.createElement('video');
                 monitorVideo.id = 'face-monitor-video';
@@ -989,7 +996,6 @@
                 monitorVideo.muted = true;
                 monitorVideo.width = 640;
                 monitorVideo.height = 480;
-                var frameSlot = document.getElementById('live-camera-video-slot');
                 if (frameSlot) {
                     var overlay = frameSlot.querySelector('#live-camera-guide-overlay');
                     var kids = Array.prototype.slice.call(frameSlot.children);
@@ -1000,6 +1006,9 @@
                 } else {
                     document.body.appendChild(monitorVideo);
                 }
+            } else if (frameSlot && !frameSlot.contains(monitorVideo)) {
+                var ov = frameSlot.querySelector('#live-camera-guide-overlay');
+                frameSlot.insertBefore(monitorVideo, ov || frameSlot.firstChild);
             }
             monitorVideo.classList.add('w-full', 'h-full', 'object-cover');
             monitorVideo.style.display = 'block';
