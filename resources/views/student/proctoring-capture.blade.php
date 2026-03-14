@@ -4,7 +4,37 @@
 @section('body_class', 'bg-offwhite')
 
 @section('content')
-<div class="min-h-[100dvh] px-4 py-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] flex items-start justify-center">
+{{-- Fullscreen gate: user must enter browser fullscreen (F11-style) before continuing --}}
+<div id="fullscreen-gate" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-900 text-white px-6 py-8">
+    <div class="max-w-md text-center">
+        <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+            <svg class="w-10 h-10 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+            </svg>
+        </div>
+        <h2 class="text-xl font-bold text-white mb-2">Full screen required</h2>
+        <p class="text-gray-300 text-sm mb-6">You must enter full screen mode (like pressing F11) before you can start the identity check. This helps ensure a fair exam environment.</p>
+        <button type="button" id="fullscreen-btn" class="w-full py-3.5 px-6 rounded-xl font-semibold text-gray-900 bg-amber-400 hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-colors">
+            Enter full screen
+        </button>
+        <p class="text-gray-500 text-xs mt-4">After entering full screen, this message will disappear and you can continue.</p>
+    </div>
+</div>
+
+{{-- Face verified success popup (shown when face check passes) --}}
+<div id="face-verified-popup" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/60 px-4" aria-modal="true" role="alertdialog" aria-labelledby="face-verified-title">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center animate-[fadeIn_0.3s_ease-out]">
+        <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+            <svg class="w-12 h-12 text-green-600" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd"/>
+            </svg>
+        </div>
+        <h3 id="face-verified-title" class="text-xl font-bold text-gray-900 mb-1">Face verified</h3>
+        <p class="text-gray-600 text-sm">Starting your quiz…</p>
+    </div>
+</div>
+
+<div id="proctoring-capture-main" class="min-h-[100dvh] px-4 py-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] flex items-start justify-center hidden">
     <div class="max-w-md mx-auto w-full">
         <h1 class="text-base font-semibold text-gray-900 mb-1">Quick face check</h1>
         <p class="text-gray-600 text-xs mb-3">Tap <span class="font-semibold">Start camera</span> and keep your face inside the circle.</p>
@@ -72,6 +102,10 @@
         </p>
     </div>
 </div>
+<style>
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+#face-verified-popup.flex { display: flex !important; }
+</style>
 
 @push('scripts')
 <!-- TensorFlow.js + BlazeFace for Face Detection -->

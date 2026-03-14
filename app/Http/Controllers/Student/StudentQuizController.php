@@ -609,6 +609,7 @@ class StudentQuizController extends Controller
             'screenshot_attempt',
             'tab_switch',
             'multiple_faces',
+            'multiple_faces_pre_quiz',
             'multiple_faces_during_quiz',
             'window_resize',
             'blur', // includes minimize/opening external window cases captured by browser focus change

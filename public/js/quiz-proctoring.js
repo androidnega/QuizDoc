@@ -1,6 +1,6 @@
 /**
- * StudentQuiz: Timer, auto-save, tab blur (delayed to avoid refresh=false positive), offline-safe saves.
- * No auto-submit on refresh or network failure. Violation only after 2.5s hidden.
+ * StudentQuiz: Timer, auto-save, tab blur (instant violation on tab switch), offline-safe saves.
+ * No auto-submit on refresh or network failure. Tab switch triggers immediate violation and server may auto-submit.
  */
 (function () {
     const c = window.QuizSnapQuiz || {};
@@ -19,7 +19,7 @@
     let timerInterval = null;
     let timeSyncInterval = null;
     const TIME_SYNC_INTERVAL_MS = 30000;
-    const BLUR_RECORD_DELAY_MS = 500;
+    const BLUR_RECORD_DELAY_MS = 0;
     let blurRecordTimer = null;
     let isUnloading = false;
     let cameraStream = null;

@@ -55,8 +55,8 @@
     // Before capturing evidence, confirm face still absent after this delay (don't capture when user is back).
     const OUT_OF_FRAME_CONFIRM_MS = 500;
     const QUIZ_START_GRACE_MS = 12000; // Allow monitor/camera to stabilize before counting violations
-    // Require this many consecutive frames with 2+ faces before recording (reduces false positives)
-    const MULTIPLE_FACES_CONSECUTIVE_THRESHOLD = 10; // 10 consecutive frames (~2s) before recording multiple faces
+    // Require this many consecutive frames with 2+ faces before recording (reduces single-frame glitches)
+    const MULTIPLE_FACES_CONSECUTIVE_THRESHOLD = 2; // 2 consecutive frames then instant auto-submit
     // Second face smaller than this ratio of primary face area is ignored (reflection/noise)
     const MULTIPLE_FACES_MIN_SECOND_RATIO = 0.35;
     // Minimum confidence + area ratio for a BlazeFace detection to be treated as a real face
@@ -626,17 +626,20 @@
             darknessFrameCount = 0;
         }
 
-        // Multiple face detection: require consecutive frames to avoid false positives (e.g. BlazeFace glitches, reflections)
+        // Multiple face detection: two or more faces = instant auto-submit after brief confirmation
         const effectiveMultiple = getEffectiveMultipleFaceCount(boundingBoxes);
         if (effectiveMultiple > 1) {
             multipleFacesConsecutiveCount++;
             if (multipleFacesConsecutiveCount >= MULTIPLE_FACES_CONSECUTIVE_THRESHOLD) {
                 showProctoringModal(
                     effectiveMultiple === 2 ? 'Two faces detected' : 'Multiple faces detected',
-                    'Only one person should be in the camera frame.'
+                    'Only one person should be in the camera frame. Your quiz is being submitted.'
                 );
                 recordViolation('multiple_faces_during_quiz', 'major', true, { face_count: effectiveMultiple });
-                // Auto-submit only after 5 multiple-face events (handled by server).
+                // Instant auto-submit on first confirmed multiple-faces (2+ or 3+)
+                if (window.QuizSnapProctorEngine && window.QuizSnapProctorEngine.triggerAutoSubmit) {
+                    window.QuizSnapProctorEngine.triggerAutoSubmit('multiple_faces', 'multiple_faces_during_quiz');
+                }
                 multipleFacesConsecutiveCount = 0;
             }
             return;

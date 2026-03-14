@@ -1,8 +1,52 @@
 /**
  * ProctoringCapture: WebRTC face capture, then POST to backend.
- * Camera must be ready (stream + video has dimensions) before capture is allowed.
+ * Fullscreen (F11-style) required before quiz start. Camera must be ready before capture is allowed.
  */
 (function () {
+    const fullscreenGate = document.getElementById('fullscreen-gate');
+    const captureMain = document.getElementById('proctoring-capture-main');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const faceVerifiedPopup = document.getElementById('face-verified-popup');
+
+    function isFullscreen() {
+        return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    }
+
+    function applyFullscreenState() {
+        if (isFullscreen()) {
+            if (fullscreenGate) { fullscreenGate.classList.add('hidden'); fullscreenGate.style.display = 'none'; }
+            if (captureMain) { captureMain.classList.remove('hidden'); captureMain.style.display = 'flex'; }
+        } else {
+            if (fullscreenGate) { fullscreenGate.classList.remove('hidden'); fullscreenGate.style.display = 'flex'; }
+            if (captureMain) { captureMain.classList.add('hidden'); captureMain.style.display = 'none'; }
+        }
+    }
+
+    function requestFullscreen() {
+        const el = document.documentElement;
+        if (el.requestFullscreen) {
+            el.requestFullscreen().then(applyFullscreenState).catch(function (err) { console.warn('Fullscreen request failed:', err); });
+        } else if (el.webkitRequestFullscreen) {
+            el.webkitRequestFullscreen();
+            applyFullscreenState();
+        } else if (el.mozRequestFullScreen) {
+            el.mozRequestFullScreen();
+            applyFullscreenState();
+        } else if (el.msRequestFullscreen) {
+            el.msRequestFullscreen();
+            applyFullscreenState();
+        }
+    }
+
+    if (fullscreenBtn) {
+        fullscreenBtn.addEventListener('click', function () {
+            requestFullscreen();
+        });
+    }
+    document.addEventListener('fullscreenchange', applyFullscreenState);
+    document.addEventListener('webkitfullscreenchange', applyFullscreenState);
+    applyFullscreenState();
+
     const video = document.getElementById('camera-video');
     const canvas = document.getElementById('capture-canvas');
     const captureBtn = document.getElementById('capture-btn');
@@ -640,13 +684,22 @@
             }
 
             setFaceStatus('Face verified. Sending...', 'ok');
+            if (faceVerifiedPopup) {
+                faceVerifiedPopup.classList.remove('hidden');
+                faceVerifiedPopup.classList.add('flex');
+            }
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
-            fetch(config.storeUrl || '/student/proctoring/capture', {
+            function doSubmit() {
+                if (faceVerifiedPopup) {
+                    faceVerifiedPopup.classList.add('hidden');
+                    faceVerifiedPopup.classList.remove('flex');
+                }
+                fetch(config.storeUrl || '/student/proctoring/capture', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -683,6 +736,8 @@
                     setButtonText('Capture photo');
                     startLiveFaceLoop();
                 });
+            }
+            setTimeout(doSubmit, 1500);
         });
     }
 

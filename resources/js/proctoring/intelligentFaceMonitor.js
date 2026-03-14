@@ -411,16 +411,11 @@
      * Handle monitoring during quiz
      */
     function handleQuizMonitoring(faceCount, landmarks) {
-        // Multiple face detection
+        // Multiple face detection: two or more faces = instant auto-submit
         if (faceCount > 1) {
-            violationCount++;
             recordViolation('multiple_faces_during_quiz', 'major', true, { face_count: faceCount });
-            
-            if (violationCount >= 2) {
-                // Auto-submit after 2 violations
-                if (window.QuizSnapProctorEngine && window.QuizSnapProctorEngine.triggerAutoSubmit) {
-                    window.QuizSnapProctorEngine.triggerAutoSubmit('multiple_faces_repeated', 'multiple_faces');
-                }
+            if (window.QuizSnapProctorEngine && window.QuizSnapProctorEngine.triggerAutoSubmit) {
+                window.QuizSnapProctorEngine.triggerAutoSubmit('multiple_faces', 'multiple_faces_during_quiz');
             }
             return;
         }
