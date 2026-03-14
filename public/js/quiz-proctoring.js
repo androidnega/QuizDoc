@@ -771,6 +771,10 @@
     var wasFullscreenOrMaximized = isFullscreenOrMaximized();
     var invalidStateTimer = null;
     var INVALID_PERSISTENCE_MS = 1500;
+    // Track how many times the user has left fullscreen / maximized state during this quiz.
+    // First time: show strong warning that next time will auto-submit.
+    // Second time: record critical window_resize violation (server will auto-submit).
+    var windowResizeExitCount = 0;
 
     function clearInvalidStateTimer() {
         if (invalidStateTimer) {
@@ -808,8 +812,23 @@
         if (c.proctoringTabSwitch === false) return;
         if (remainingSeconds <= 0) return;
         if (!wasFullscreenOrMaximized) return;
+
+        // Mark that we have left fullscreen/maximized at least once
         wasFullscreenOrMaximized = false;
-        showResizeBlur(false);
+        windowResizeExitCount++;
+
+        var isSecondExit = windowResizeExitCount >= 2;
+
+        // Show overlay every time, but on the first exit, also show the final warning
+        // so the message matches behaviour: "One more resize will auto-submit your quiz."
+        showResizeBlur(!isSecondExit); // first exit => showFinalWarning=true, second => already warned
+
+        // First exit: warn only (no violation yet).
+        if (!isSecondExit) {
+            return;
+        }
+
+        // Second (or later) exit: record critical violation; backend auto-submits.
         var timestamp = new Date().toISOString();
         recordViolation('window_resize', { timestamp: timestamp });
         if (resizeBlurWarning) resizeBlurWarning.classList.remove('hidden');
@@ -854,6 +873,7 @@
             hideResizeBlur();
         } else {
             if (!wasFullscreenOrMaximized) return;
+            // Show overlay immediately while we confirm the user really left fullscreen/maximized.
             showResizeBlur(false);
             if (invalidStateTimer) return;
             invalidStateTimer = setTimeout(function () {

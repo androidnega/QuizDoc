@@ -13,7 +13,8 @@
             </svg>
         </div>
         <h2 class="text-xl font-bold text-white mb-2">Full screen required</h2>
-        <p class="text-gray-300 text-sm mb-6">You must enter full screen mode (like pressing F11) before you can start the identity check. This helps ensure a fair exam environment.</p>
+        <p class="text-gray-300 text-sm mb-4">You must enter full screen mode before you can start the identity check. This helps ensure a fair exam environment.</p>
+        <p class="text-gray-400 text-xs mb-4" data-fullscreen-hint>Use your browser’s full screen control (for example F11) to enter full screen.</p>
         <button type="button" id="fullscreen-btn" class="w-full py-3.5 px-6 rounded-xl font-semibold text-gray-900 bg-amber-400 hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-colors">
             Enter full screen
         </button>

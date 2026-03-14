@@ -7,6 +7,7 @@
     const captureMain = document.getElementById('proctoring-capture-main');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
     const faceVerifiedPopup = document.getElementById('face-verified-popup');
+    const fullscreenHintText = fullscreenGate ? fullscreenGate.querySelector('[data-fullscreen-hint]') : null;
 
     function isFullscreen() {
         return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
@@ -37,6 +38,24 @@
             applyFullscreenState();
         }
     }
+
+    // Set OS-specific fullscreen shortcut hint text (Windows vs macOS vs other)
+    (function setFullscreenHint() {
+        if (!fullscreenHintText) return;
+        var ua = navigator.userAgent || '';
+        var isMac = /Macintosh|Mac OS X/i.test(ua);
+        var isWindows = /Windows NT/i.test(ua);
+        var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|Tablet/i.test(ua);
+        if (isMobile) {
+            fullscreenHintText.textContent = 'On mobile, use your browser controls to enter full screen. Keep the quiz page visible until you submit.';
+        } else if (isMac) {
+            fullscreenHintText.textContent = 'On Mac, you can also click the green window button or press Control + Command + F to toggle full screen.';
+        } else if (isWindows) {
+            fullscreenHintText.textContent = 'On Windows, you can also press F11 to toggle full screen in most browsers.';
+        } else {
+            fullscreenHintText.textContent = 'Use your browser’s full screen control (for example F11 or a maximize/full screen button) to enter full screen.';
+        }
+    })();
 
     if (fullscreenBtn) {
         fullscreenBtn.addEventListener('click', function () {
