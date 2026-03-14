@@ -10,6 +10,7 @@
     const fullscreenBtn = document.getElementById('fullscreen-btn');
     const startQuizBlock = document.getElementById('start-quiz-block');
     const startQuizBtn = document.getElementById('start-quiz-btn');
+    const fullscreenPromptBlock = document.getElementById('fullscreen-prompt-block');
     const faceVerifiedPopup = document.getElementById('face-verified-popup');
     const fullscreenHintText = fullscreenGate ? fullscreenGate.querySelector('[data-fullscreen-hint]') : null;
 
@@ -45,9 +46,12 @@
                 fullscreenGate.classList.remove('hidden');
                 if (!fullscreenGate.classList.contains('flex')) fullscreenGate.classList.add('flex');
             }
-            if (startQuizBlock) {
-                if (fullscreen) startQuizBlock.classList.remove('hidden');
-                else startQuizBlock.classList.add('hidden');
+            if (fullscreen) {
+                if (fullscreenPromptBlock) fullscreenPromptBlock.classList.add('hidden');
+                if (startQuizBlock) startQuizBlock.classList.remove('hidden');
+            } else {
+                if (fullscreenPromptBlock) fullscreenPromptBlock.classList.remove('hidden');
+                if (startQuizBlock) startQuizBlock.classList.add('hidden');
             }
         }
     }

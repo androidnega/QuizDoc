@@ -238,13 +238,6 @@
                             <div class="flex-1 h-2 bg-gray-600 rounded-full overflow-hidden"><div id="live-bar-size" class="h-full bg-emerald-500 rounded-full transition-all duration-200" style="width: 50%;"></div></div>
                         </div>
                     </div>
-                    {{-- Violation counter + Critical 0/1 + Position (dark gray banner) --}}
-                    <div class="mt-3 flex items-center gap-3 px-3 py-2 rounded-xl flex-wrap" style="background: #374151;">
-                        <span class="flex-shrink-0 text-amber-400" aria-hidden="true"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg></span>
-                        <span id="quiz-violation-number" class="quiz-violation-num font-bold text-white">{{ (int) ($normalViolationCount ?? 0) }}/10</span>
-                        <span id="quiz-critical-violation-number" class="text-xs font-bold text-white bg-red-600 px-2 py-0.5 rounded">0/1</span>
-                        <span id="live-camera-position-label" class="ml-auto text-sm font-medium text-white">Position: Good</span>
-                    </div>
                     {{-- Violations / errors list under live camera --}}
                     <div id="live-camera-violations-wrap" class="mt-3 rounded-xl overflow-hidden border border-gray-300 bg-gray-50 max-h-24 overflow-y-auto">
                         <p class="text-xs font-semibold text-gray-600 px-3 py-1.5 border-b border-gray-200 bg-gray-100">Violations &amp; alerts</p>

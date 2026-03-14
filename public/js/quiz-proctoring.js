@@ -365,7 +365,7 @@
             }
         } catch (e) {}
         if (redirectUrl) {
-            setTimeout(function () { window.location.replace(redirectUrl); }, 1200);
+            setTimeout(function () { window.location.replace(redirectUrl); }, 350);
         }
     }
 

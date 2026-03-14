@@ -9,17 +9,19 @@
     {{-- Fullscreen gate: shown only AFTER face verification; user must enter full screen before clicking Start --}}
     <div id="fullscreen-gate" class="hidden flex flex-1 flex-col items-center justify-center text-white px-6 py-8 min-h-0 bg-gray-900">
     <div class="max-w-md text-center">
-        <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-amber-500/20 flex items-center justify-center">
-            <svg class="w-10 h-10 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
-            </svg>
+        <div id="fullscreen-prompt-block">
+            <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <svg class="w-10 h-10 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                </svg>
+            </div>
+            <h2 class="text-xl font-bold text-white mb-2">Enter full screen to start</h2>
+            <p class="text-gray-300 text-sm mb-4">Face verified. You must enter full screen mode before starting the quiz.</p>
+            <p class="text-gray-400 text-xs mb-4" data-fullscreen-hint>Use your browser’s full screen control (for example F11) to enter full screen.</p>
+            <button type="button" id="fullscreen-btn" class="w-full py-3.5 px-6 rounded-xl font-semibold text-gray-900 bg-amber-400 hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-colors">
+                Enter full screen
+            </button>
         </div>
-        <h2 class="text-xl font-bold text-white mb-2">Enter full screen to start</h2>
-        <p class="text-gray-300 text-sm mb-4">Face verified. You must enter full screen mode before starting the quiz.</p>
-        <p class="text-gray-400 text-xs mb-4" data-fullscreen-hint>Use your browser’s full screen control (for example F11) to enter full screen.</p>
-        <button type="button" id="fullscreen-btn" class="w-full py-3.5 px-6 rounded-xl font-semibold text-gray-900 bg-amber-400 hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-colors">
-            Enter full screen
-        </button>
         <div id="start-quiz-block" class="hidden mt-6">
             <p class="text-gray-300 text-sm mb-3">You are in full screen. Click below to start the quiz.</p>
             <button type="button" id="start-quiz-btn" class="w-full py-3.5 px-6 rounded-xl font-semibold text-white bg-emerald-600 hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-colors">
