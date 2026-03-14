@@ -1,0 +1,11 @@
+#!/bin/sh
+# Replace Cursor's "Made-with: Cursor" footer with project attribution.
+# Install: cp scripts/prepare-commit-msg .git/hooks/prepare-commit-msg && chmod +x .git/hooks/prepare-commit-msg
+
+MSG_FILE="$1"
+[ -f "$MSG_FILE" ] || exit 0
+
+tmp=$(mktemp)
+sed 's/Made-with: Cursor/Developed by Manuel on git version pull/g' "$MSG_FILE" > "$tmp"
+mv "$tmp" "$MSG_FILE"
+exit 0
