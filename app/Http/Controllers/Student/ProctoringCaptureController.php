@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Quiz;
 use App\Models\QuizSession;
 use App\Models\Setting;
-use App\Services\CloudinaryService;
 use App\Services\QuestionAssignmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -194,13 +193,12 @@ class ProctoringCaptureController extends Controller
                 $preFaceImageHash = hash('sha256', $imageBytes);
             }
             try {
-                if (CloudinaryService::isConfigured()) {
-                    $imagePath = CloudinaryService::uploadFromDataUrl($data, 'pre_q' . $quiz->id . '_' . $studentIndex);
-                }
-                if ($imagePath === null && $imageBytes !== false) {
-                    $imagePath = 'proctoring/pre_' . $quiz->id . '_' . $studentIndex . '_' . time() . '.jpg';
-                    Storage::disk('public')->put($imagePath, $imageBytes);
-                }
+                // Verification images always stored on server: verification/{index}/{date}_{time}_pre_quiz_{quiz_id}.jpg
+                $safeIndex = preg_replace('/[^a-zA-Z0-9_-]/', '_', trim((string) $studentIndex)) ?: 'unknown';
+                $now = now();
+                $fileName = $now->format('Y-m-d') . '_' . $now->format('His') . '_pre_quiz_' . $quiz->id . '.jpg';
+                $imagePath = 'verification/' . $safeIndex . '/' . $fileName;
+                Storage::disk('public')->put($imagePath, $imageBytes);
             } catch (\Throwable $e) {
                 report($e);
                 return response()->json([

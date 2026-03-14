@@ -68,7 +68,7 @@ class StaffProfileController extends Controller
             if ($user->avatar && !str_starts_with($user->avatar, 'http')) {
                 Storage::disk('public')->delete($user->avatar);
             }
-            $avatarValue = $file->store('avatars', 'public');
+            $avatarValue = $file->store('profiles', 'public');
         } else {
             if ($user->avatar && !str_starts_with($user->avatar, 'http')) {
                 Storage::disk('public')->delete($user->avatar);

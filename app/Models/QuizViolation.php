@@ -46,6 +46,7 @@ class QuizViolation extends Model
             'screenshot_attempt',
             'tab_switch',
             'multiple_faces',
+            'multiple_faces_pre_quiz',
             'multiple_faces_during_quiz',
             'window_resize',
             'blur',

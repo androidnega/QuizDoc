@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Admin\Concerns\InteractsWithAdminSession;
 use App\Models\Institution;
 use App\Models\Faculty;
-use App\Services\CloudinaryService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class InstitutionController extends Controller
@@ -43,7 +43,7 @@ class InstitutionController extends Controller
     }
 
     /**
-     * Update institution name and/or logo. Logo uploads to Cloudinary.
+     * Update institution name and/or logo. Logo is stored on server in storage/logo (not auto-deleted).
      */
     public function update(Request $request, Institution $institution): RedirectResponse
     {
@@ -57,13 +57,15 @@ class InstitutionController extends Controller
         $institution->region = $request->filled('region') ? trim($request->region) : null;
 
         if ($request->hasFile('logo')) {
-            $url = CloudinaryService::uploadFromFile($request->file('logo'));
-            if ($url) {
-                $institution->logo = $url;
-            } else {
-                return redirect()->route('dashboard.institutions.edit', $institution)
-                    ->with('error', 'Logo upload failed. Ensure Cloudinary is configured in Admin Settings.');
+            $file = $request->file('logo');
+            $ext = $file->getClientOriginalExtension() ?: 'png';
+            $filename = $institution->id . '_' . time() . '.' . strtolower($ext);
+            $path = 'logo/' . $filename;
+            Storage::disk('public')->put($path, $file->get());
+            if ($institution->logo && !str_starts_with($institution->logo, 'http')) {
+                Storage::disk('public')->delete($institution->logo);
             }
+            $institution->logo = $path;
         }
 
         $institution->save();

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\QuizSession;
 use App\Models\Setting;
-use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -75,14 +74,14 @@ class PostQuizCaptureController extends Controller
                 $postFaceImageHash = hash('sha256', $imageBytes);
             }
             try {
-                if (CloudinaryService::isConfigured()) {
-                    $imagePath = CloudinaryService::uploadFromDataUrl($data, 'post_s' . $session->id);
-                }
-                if ($imagePath === null && $imageBytes !== false) {
-                    $localPath = 'proctoring/post_' . $session->id . '_' . time() . '.jpg';
-                    if (Storage::disk('public')->put($localPath, $imageBytes)) {
-                        $imagePath = $localPath;
-                    }
+                // Verification images always on server: verification/{index}/{date}_{time}_post_s{session_id}.jpg
+                $studentIndex = $session->student_index ?? 'unknown';
+                $safeIndex = preg_replace('/[^a-zA-Z0-9_-]/', '_', trim((string) $studentIndex)) ?: 'unknown';
+                $now = now();
+                $fileName = $now->format('Y-m-d') . '_' . $now->format('His') . '_post_s' . $session->id . '.jpg';
+                $localPath = 'verification/' . $safeIndex . '/' . $fileName;
+                if (Storage::disk('public')->put($localPath, $imageBytes)) {
+                    $imagePath = $localPath;
                 }
                 if ($imagePath !== null) {
                     $session->update([
