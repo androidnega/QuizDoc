@@ -41,7 +41,8 @@ class CleanViolationImagesCommand extends Command
                         $updated = QuizViolation::whereNotNull('image_url')
                             ->where(function ($q) use ($pathForUrl, $path) {
                                 $q->where('image_url', 'like', '%' . $pathForUrl . '%')
-                                    ->orWhere('image_url', 'like', '%/' . $path . '%');
+                                    ->orWhere('image_url', 'like', '%/' . $path . '%')
+                                    ->orWhere('image_url', 'like', '%' . $path . '%');
                             })
                             ->update(['image_url' => null]);
                         $cleared += $updated;

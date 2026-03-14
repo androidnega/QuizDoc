@@ -1158,9 +1158,11 @@ class StudentQuizController extends Controller
         $now = now();
         $fileName = $now->format('Y-m-d') . '_' . $now->format('His') . '_s' . $sessionId . '_' . Str::random(8) . '.jpg';
         $path = 'violations/' . $safeIndex . '/' . $fileName;
-        Storage::disk('public')->put($path, $binary);
+        $disk = Storage::disk('public');
+        $disk->makeDirectory('violations/' . $safeIndex);
+        $disk->put($path, $binary);
 
-        return asset('storage/' . $path);
+        return $path;
     }
 
     private function normalizeViolationMetadata(mixed $metadata): array

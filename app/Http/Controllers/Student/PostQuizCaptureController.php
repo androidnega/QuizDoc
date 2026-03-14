@@ -80,7 +80,9 @@ class PostQuizCaptureController extends Controller
                 $now = now();
                 $fileName = $now->format('Y-m-d') . '_' . $now->format('His') . '_post_s' . $session->id . '.jpg';
                 $localPath = 'verification/' . $safeIndex . '/' . $fileName;
-                if (Storage::disk('public')->put($localPath, $imageBytes)) {
+                $disk = Storage::disk('public');
+                $disk->makeDirectory('verification/' . $safeIndex);
+                if ($disk->put($localPath, $imageBytes)) {
                     $imagePath = $localPath;
                 }
                 if ($imagePath !== null) {

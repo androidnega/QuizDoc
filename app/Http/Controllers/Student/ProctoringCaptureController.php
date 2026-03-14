@@ -198,7 +198,9 @@ class ProctoringCaptureController extends Controller
                 $now = now();
                 $fileName = $now->format('Y-m-d') . '_' . $now->format('His') . '_pre_quiz_' . $quiz->id . '.jpg';
                 $imagePath = 'verification/' . $safeIndex . '/' . $fileName;
-                Storage::disk('public')->put($imagePath, $imageBytes);
+                $disk = Storage::disk('public');
+                $disk->makeDirectory('verification/' . $safeIndex);
+                $disk->put($imagePath, $imageBytes);
             } catch (\Throwable $e) {
                 report($e);
                 return response()->json([
