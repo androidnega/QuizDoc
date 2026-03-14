@@ -15,7 +15,7 @@
         <a href="{{ route('student.landing') }}" class="inline-block px-4 py-2.5 rounded-lg text-sm font-semibold bg-primary-600 text-white hover:bg-primary-700">Back to home</a>
     </div>
 </div>
-<div class="min-h-[100dvh] flex flex-col px-4 py-6 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+<div class="min-h-[100dvh] flex flex-col items-center justify-center px-4 py-6 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
     <div class="w-full max-w-xl mx-auto" id="quiz-rules-content">
         {{-- Compact note header --}}
         <div class="mb-4 flex items-start gap-3" role="alert" aria-live="polite">
