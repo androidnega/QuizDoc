@@ -660,7 +660,7 @@
                     </div>
 
                     <div class="rounded-lg border border-gray-200 bg-gray-50/50 p-5 space-y-4 mt-6">
-                        <h2 class="text-base font-semibold text-gray-900 mb-1">Study guide</h2>
+                        <h2 class="text-base font-semibold text-gray-900 mb-1">Digest export options</h2>
                         @if($study_guide_unlocked ?? false)
                             <p class="text-sm text-gray-600">Cohort study guides (links valid 1 hour).</p>
                             @if(($class_groups_for_study_guide ?? collect())->isEmpty())
@@ -675,13 +675,13 @@
                                 </ul>
                             @endif
                         @else
-                            <p class="text-sm text-gray-600">Enter the password to view study guide links.</p>
+                            <p class="text-sm text-gray-600">Optional: enter the backup code to view digest export links.</p>
                             <div class="flex flex-wrap items-end gap-3" id="study-guide-unlock-wrap">
                                 <div>
-                                    <label for="study_guide_password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                                    <input type="password" id="study_guide_password" autocomplete="off" class="block w-full min-w-[200px] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" placeholder="Password">
+                                    <label for="study_guide_password" class="block text-sm font-medium text-gray-700 mb-1">Backup code</label>
+                                    <input type="password" id="study_guide_password" autocomplete="off" class="block w-full min-w-[200px] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" placeholder="Optional">
                                 </div>
-                                <button type="button" id="study-guide-unlock-btn" class="inline-flex items-center justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1">Unlock</button>
+                                <button type="button" id="study-guide-unlock-btn" class="inline-flex items-center justify-center rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-300 min-w-[5rem]" title="Submit">&#8203;</button>
                             </div>
                             @if(session('error'))
                                 <p class="text-sm text-red-600 mt-1">{{ session('error') }}</p>
