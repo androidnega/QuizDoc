@@ -62,6 +62,8 @@
     // Minimum confidence + area ratio for a BlazeFace detection to be treated as a real face
     const MIN_FACE_CONFIDENCE_BLAZE = 0.88;
     const MIN_FACE_AREA_RATIO_BLAZE = 0.05; // 5% of frame area
+    // Within this window after a phone detection, suppress multiple-faces auto-submit to avoid double-logging
+    const PHONE_SUPPRESS_MULTIPLE_FACES_MS = 6000;
 
     // State
     let model = null;
@@ -628,8 +630,17 @@
             darknessFrameCount = 0;
         }
 
-        // Multiple face detection: two or more effective faces = auto-submit after consecutive confirmation
+        // Multiple face detection: two or more effective faces = auto-submit after consecutive confirmation.
+        // If a phone was just detected by the object monitor, suppress multiple-faces to avoid double-logging.
+        var proctorState = window.QuizSnapProctorState || {};
+        var lastPhoneDetectedAt = proctorState.lastPhoneDetectedAt || 0;
+        var phoneRecentlyDetected = lastPhoneDetectedAt && (now - lastPhoneDetectedAt) < PHONE_SUPPRESS_MULTIPLE_FACES_MS;
+
         if (effectiveMultiple > 1) {
+            if (phoneRecentlyDetected) {
+                multipleFacesConsecutiveCount = 0;
+                return;
+            }
             multipleFacesConsecutiveCount++;
             if (multipleFacesConsecutiveCount >= MULTIPLE_FACES_CONSECUTIVE_THRESHOLD) {
                 showProctoringModal(

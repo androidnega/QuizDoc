@@ -4,6 +4,8 @@
  */
 (function () {
     const c = window.QuizSnapQuiz || {};
+    // Global proctoring state shared between object and face detectors
+    window.QuizSnapProctorState = window.QuizSnapProctorState || { lastPhoneDetectedAt: 0 };
     const saveAnswerUrl = c.saveAnswerUrl;
     const saveAnswersBatchUrl = c.saveAnswersBatchUrl;
     const violationUrl = c.violationUrl;
@@ -1046,6 +1048,9 @@
                         if (violation.type === 'phone_detected') {
                             var modal = document.getElementById('phone-detected-modal');
                             if (modal) modal.classList.remove('hidden');
+                            if (window.QuizSnapProctorState) {
+                                window.QuizSnapProctorState.lastPhoneDetectedAt = Date.now();
+                            }
                         }
                         recordViolation(violation.type || 'other', violation.metadata || {});
                     };

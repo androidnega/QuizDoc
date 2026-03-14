@@ -521,21 +521,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     updateAnsweredSummary();
 
-    // Sync violation counter (out-of-frame events 0/5) from intelligent face monitor
-    function updateViolationCounter() {
-        var el = document.getElementById('quiz-violation-number');
-        if (!el) return;
-        var mon = window.QuizSnapIntelligentFaceMonitor;
-        var count = (mon && typeof mon.getValidOutOfFrameEvents === 'function') ? mon.getValidOutOfFrameEvents() : 0;
-        el.textContent = count + '/10';
-        el.className = 'quiz-violation-num';
-        if (count >= 9) el.classList.add('warn-4');
-        else if (count >= 7) el.classList.add('warn-3');
-        else if (count >= 5) el.classList.add('warn-2');
-        else if (count >= 1) el.classList.add('warn-1');
-    }
-    setInterval(updateViolationCounter, 500);
-
     // Examiner voice: subscribe to live-proctor-voice.{sessionId} and play received audio
     (function() {
         var sessionId = window.QuizSnapQuiz && window.QuizSnapQuiz.sessionId;
