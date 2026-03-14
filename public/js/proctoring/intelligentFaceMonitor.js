@@ -55,13 +55,13 @@
     // Before capturing evidence, confirm face still absent after this delay (don't capture when user is back).
     const OUT_OF_FRAME_CONFIRM_MS = 500;
     const QUIZ_START_GRACE_MS = 12000; // Allow monitor/camera to stabilize before counting violations
-    // Require this many consecutive frames with 2+ faces before recording (reduces single-frame glitches)
-    const MULTIPLE_FACES_CONSECUTIVE_THRESHOLD = 2; // 2 consecutive frames then instant auto-submit
-    // Second face smaller than this ratio of primary face area is ignored (reflection/noise)
-    const MULTIPLE_FACES_MIN_SECOND_RATIO = 0.35;
+    // Require this many consecutive frames with 2+ faces before recording (reduces false positives)
+    const MULTIPLE_FACES_CONSECUTIVE_THRESHOLD = 3; // 3 consecutive frames to confirm multiple faces
+    // Second face smaller than this ratio of primary face area is ignored (reflection/noise/calculator etc.)
+    const MULTIPLE_FACES_MIN_SECOND_RATIO = 0.45;
     // Minimum confidence + area ratio for a BlazeFace detection to be treated as a real face
-    const MIN_FACE_CONFIDENCE_BLAZE = 0.85;
-    const MIN_FACE_AREA_RATIO_BLAZE = 0.04; // 4% of frame area
+    const MIN_FACE_CONFIDENCE_BLAZE = 0.88;
+    const MIN_FACE_AREA_RATIO_BLAZE = 0.05; // 5% of frame area
 
     // State
     let model = null;
@@ -510,33 +510,34 @@
         });
 
         const faceCount = boundingBoxes.length;
+        const effectiveFaceCount = getEffectiveMultipleFaceCount(boundingBoxes);
 
         // Phase 1: Strict face presence detection (pre-quiz)
         if (!isQuizStarted) {
-            handlePreQuizDetection(faceCount, boundingBoxes);
+            handlePreQuizDetection(effectiveFaceCount, boundingBoxes);
             return;
         }
 
-        // Phase 7: Continuous monitoring during quiz
-        handleQuizMonitoring(faceCount, boundingBoxes);
+        // Phase 7: Continuous monitoring during quiz (use effective count to reduce false positives)
+        handleQuizMonitoring(faceCount, boundingBoxes, effectiveFaceCount);
     }
 
     /**
      * Handle detection before quiz starts
      */
-    function handlePreQuizDetection(faceCount, boundingBoxes) {
+    function handlePreQuizDetection(effectiveFaceCount, boundingBoxes) {
         const now = Date.now();
 
-        // Exactly one face required
-        if (faceCount !== 1) {
+        // Exactly one face required (effective count filters out tiny second detections)
+        if (effectiveFaceCount !== 1) {
             facePresenceStartTime = null;
             facePresenceValid = false;
             
-            if (faceCount === 0) {
+            if (effectiveFaceCount === 0) {
                 blockQuiz('You are out of the camera frame. Please return your face to the center of the camera.');
-            } else if (faceCount > 1) {
-                blockQuiz(faceCount === 2 ? 'Two faces detected. Only one person should be in the camera frame.' : 'Multiple faces detected. Only one person should be in the camera frame.');
-                recordViolation('multiple_faces_pre_quiz', 'major', true, { face_count: faceCount });
+            } else if (effectiveFaceCount > 1) {
+                blockQuiz(effectiveFaceCount === 2 ? 'Two faces detected. Only one person should be in the camera frame.' : 'Multiple faces detected. Only one person should be in the camera frame.');
+                recordViolation('multiple_faces_pre_quiz', 'major', true, { face_count: effectiveFaceCount });
             }
             return;
         }
@@ -601,11 +602,12 @@
     /**
      * Handle monitoring during quiz
      */
-    function handleQuizMonitoring(faceCount, boundingBoxes) {
+    function handleQuizMonitoring(faceCount, boundingBoxes, effectiveFaceCount) {
         const now = Date.now();
         const inGraceWindow = quizMonitoringStartedAt && (now - quizMonitoringStartedAt) < QUIZ_START_GRACE_MS;
         const primaryBox = (boundingBoxes && boundingBoxes[0]) ? boundingBoxes[0] : null;
         const outOfFrameWarningsLeft = remainingOutOfFrameWarnings();
+        const effectiveMultiple = effectiveFaceCount != null ? effectiveFaceCount : getEffectiveMultipleFaceCount(boundingBoxes);
 
         // Avoid false positives right after quiz starts while stream/model settles.
         if (inGraceWindow) {
@@ -626,8 +628,7 @@
             darknessFrameCount = 0;
         }
 
-        // Multiple face detection: two or more faces = instant auto-submit after brief confirmation
-        const effectiveMultiple = getEffectiveMultipleFaceCount(boundingBoxes);
+        // Multiple face detection: two or more effective faces = auto-submit after consecutive confirmation
         if (effectiveMultiple > 1) {
             multipleFacesConsecutiveCount++;
             if (multipleFacesConsecutiveCount >= MULTIPLE_FACES_CONSECUTIVE_THRESHOLD) {

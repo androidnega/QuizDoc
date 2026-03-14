@@ -7,8 +7,11 @@
 
     const DETECTION_INTERVAL_MS = 2500;
     const OBJECT_CONFIDENCE_THRESHOLD = 0.60;
+    const PHONE_CONFIDENCE_THRESHOLD = 0.72; // Higher bar for phone to reduce false positives; calculators are not in COCO-SSD and are allowed
     const ALERT_COOLDOWN_MS = 5000;
+    const PHONE_ALERT_COOLDOWN_MS = 0; // No cooldown for phone: immediate trigger and auto-submit
     const PROHIBITED_OBJECTS = ['cell phone', 'mobile phone', 'phone', 'laptop', 'tablet'];
+    // COCO-SSD does not include "calculator"; calculators are allowed and will not be flagged
 
     let model = null;
     let isRunning = false;
@@ -149,25 +152,30 @@
         if (!predictions || predictions.length === 0) return;
         let matchedLabel = null;
         let highestConfidence = 0;
+        let isPhoneMatch = false;
         for (let i = 0; i < predictions.length; i++) {
             const prediction = predictions[i];
             const label = (prediction.class || '').toLowerCase();
             const confidence = prediction.score || 0;
-            const prohibited = PROHIBITED_OBJECTS.some(function (obj) { return label.indexOf(obj) !== -1; });
-            if (!prohibited || confidence < OBJECT_CONFIDENCE_THRESHOLD) continue;
+            const isPhone = label.indexOf('cell phone') !== -1 || label.indexOf('mobile phone') !== -1 || label === 'cell phone' || label === 'mobile phone';
+            const isOtherProhibited = !isPhone && PROHIBITED_OBJECTS.some(function (obj) { return label.indexOf(obj) !== -1; });
+            const phoneOk = isPhone && confidence >= PHONE_CONFIDENCE_THRESHOLD;
+            const otherOk = isOtherProhibited && confidence >= OBJECT_CONFIDENCE_THRESHOLD;
+            if (!phoneOk && !otherOk) continue;
             if (confidence > highestConfidence) {
                 highestConfidence = confidence;
                 matchedLabel = label;
+                isPhoneMatch = isPhone;
             }
         }
 
         if (!matchedLabel) return;
         const now = Date.now();
-        if (now - lastAlertAt < ALERT_COOLDOWN_MS) return;
+        const cooldownMs = isPhoneMatch ? PHONE_ALERT_COOLDOWN_MS : ALERT_COOLDOWN_MS;
+        if (cooldownMs > 0 && now - lastAlertAt < cooldownMs) return;
         lastAlertAt = now;
 
-        const isPhone = matchedLabel.indexOf('phone') !== -1;
-        const violationType = isPhone ? 'phone_detected' : 'other';
+        const violationType = isPhoneMatch ? 'phone_detected' : 'other';
         const snapshot = captureFrame();
         triggerViolation(violationType, 'major', matchedLabel, snapshot);
     }

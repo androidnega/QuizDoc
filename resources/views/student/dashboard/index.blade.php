@@ -107,8 +107,7 @@
                       {{ route('dashboard.course-materials') }}
                   @endif"
                @if($scheduledUpcoming) data-rules-url="{{ route('student.rules.show.quiz', ['token' => $scheduledQuiz->link_token]) }}" @endif
-               @if($scheduledActive && $scheduledQuiz) data-quiz-rules-url="{{ route('student.rules.show.quiz', ['token' => $scheduledQuiz->link_token]) }}" @endif
-               class="flex flex-col flex-1 no-underline text-inherit hover:opacity-90 transition-opacity min-w-0 @if($scheduledActive && $scheduledQuiz) js-quiz-start-require-fullscreen @endif">
+               class="flex flex-col flex-1 no-underline text-inherit hover:opacity-90 transition-opacity min-w-0">
                 <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-sm sm:text-base shrink-0" style="background-color: #a7f3d0; color: #047857;"><i class="fas fa-book"></i></span>
                 <span class="text-sm font-bold mt-1.5 sm:mt-2 truncate text-slate-900">
                     @if(isset($scheduledQuiz) && $scheduledQuiz)
@@ -130,7 +129,7 @@
                 </span>
             </a>
             @if($scheduledActive && $scheduledQuiz)
-            <a href="{{ route('student.rules.show.quiz', ['token' => $scheduledQuiz->link_token]) }}" class="js-quiz-start-require-fullscreen mt-2 self-start inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide text-amber-900 bg-amber-400 hover:bg-amber-500 border border-amber-500/50 shadow-sm transition-colors" data-quiz-rules-url="{{ route('student.rules.show.quiz', ['token' => $scheduledQuiz->link_token]) }}">Start</a>
+            <a href="{{ route('student.rules.show.quiz', ['token' => $scheduledQuiz->link_token]) }}" class="mt-2 self-start inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide text-amber-900 bg-amber-400 hover:bg-amber-500 border border-amber-500/50 shadow-sm transition-colors">Start</a>
             @endif
         </div>
         @endif
@@ -298,7 +297,4 @@
 @endif
 @endpush
 @endif
-@push('scripts')
-<script src="{{ asset('js/quiz-start-fullscreen.js') }}" defer></script>
-@endpush
 @endsection

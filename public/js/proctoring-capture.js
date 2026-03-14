@@ -8,8 +8,13 @@
     const fullscreenGate = document.getElementById('fullscreen-gate');
     const captureMain = document.getElementById('proctoring-capture-main');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const startQuizBlock = document.getElementById('start-quiz-block');
+    const startQuizBtn = document.getElementById('start-quiz-btn');
     const faceVerifiedPopup = document.getElementById('face-verified-popup');
     const fullscreenHintText = fullscreenGate ? fullscreenGate.querySelector('[data-fullscreen-hint]') : null;
+
+    var phase = 'face_check';
+    var pendingRedirectUrl = null;
 
     function isFullscreen() {
         const el = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
@@ -20,15 +25,46 @@
     function applyFullscreenState() {
         const fullscreen = isFullscreen();
         if (root) {
-            root.classList.toggle('bg-gray-900', !fullscreen);
-            root.classList.toggle('bg-gray-50', fullscreen);
+            if (phase === 'fullscreen_before_start') {
+                root.classList.add('bg-gray-900');
+                root.classList.remove('bg-gray-50');
+            } else {
+                root.classList.add('bg-gray-50');
+                root.classList.remove('bg-gray-900');
+            }
         }
+        if (phase === 'face_check') {
+            if (fullscreenGate) fullscreenGate.classList.add('hidden');
+            if (captureMain) captureMain.classList.remove('hidden');
+            if (startQuizBlock) startQuizBlock.classList.add('hidden');
+            return;
+        }
+        if (phase === 'fullscreen_before_start') {
+            if (captureMain) captureMain.classList.add('hidden');
+            if (fullscreenGate) {
+                fullscreenGate.classList.remove('hidden');
+                if (!fullscreenGate.classList.contains('flex')) fullscreenGate.classList.add('flex');
+            }
+            if (startQuizBlock) {
+                if (fullscreen) startQuizBlock.classList.remove('hidden');
+                else startQuizBlock.classList.add('hidden');
+            }
+        }
+    }
+
+    function showFullscreenBeforeStart(redirectUrl) {
+        phase = 'fullscreen_before_start';
+        pendingRedirectUrl = redirectUrl || null;
+        if (faceVerifiedPopup) {
+            faceVerifiedPopup.classList.add('hidden');
+            faceVerifiedPopup.classList.remove('flex');
+        }
+        if (captureMain) captureMain.classList.add('hidden');
         if (fullscreenGate) {
-            fullscreenGate.classList.toggle('hidden', fullscreen);
+            fullscreenGate.classList.remove('hidden');
+            fullscreenGate.classList.add('flex');
         }
-        if (captureMain) {
-            captureMain.classList.toggle('hidden', !fullscreen);
-        }
+        applyFullscreenState();
     }
 
     function requestFullscreen() {
@@ -75,11 +111,22 @@
             requestFullscreen();
         });
     }
+    if (startQuizBtn) {
+        startQuizBtn.addEventListener('click', function () {
+            if (pendingRedirectUrl) window.location.href = pendingRedirectUrl;
+        });
+    }
     document.addEventListener('fullscreenchange', applyFullscreenState);
     document.addEventListener('webkitfullscreenchange', applyFullscreenState);
-    // Apply once on load: if already fullscreen, skip gate silently (no prompt); else show gate.
+
     function initFullscreenState() {
-        applyFullscreenState();
+        phase = 'face_check';
+        if (fullscreenGate) fullscreenGate.classList.add('hidden');
+        if (captureMain) captureMain.classList.remove('hidden');
+        if (root) {
+            root.classList.add('bg-gray-50');
+            root.classList.remove('bg-gray-900');
+        }
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
@@ -88,6 +135,7 @@
     } else {
         setTimeout(initFullscreenState, 0);
     }
+    window.QuizSnapProctoringShowFullscreenBeforeStart = showFullscreenBeforeStart;
 
     const video = document.getElementById('camera-video');
     const canvas = document.getElementById('capture-canvas');
@@ -762,9 +810,13 @@
                 })
                 .then(function (data) {
                     if (data.success && data.redirect) {
-                        setFaceStatus('Success! Redirecting...', 'ok');
+                        setFaceStatus('Success!', 'ok');
                         stopCamera();
-                        window.location.href = data.redirect;
+                        if (window.QuizSnapProctoringShowFullscreenBeforeStart) {
+                            window.QuizSnapProctoringShowFullscreenBeforeStart(data.redirect);
+                        } else {
+                            window.location.href = data.redirect;
+                        }
                     } else {
                         showError(data.message || 'Failed to start quiz. Please try again.');
                         captureBtn.disabled = false;

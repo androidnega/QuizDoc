@@ -22,7 +22,7 @@
                 @endif
                 <p class="text-xs text-slate-500 mt-1">{{ $quiz->duration_minutes }} min · {{ $quiz->getQuestionsPerStudent() }} questions</p>
             </div>
-            <a href="{{ route('student.rules.show.quiz', ['token' => $quiz->link_token]) }}" class="js-quiz-start-require-fullscreen inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-slate-600 text-white hover:bg-slate-700 flex-shrink-0 min-h-[44px] sm:min-h-0" data-quiz-rules-url="{{ route('student.rules.show.quiz', ['token' => $quiz->link_token]) }}">
+            <a href="{{ route('student.rules.show.quiz', ['token' => $quiz->link_token]) }}" class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-slate-600 text-white hover:bg-slate-700 flex-shrink-0 min-h-[44px] sm:min-h-0">
                 Start quiz
                 <i class="fas fa-arrow-right text-xs"></i>
             </a>
@@ -78,8 +78,4 @@
     </div>
     @endif
 </section>
-
-@push('scripts')
-<script src="{{ asset('js/quiz-start-fullscreen.js') }}" defer></script>
-@endpush
 @endsection
