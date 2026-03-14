@@ -2,7 +2,27 @@
 
 All proctoring images (face at start/end, violation captures) are stored under Laravel’s `storage/app/public` when “Server” is selected in settings.
 
-## On the server (one-time)
+## No SSH / no terminal (cPanel only)
+
+**Open this URL once in your browser** (same key as your migration/pull script):
+
+```
+https://quiz.neckpressing.com/thekey.php?key=QuizSnapMigrate2026Xp9k3m7
+```
+
+That script will:
+
+1. Pull latest code from git (reset + fetch)
+2. Clear Laravel caches
+3. Run **storage:link** (create `public/storage` → `storage/app/public`)
+4. Run **storage:ensure-proctoring** (create `verification/` and `violations/` dirs)
+5. Set permissions on `storage` and `bootstrap/cache` (chmod 775 where possible)
+
+After the page shows “SUCCESS”, proctoring and verification images will save and display. Delete `thekey.php` when you no longer need it.
+
+---
+
+## If you have SSH (optional)
 
 1. **Create the storage link** (so `public/storage` serves files from `storage/app/public`):
    ```bash
