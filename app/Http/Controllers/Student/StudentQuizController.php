@@ -444,14 +444,18 @@ class StudentQuizController extends Controller
             ], 422);
         }
 
+        $storageDriver = Setting::getValue(Setting::KEY_VIOLATION_STORAGE_DRIVER, 'server');
+        $useCloudinary = ($storageDriver === 'cloudinary') && CloudinaryService::isConfigured();
+
         try {
-            if (CloudinaryService::isConfigured()) {
+            if ($useCloudinary) {
                 $imageUrl = CloudinaryService::uploadFromDataUrl(
                     $data,
                     'violation_s' . $session->id . '_' . time() . '_' . Str::random(8)
                 );
             } else {
-                $imageUrl = $this->storeViolationCaptureLocally($session->id, $data);
+                $studentIndex = $session->student_index ?? 'unknown';
+                $imageUrl = $this->storeViolationCaptureLocally($session->id, $data, $studentIndex);
             }
         } catch (\Throwable $e) {
             report($e);
@@ -1134,7 +1138,11 @@ class StudentQuizController extends Controller
         return false;
     }
 
-    private function storeViolationCaptureLocally(int $sessionId, string $dataUrl): string
+    /**
+     * Store violation image on server under violations/{index_number}/{date}_{time}_{session_id}_{random}.jpg.
+     * Ensures violations directory exists and is logged by student index and date/time.
+     */
+    private function storeViolationCaptureLocally(int $sessionId, string $dataUrl, string $studentIndex = 'unknown'): string
     {
         $parts = explode(',', $dataUrl, 2);
         if (count($parts) !== 2) {
@@ -1145,8 +1153,10 @@ class StudentQuizController extends Controller
             throw new \RuntimeException('Failed to decode image');
         }
 
-        $fileName = now()->format('Ymd_His_u') . '_' . Str::random(8) . '.jpg';
-        $path = 'violations/session_' . $sessionId . '/' . $fileName;
+        $safeIndex = preg_replace('/[^a-zA-Z0-9_-]/', '_', trim((string) $studentIndex)) ?: 'unknown';
+        $now = now();
+        $fileName = $now->format('Y-m-d') . '_' . $now->format('His') . '_s' . $sessionId . '_' . Str::random(8) . '.jpg';
+        $path = 'violations/' . $safeIndex . '/' . $fileName;
         Storage::disk('public')->put($path, $binary);
 
         return asset('storage/' . $path);

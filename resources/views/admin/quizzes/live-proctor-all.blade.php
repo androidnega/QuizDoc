@@ -5,7 +5,7 @@
 
 @section('dashboard_content')
 <div class="w-full min-w-0 space-y-4">
-    <p class="text-sm text-gray-600">All your live sessions in one view. Sessions with recent activity (heartbeat in the last 2 minutes or started in the last 5 minutes) are shown. Click a feed to enlarge; you may end a student’s quiz if they violate rules.</p>
+    <p class="text-sm text-gray-600">All your live sessions in one view. Index numbers and last activity only; no camera feed or remote end-quiz. Sessions with recent activity (heartbeat in the last 2 minutes or started in the last 5 minutes) are shown.</p>
     <div class="bg-white rounded-lg border border-gray-200 p-2 flex items-center gap-3 flex-wrap">
         <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Live mic</span>
         <button type="button" id="live-proctor-mic-btn" class="inline-flex items-center justify-center w-10 h-10 rounded-full border-2 border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-600 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1" aria-label="Microphone off" title="Click to start speaking; click again to stop. Students must allow audio to hear you.">
@@ -28,7 +28,7 @@
     </div>
     <div class="bg-white rounded-lg border border-gray-200 p-4">
         <div id="live-proctor-all-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 min-w-0">
-            {{-- Populated by JS --}}
+            {{-- Populated by JS: index + name + quiz title only --}}
         </div>
         <div id="live-proctor-all-empty" class="hidden text-center py-12 text-gray-500">
             <p class="text-sm">No students are currently writing any of your quizzes.</p>
@@ -38,115 +38,16 @@
     </div>
 </div>
 
-{{-- Modal: enlarged feed + student/quiz details + End quiz --}}
-<div id="live-proctor-all-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4" aria-modal="true" role="dialog">
-    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-2">
-            <div class="min-w-0">
-                <p id="live-all-modal-quiz" class="text-xs font-medium text-gray-500 truncate"></p>
-                <p id="live-all-modal-index" class="font-semibold text-gray-900 truncate"></p>
-                <p id="live-all-modal-name" class="text-sm text-gray-500 truncate"></p>
-            </div>
-            <button type="button" id="live-proctor-all-modal-close" class="shrink-0 p-2 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Close">✕</button>
-        </div>
-        <div class="flex-1 min-h-0 bg-gray-900 flex items-center justify-center p-2">
-            <img id="live-all-modal-img" src="" alt="Camera feed" class="max-w-full max-h-[60vh] w-auto h-auto object-contain" onerror="this.onerror=null; this.src=this.dataset.placeholder||'';" data-placeholder="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
-        </div>
-        <div class="px-4 py-3 border-t border-gray-200 flex flex-wrap items-center gap-2">
-            <button type="button" id="live-all-modal-end-quiz-btn" class="btn bg-red-100 text-red-800 hover:bg-red-200 py-2 px-4 text-sm font-semibold">End quiz (violation)</button>
-            <span id="live-all-modal-end-status" class="text-sm text-gray-500 hidden"></span>
-        </div>
-    </div>
-</div>
-
 @push('scripts')
 <script>
 (function() {
     var sessionsUrl = "{{ route('dashboard.quizzes.live-proctor-all.sessions') }}";
     var voiceUrl = "{{ route('dashboard.quizzes.live-proctor-voice') }}";
-    var frameUrlTemplate = "{{ route('dashboard.quizzes.sessions.proctor-frame', ['quiz' => '__QID__', 'quizSession' => '__SID__']) }}";
-    var endSessionUrlTemplate = "{{ route('dashboard.quizzes.sessions.end-by-examiner', ['quiz' => '__QID__', 'quizSession' => '__SID__']) }}";
     var grid = document.getElementById('live-proctor-all-grid');
     var currentSessions = [];
     var emptyEl = document.getElementById('live-proctor-all-empty');
     var loadingEl = document.getElementById('live-proctor-all-loading');
-    var modal = document.getElementById('live-proctor-all-modal');
-    var modalImg = document.getElementById('live-all-modal-img');
-    var modalQuiz = document.getElementById('live-all-modal-quiz');
-    var modalIndex = document.getElementById('live-all-modal-index');
-    var modalName = document.getElementById('live-all-modal-name');
-    var modalClose = document.getElementById('live-proctor-all-modal-close');
-    var endQuizBtn = document.getElementById('live-all-modal-end-quiz-btn');
-    var endStatus = document.getElementById('live-all-modal-end-status');
     var csrfToken = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content;
-    var placeholderDataUri = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-
-    var frameRefreshIntervalMs = 2000;
-    var batchSize = 4;
-    var batchDelayMs = 180;
-    var proctorPusher = null;
-    var proctorSubscribedSessionIds = {};
-
-    function frameUrl(quizId, sessionId) {
-        return frameUrlTemplate.replace('__QID__', String(quizId)).replace('__SID__', String(sessionId)) + '?t=' + Date.now();
-    }
-
-    function onProctorImgError(img) {
-        if (img && img.src && img.src !== placeholderDataUri) img.src = placeholderDataUri;
-    }
-
-    function openModal(session) {
-        if (!modal || !modalImg) return;
-        modal.classList.remove('hidden');
-        modalImg.src = frameUrl(session.quiz_id, session.id);
-        if (modalQuiz) modalQuiz.textContent = session.quiz_title || '—';
-        if (modalIndex) modalIndex.textContent = 'Index: ' + (session.student_index || session.id);
-        if (modalName) modalName.textContent = (session.student_name && session.student_name.trim()) ? session.student_name.trim() : '—';
-        endQuizBtn.dataset.quizId = session.quiz_id;
-        endQuizBtn.dataset.sessionId = session.id;
-        if (endStatus) { endStatus.classList.add('hidden'); endStatus.textContent = ''; }
-        endQuizBtn.disabled = false;
-    }
-
-    function closeModal() {
-        if (modal) modal.classList.add('hidden');
-        if (modalImg) modalImg.src = '';
-    }
-
-    if (modalClose) modalClose.addEventListener('click', closeModal);
-    if (modal) modal.addEventListener('click', function(e) {
-        if (e.target === modal) closeModal();
-    });
-
-    if (endQuizBtn) {
-        endQuizBtn.addEventListener('click', function() {
-            var qid = this.dataset.quizId;
-            var sid = this.dataset.sessionId;
-            if (!qid || !sid || this.disabled) return;
-            if (!confirm('End this student\'s quiz now? Their attempt will be submitted as-is. This cannot be undone.')) return;
-            this.disabled = true;
-            if (endStatus) { endStatus.classList.remove('hidden'); endStatus.textContent = 'Ending…'; }
-            var url = endSessionUrlTemplate.replace('__QID__', String(qid)).replace('__SID__', String(sid));
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken || ''
-                },
-                body: JSON.stringify({})
-            })
-            .then(function(r) { return r.json().catch(function() { return {}; }); })
-            .then(function(data) {
-                if (endStatus) endStatus.textContent = data.success ? 'Quiz ended. Student will see submission.' : (data.message || 'Failed.');
-                if (data.success) setTimeout(closeModal, 1500);
-            })
-            .catch(function() {
-                if (endStatus) endStatus.textContent = 'Request failed.';
-                endQuizBtn.disabled = false;
-            });
-        });
-    }
 
     function renderSessions(sessions) {
         if (loadingEl) loadingEl.classList.add('hidden');
@@ -168,33 +69,19 @@
             if (!card) {
                 card = document.createElement('div');
                 card.setAttribute('data-session-id', s.id);
-                card.className = 'rounded-lg border border-gray-200 overflow-hidden bg-gray-50 min-w-0 cursor-pointer hover:border-primary-400 hover:shadow transition-all';
+                card.className = 'rounded-lg border border-gray-200 bg-white p-3 min-w-0';
                 var quizLine = (s.quiz_title && s.quiz_title.trim()) ? ('<span class="text-xs text-gray-500 truncate block" title="' + (s.quiz_title || '').replace(/"/g, '&quot;') + '">' + (s.quiz_title || '').trim() + '</span>') : '';
-                var nameLine = (s.student_name && s.student_name.trim()) ? ('<span class="text-gray-600 text-xs truncate block" title="' + (s.student_name || '').replace(/"/g, '&quot;') + '">' + (s.student_name || '').trim() + '</span>') : '';
+                var nameLine = (s.student_name && s.student_name.trim()) ? ('<span class="text-gray-600 text-xs truncate block mt-0.5">' + (s.student_name || '').trim().replace(/</g, '&lt;') + '</span>') : '';
                 card.innerHTML =
-                    '<div class="px-2 py-1.5 border-b border-gray-200 bg-white min-h-[2.5rem] flex flex-col justify-center">' +
                     quizLine +
-                    '<span class="font-semibold text-gray-900 text-xs truncate">' + (s.student_index || 'Index ' + s.id) + '</span>' +
-                    nameLine +
-                    '</div>' +
-                    '<div class="aspect-[3/4] bg-gray-900 flex items-center justify-center w-full overflow-hidden" style="height:100px">' +
-                    '<img src="" alt="Feed" class="w-full h-full object-cover proctor-frame-img" data-quiz-id="' + s.quiz_id + '" data-session-id="' + s.id + '" loading="lazy" referrerpolicy="no-referrer">' +
-                    '</div>';
+                    '<span class="font-semibold text-gray-900 text-sm block mt-0.5">' + (s.student_index || 'Index ' + s.id) + '</span>' +
+                    nameLine;
                 grid.appendChild(card);
-                card.addEventListener('click', function() {
-                    openModal(s);
-                });
-            }
-            var img = card.querySelector('.proctor-frame-img');
-            if (img) {
-                img.onerror = function() { onProctorImgError(img); };
-                img.src = frameUrl(s.quiz_id, s.id);
             }
         });
         Object.keys(existing).forEach(function(id) {
             if (!seen[id]) existing[id].remove();
         });
-        subscribeProctorFrameChannels();
     }
 
     function fetchSessions() {
@@ -206,99 +93,10 @@
             .catch(function() { renderSessions([]); });
     }
 
-    function refreshGridImagesStaggered() {
-        if (!grid) return;
-        var imgs = Array.prototype.slice.call(grid.querySelectorAll('.proctor-frame-img'));
-        imgs.forEach(function(img, i) {
-            window.setTimeout(function() {
-                var qid = img.getAttribute('data-quiz-id');
-                var sid = img.getAttribute('data-session-id');
-                if (qid && sid) img.src = frameUrl(qid, sid);
-            }, (i % batchSize) * batchDelayMs);
-        });
-    }
-
-    function refreshModalImage() {
-        if (modal && !modal.classList.contains('hidden') && modalImg && endQuizBtn && endQuizBtn.dataset.quizId && endQuizBtn.dataset.sessionId) {
-            modalImg.src = frameUrl(endQuizBtn.dataset.quizId, endQuizBtn.dataset.sessionId);
-        }
-    }
-
-    function refreshSessionFrame(sessionId) {
-        var session = currentSessions.filter(function(s) { return String(s.id) === String(sessionId); })[0];
-        if (!session) return;
-        var img = grid && grid.querySelector('.proctor-frame-img[data-session-id="' + sessionId + '"]');
-        if (img) img.src = frameUrl(session.quiz_id, session.id);
-        if (modal && !modal.classList.contains('hidden') && endQuizBtn && String(endQuizBtn.dataset.sessionId) === String(sessionId)) {
-            modalImg.src = frameUrl(session.quiz_id, session.id);
-        }
-    }
-
-    function subscribeProctorFrameChannels() {
-        if (typeof Pusher === 'undefined' || !window.REVERB_CONFIG || !window.REVERB_CONFIG.key) return;
-        var c = window.REVERB_CONFIG;
-        if (!proctorPusher) {
-            try {
-                proctorPusher = new Pusher(c.key, {
-                    wsHost: c.host,
-                    wsPort: parseInt(c.port, 10) || 8080,
-                    wssPort: 443,
-                    forceTLS: (c.scheme || 'http') === 'https',
-                    disableStats: true,
-                    enabledTransports: ['ws', 'wss'],
-                    cluster: 'mt1'
-                });
-            } catch (e) { return; }
-        }
-        var want = {};
-        currentSessions.forEach(function(s) { want[String(s.id)] = true; });
-        Object.keys(proctorSubscribedSessionIds).forEach(function(sid) {
-            if (!want[sid]) {
-                try { proctorPusher.unsubscribe('live-proctor-frame.' + sid); } catch (e) {}
-                delete proctorSubscribedSessionIds[sid];
-            }
-        });
-        currentSessions.forEach(function(s) {
-            var sid = String(s.id);
-            if (proctorSubscribedSessionIds[sid]) return;
-            try {
-                var ch = proctorPusher.subscribe('live-proctor-frame.' + sid);
-                ch.bind('ProctorFrameUpdated', function(data) {
-                    var id = (data && data.session_id) ? data.session_id : sid;
-                    refreshSessionFrame(id);
-                });
-                proctorSubscribedSessionIds[sid] = true;
-            } catch (e) {}
-        });
-    }
-
-    fetchSessions();
-    setInterval(fetchSessions, 8000);
-    setInterval(function() {
-        if (document.hidden) return;
-        refreshGridImagesStaggered();
-        refreshModalImage();
-    }, frameRefreshIntervalMs);
-
-    /* Live mic: examiner speaks to all or selected student */
-    var micBtn = document.getElementById('live-proctor-mic-btn');
-    var micIconOff = document.getElementById('live-proctor-mic-icon-off');
-    var micIconOn = document.getElementById('live-proctor-mic-icon-on');
-    var micTarget = document.getElementById('live-proctor-mic-target');
-    var micStatus = document.getElementById('live-proctor-mic-status');
-    var micLevelWrap = document.getElementById('live-proctor-mic-level-wrap');
-    var micStream = null;
-    var mediaRecorder = null;
-    var sendChunkInterval = null;
-    var micChunks = [];
-
     function getTargetSessionIds() {
-        var target = micTarget && micTarget.value ? micTarget.value : 'all';
-        if (target === 'selected') {
-            var sid = endQuizBtn && endQuizBtn.dataset.sessionId ? endQuizBtn.dataset.sessionId : null;
-            if (!sid || modal.classList.contains('hidden')) return [];
-            return [parseInt(sid, 10)];
-        }
+        var target = document.getElementById('live-proctor-mic-target');
+        target = target && target.value ? target.value : 'all';
+        if (target === 'selected') return [];
         return currentSessions.map(function(s) { return s.id; });
     }
 
@@ -317,6 +115,11 @@
         }).catch(function() {});
     }
 
+    var micStream = null;
+    var mediaRecorder = null;
+    var sendChunkInterval = null;
+    var micChunks = [];
+
     function stopMic() {
         if (sendChunkInterval) {
             clearInterval(sendChunkInterval);
@@ -331,6 +134,11 @@
             micStream = null;
         }
         micChunks = [];
+        var micIconOff = document.getElementById('live-proctor-mic-icon-off');
+        var micIconOn = document.getElementById('live-proctor-mic-icon-on');
+        var micStatus = document.getElementById('live-proctor-mic-status');
+        var micBtn = document.getElementById('live-proctor-mic-btn');
+        var micLevelWrap = document.getElementById('live-proctor-mic-level-wrap');
         if (micIconOff) micIconOff.classList.remove('hidden');
         if (micIconOn) micIconOn.classList.add('hidden');
         if (micStatus) micStatus.textContent = 'Off';
@@ -339,60 +147,7 @@
             micBtn.classList.remove('bg-red-500', 'border-red-600', 'text-white');
             micBtn.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
         }
-        if (micLevelWrap) { micLevelWrap.classList.add('hidden'); micLevelWrap.style.display = ''; }
-        stopMicLevelMeter();
-    }
-
-    var audioContextForMic = null;
-    var micLevelAnimationId = null;
-    var analyserNode = null;
-
-    function stopMicLevelMeter() {
-        if (micLevelAnimationId != null) {
-            cancelAnimationFrame(micLevelAnimationId);
-            micLevelAnimationId = null;
-        }
-        if (analyserNode) analyserNode = null;
-        if (audioContextForMic) {
-            try { audioContextForMic.close(); } catch (e) {}
-            audioContextForMic = null;
-        }
-        var bar = document.getElementById('live-proctor-mic-level-bar');
-        if (bar) bar.style.width = '0%';
-    }
-
-    function runMicLevelMeter(stream) {
-        try {
-            var AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-            var ctx = new AudioContext();
-            audioContextForMic = ctx;
-            var source = ctx.createMediaStreamSource(stream);
-            var analyser = ctx.createAnalyser();
-            analyser.fftSize = 256;
-            analyser.smoothingTimeConstant = 0.8;
-            source.connect(analyser);
-            analyserNode = analyser;
-            var dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-            function updateLevel() {
-                if (!analyserNode || !micStream) {
-                    stopMicLevelMeter();
-                    return;
-                }
-                analyser.getByteFrequencyData(dataArray);
-                var sum = 0;
-                for (var i = 0; i < dataArray.length; i++) sum += dataArray[i];
-                var avg = dataArray.length ? sum / dataArray.length : 0;
-                var pct = Math.min(100, Math.round((avg / 255) * 100 * 2.5));
-                var bar = document.getElementById('live-proctor-mic-level-bar');
-                if (bar) bar.style.width = pct + '%';
-                micLevelAnimationId = requestAnimationFrame(updateLevel);
-            }
-            updateLevel();
-        } catch (e) {
-            console.warn('Mic level meter failed:', e);
-        }
+        if (micLevelWrap) { micLevelWrap.classList.add('hidden'); }
     }
 
     function startMic() {
@@ -424,6 +179,11 @@
                         reader.readAsDataURL(blob);
                     }
                 }, 280);
+                var micIconOff = document.getElementById('live-proctor-mic-icon-off');
+                var micIconOn = document.getElementById('live-proctor-mic-icon-on');
+                var micStatus = document.getElementById('live-proctor-mic-status');
+                var micBtn = document.getElementById('live-proctor-mic-btn');
+                var micLevelWrap = document.getElementById('live-proctor-mic-level-wrap');
                 if (micIconOff) micIconOff.classList.add('hidden');
                 if (micIconOn) micIconOn.classList.remove('hidden');
                 if (micStatus) micStatus.textContent = 'On – students can hear you';
@@ -432,32 +192,24 @@
                     micBtn.classList.remove('bg-emerald-50', 'border-emerald-500', 'text-emerald-700');
                     micBtn.classList.add('bg-red-500', 'border-red-600', 'text-white');
                 }
-                if (micLevelWrap) {
-                    micLevelWrap.classList.remove('hidden');
-                    micLevelWrap.style.display = 'flex';
-                }
-                runMicLevelMeter(stream);
+                if (micLevelWrap) micLevelWrap.classList.remove('hidden');
             })
-            .catch(function(err) {
+            .catch(function() {
                 alert('Could not access microphone. Please allow microphone permission and try again.');
                 stopMic();
             });
     }
 
+    var micBtn = document.getElementById('live-proctor-mic-btn');
     if (micBtn) {
         micBtn.addEventListener('click', function() {
-            if (micStream) {
-                stopMic();
-            } else {
-                var ids = getTargetSessionIds();
-                if (micTarget && micTarget.value === 'selected' && ids.length === 0) {
-                    alert('Select a student (click a feed) to speak to them only.');
-                    return;
-                }
-                startMic();
-            }
+            if (micStream) stopMic();
+            else startMic();
         });
     }
+
+    fetchSessions();
+    setInterval(fetchSessions, 5000);
 })();
 </script>
 @endpush

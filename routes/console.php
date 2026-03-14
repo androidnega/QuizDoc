@@ -99,3 +99,6 @@ Schedule::command('students:promote-levels')->yearlyOn(9, 1, '00:00');
 
 // Exam reminder: send browser push notifications ~1 hour before scheduled exams
 Schedule::command('exam:send-reminder-push')->everyTenMinutes();
+
+// Violation images: delete server-stored images older than retention days (primary setting)
+Schedule::command('violations:clean-old-images')->daily();

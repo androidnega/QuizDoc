@@ -83,6 +83,9 @@ class SettingsController extends Controller
             'proctoring_block_right_click' => Setting::getValue(Setting::KEY_PROCTORING_BLOCK_RIGHT_CLICK, '1') === '1',
             'proctoring_block_copy_paste' => Setting::getValue(Setting::KEY_PROCTORING_BLOCK_COPY_PASTE, '1') === '1',
             'live_proctor_enabled' => Setting::getValue(Setting::KEY_LIVE_PROCTOR_ENABLED, '1') === '1',
+            'violation_storage_driver' => Setting::getValue(Setting::KEY_VIOLATION_STORAGE_DRIVER, 'server'),
+            'violation_retention_days_primary' => Setting::getValue(Setting::KEY_VIOLATION_RETENTION_DAYS_PRIMARY, '21'),
+            'violation_retention_days_secondary' => Setting::getValue(Setting::KEY_VIOLATION_RETENTION_DAYS_SECONDARY, '21'),
             'ai_quiz_cooldown_hours' => Setting::getValue(Setting::KEY_AI_QUIZ_COOLDOWN_HOURS, '24'),
             'landing_hero_image' => Setting::getValue(Setting::KEY_LANDING_HERO_IMAGE),
             'landing_hero_enabled' => Setting::getValue(Setting::KEY_LANDING_HERO_ENABLED, '1') === '1',
@@ -180,6 +183,9 @@ class SettingsController extends Controller
             'proctoring_block_right_click' => 'nullable|boolean',
             'proctoring_block_copy_paste' => 'nullable|boolean',
             'live_proctor_enabled' => 'nullable|boolean',
+            'violation_storage_driver' => 'nullable|string|in:cloudinary,server',
+            'violation_retention_days_primary' => 'nullable|integer|min:1|max:365',
+            'violation_retention_days_secondary' => 'nullable|integer|min:1|max:365',
             'ai_quiz_cooldown_hours' => 'nullable|integer|min:1|max:168',
             'landing_hero_image_url' => 'nullable|string|max:2048',
             'landing_hero_image_file' => 'nullable|image|max:5120',
@@ -297,6 +303,19 @@ class SettingsController extends Controller
             Setting::setValue(Setting::KEY_PROCTORING_OBJECT_DETECT, $request->boolean('proctoring_object_detect') ? '1' : '0');
             Setting::setValue(Setting::KEY_PROCTORING_BLOCK_RIGHT_CLICK, $request->boolean('proctoring_block_right_click') ? '1' : '0');
             Setting::setValue(Setting::KEY_PROCTORING_BLOCK_COPY_PASTE, $request->boolean('proctoring_block_copy_paste') ? '1' : '0');
+            if (in_array($request->input('violation_storage_driver'), ['cloudinary', 'server'], true)) {
+                Setting::setValue(Setting::KEY_VIOLATION_STORAGE_DRIVER, $request->input('violation_storage_driver'));
+            }
+            $primaryDays = $request->input('violation_retention_days_primary');
+            if ($primaryDays !== null && $primaryDays !== '') {
+                $primaryDays = max(1, min(365, (int) $primaryDays));
+                Setting::setValue(Setting::KEY_VIOLATION_RETENTION_DAYS_PRIMARY, (string) $primaryDays);
+            }
+            $secondaryDays = $request->input('violation_retention_days_secondary');
+            if ($secondaryDays !== null && $secondaryDays !== '') {
+                $secondaryDays = max(1, min(365, (int) $secondaryDays));
+                Setting::setValue(Setting::KEY_VIOLATION_RETENTION_DAYS_SECONDARY, (string) $secondaryDays);
+            }
         }
         if ($request->has('ai_quiz_cooldown_hours')) {
             $hours = max(1, min(168, (int) $request->ai_quiz_cooldown_hours));
@@ -364,6 +383,9 @@ class SettingsController extends Controller
                 Setting::KEY_PROCTORING_OBJECT_DETECT,
                 Setting::KEY_PROCTORING_BLOCK_RIGHT_CLICK,
                 Setting::KEY_PROCTORING_BLOCK_COPY_PASTE,
+                Setting::KEY_VIOLATION_STORAGE_DRIVER,
+                Setting::KEY_VIOLATION_RETENTION_DAYS_PRIMARY,
+                Setting::KEY_VIOLATION_RETENTION_DAYS_SECONDARY,
             ] as $key) {
                 Cache::forget('setting:' . $key);
             }

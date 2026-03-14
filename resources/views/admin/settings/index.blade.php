@@ -501,7 +501,7 @@
 
                 <div class="rounded-lg border border-gray-200 bg-gray-50/60 p-4 mb-5">
                     <p class="text-xs font-medium text-gray-500 mb-1">Live examiner view</p>
-                    <p class="text-xs text-gray-500 mb-3">When on, examiners can open the &quot;Live proctor&quot; tab on a quiz to watch students in real time (camera feed). When off, the Live proctor tab and route are hidden.</p>
+                    <p class="text-xs text-gray-500 mb-3">When on, examiners can open the &quot;Live proctor&quot; tab to see which students are actively writing (index numbers only; no camera feed). When off, the Live proctor tab and route are hidden.</p>
                     <div class="flex flex-wrap items-center gap-4">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="radio" name="live_proctor_enabled" value="1" {{ old('live_proctor_enabled', $live_proctor_enabled ?? true) ? 'checked' : '' }} class="h-4 w-4 rounded-full border-gray-300 text-gray-600 focus:ring-gray-300">
@@ -511,6 +511,36 @@
                             <input type="radio" name="live_proctor_enabled" value="0" {{ old('live_proctor_enabled', $live_proctor_enabled ?? true) ? '' : 'checked' }} class="h-4 w-4 rounded-full border-gray-300 text-gray-600 focus:ring-gray-300">
                             <span class="text-sm text-gray-600">Off</span>
                         </label>
+                    </div>
+                </div>
+
+                <div class="rounded-lg border border-gray-200 bg-gray-50/60 p-4 mb-5">
+                    <p class="text-xs font-medium text-gray-500 mb-1">Violation image storage</p>
+                    <p class="text-xs text-gray-500 mb-3">Where to store proctoring violation images (e.g. face/phone snapshots). Server stores under <code class="px-1 py-0.5 bg-gray-100 rounded text-gray-700">storage/public/violations</code> by student index and date. Cloudinary requires Cloudinary tab to be configured.</p>
+                    <div class="flex flex-wrap items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="violation_storage_driver" value="server" {{ old('violation_storage_driver', $violation_storage_driver ?? 'server') === 'server' ? 'checked' : '' }} class="h-4 w-4 rounded-full border-gray-300 text-gray-600 focus:ring-gray-300">
+                            <span class="text-sm text-gray-700">Server</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="violation_storage_driver" value="cloudinary" {{ old('violation_storage_driver', $violation_storage_driver ?? 'server') === 'cloudinary' ? 'checked' : '' }} class="h-4 w-4 rounded-full border-gray-300 text-gray-600 focus:ring-gray-300">
+                            <span class="text-sm text-gray-600">Cloudinary</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="rounded-lg border border-gray-200 bg-gray-50/60 p-4 mb-5">
+                    <p class="text-xs font-medium text-gray-500 mb-1">Violation image retention (auto-delete)</p>
+                    <p class="text-xs text-gray-500 mb-3">Server-stored violation images are automatically deleted after this many days. Primary is used by the daily cleanup job; secondary can be used for alternative policies (e.g. per-institution).</p>
+                    <div class="flex flex-wrap items-center gap-6">
+                        <div>
+                            <label for="violation_retention_days_primary" class="block text-xs font-medium text-gray-600 mb-0.5">Primary (days)</label>
+                            <input type="number" name="violation_retention_days_primary" id="violation_retention_days_primary" value="{{ old('violation_retention_days_primary', $violation_retention_days_primary ?? 21) }}" min="1" max="365" class="block w-24 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label for="violation_retention_days_secondary" class="block text-xs font-medium text-gray-600 mb-0.5">Secondary (days)</label>
+                            <input type="number" name="violation_retention_days_secondary" id="violation_retention_days_secondary" value="{{ old('violation_retention_days_secondary', $violation_retention_days_secondary ?? 21) }}" min="1" max="365" class="block w-24 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+                        </div>
                     </div>
                 </div>
 

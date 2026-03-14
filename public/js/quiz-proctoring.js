@@ -256,7 +256,7 @@
 
     var savePending = {};
     var saveDebounceTimer = null;
-    var SAVE_DEBOUNCE_MS = 1200;
+    var SAVE_DEBOUNCE_MS = 1500;
     var offlineBanner = null;
 
     function showOfflineBanner(show) {
@@ -633,8 +633,13 @@
         sendHeartbeat();
     });
 
+    var lastHeartbeatAt = 0;
+    var HEARTBEAT_THROTTLE_MS = 25000;
     function sendHeartbeat() {
         if (!heartbeatUrl) return;
+        var now = Date.now();
+        if (now - lastHeartbeatAt < HEARTBEAT_THROTTLE_MS) return;
+        lastHeartbeatAt = now;
         fetch(heartbeatUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf(), 'Accept': 'application/json' },
