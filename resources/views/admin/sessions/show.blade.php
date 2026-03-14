@@ -134,12 +134,17 @@
             </div>
         </section>
 
-        {{-- Violation Log: clear table with time, type, severity, and details --}}
+        {{-- Violation Log: first 5 visible, then "Show more" to reveal rest --}}
         <section class="min-w-0 bg-white rounded-lg border border-gray-200 p-3">
             <h2 class="text-sm font-semibold text-gray-900 mb-2">Violation Log</h2>
             @if($session->violations->isEmpty())
                 <div class="text-center py-4 text-gray-500 text-xs">No violations recorded.</div>
             @else
+                @php
+                    $violationsFirst = $session->violations->take(5);
+                    $violationsRest = $session->violations->slice(5);
+                    $restCount = $violationsRest->count();
+                @endphp
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-xs border border-gray-200 rounded overflow-hidden">
                         <thead class="bg-gray-50">
@@ -153,7 +158,7 @@
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
-                            @foreach($session->violations as $idx => $v)
+                            @foreach($violationsFirst as $idx => $v)
                                 @php
                                     $typeLabels = [
                                         'blur' => 'Window lost focus',
@@ -168,6 +173,7 @@
                                         'no_face_during_quiz' => 'No face during quiz',
                                         'face_out_of_frame' => 'Face out of frame',
                                         'multiple_faces_during_quiz' => 'Multiple faces during quiz',
+                                        'multiple_faces_pre_quiz' => 'Multiple faces pre quiz',
                                         'multiple_faces' => 'Multiple faces detected',
                                         'head_turn' => 'Head turned away',
                                         'static_face_detected' => 'Static face detected',
@@ -243,9 +249,124 @@
                                     </td>
                                 </tr>
                             @endforeach
+                            @if($restCount > 0)
+                                <tr id="violation-log-show-more-row" class="bg-gray-50 border-t border-gray-200">
+                                    <td colspan="6" class="px-2 py-2">
+                                        <button type="button" id="violation-log-toggle" class="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 hover:text-primary-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 rounded px-1 py-0.5" aria-expanded="false" aria-controls="violation-log-more">
+                                            <svg id="violation-log-chevron" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                            <span id="violation-log-toggle-text">Show {{ $restCount }} more violation{{ $restCount === 1 ? '' : 's' }}</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            @endif
                         </tbody>
+                        @if($restCount > 0)
+                            <tbody id="violation-log-more" class="bg-white divide-y divide-gray-100 hidden" hidden>
+                                @foreach($violationsRest as $idx => $v)
+                                @php
+                                    $typeLabels = [
+                                        'blur' => 'Window lost focus',
+                                        'tab_switch' => 'Switched to another tab',
+                                        'window_resize' => 'Window resized or minimized',
+                                        'phone_detected' => 'Phone detected',
+                                        'copy_paste' => 'Copy or paste attempted',
+                                        'right_click' => 'Right-click / context menu',
+                                        'screenshot_attempt' => 'Screenshot key pressed',
+                                        'multiple_ip' => 'Different IP address used',
+                                        'face_mismatch' => 'Face mismatch',
+                                        'no_face_during_quiz' => 'No face during quiz',
+                                        'face_out_of_frame' => 'Face out of frame',
+                                        'multiple_faces_during_quiz' => 'Multiple faces during quiz',
+                                        'multiple_faces' => 'Multiple faces detected',
+                                        'multiple_faces_pre_quiz' => 'Multiple faces pre quiz',
+                                        'head_turn' => 'Head turned away',
+                                        'static_face_detected' => 'Static face detected',
+                                        'other' => 'Other',
+                                    ];
+                                    $label = $typeLabels[$v->type] ?? ucfirst(str_replace('_', ' ', $v->type));
+                                    $meta = $v->metadata;
+                                    if (is_string($meta)) {
+                                        $decoded = @json_decode($meta, true);
+                                        $meta = $decoded !== null ? $decoded : $meta;
+                                    }
+                                    $details = '';
+                                    if (is_array($meta)) {
+                                        if (isset($meta['expected'], $meta['got'])) {
+                                            $details = 'Expected IP: ' . e($meta['expected']) . ' — Got: ' . e($meta['got']);
+                                        } else {
+                                            $parts = [];
+                                            if (isset($meta['face_count'])) { $parts[] = 'Face count: ' . (int) $meta['face_count']; }
+                                            if (isset($meta['object'])) { $parts[] = 'Object: ' . (string) $meta['object']; }
+                                            if (isset($meta['reason'])) { $parts[] = 'Reason: ' . (string) $meta['reason']; }
+                                            if (isset($meta['warning_count'])) { $parts[] = 'Warning count: ' . (int) $meta['warning_count']; }
+                                            if (isset($meta['remaining_warnings'])) { $parts[] = 'Remaining warnings: ' . (int) $meta['remaining_warnings']; }
+                                            $loggedAt = $meta['logged_at'] ?? $meta['captured_at'] ?? $meta['detected_at'] ?? $meta['timestamp'] ?? null;
+                                            if ($loggedAt !== null) { $parts[] = 'At ' . (is_numeric($loggedAt) ? date('M d, H:i:s', (int) $loggedAt) : (string) $loggedAt); }
+                                            if (empty($parts)) { $parts[] = implode('; ', array_map(fn ($k, $val) => $k . ': ' . (is_scalar($val) ? $val : json_encode($val)), array_keys($meta), $meta)); }
+                                            $details = implode(' | ', array_filter($parts));
+                                        }
+                                    } elseif ((string)$meta !== '') { $details = (string) $meta; }
+                                    $rowNum = $violationsFirst->count() + $idx + 1;
+                                @endphp
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-2 py-1.5 tabular-nums font-medium text-gray-600">{{ $rowNum }}</td>
+                                    <td class="px-2 py-1.5 whitespace-nowrap text-gray-700">{{ $v->occurred_at?->format('M d, H:i:s') ?? '—' }}</td>
+                                    <td class="px-2 py-1.5"><span class="px-1.5 py-0.5 rounded font-medium bg-red-100 text-red-800">{{ $label }}</span></td>
+                                    <td class="px-2 py-1.5">
+                                        @if($v->severity === 'critical')
+                                            <span class="px-1.5 py-0.5 rounded font-medium bg-red-200 text-red-900">Critical</span>
+                                        @else
+                                            <span class="px-1.5 py-0.5 rounded font-medium bg-amber-100 text-amber-800">Warning</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-2 py-1.5 text-gray-600 max-w-[200px] sm:max-w-xs break-words">{{ $details ?: '—' }}</td>
+                                    <td class="px-2 py-1.5">
+                                        @if(!empty($v->image_url))
+                                            @php
+                                                $img = $v->image_url;
+                                                $imgUrl = (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) ? $img : asset('storage/' . ltrim($img, '/'));
+                                            @endphp
+                                            <button type="button" class="session-img-thumb rounded border border-gray-200 overflow-hidden" data-session-full-img="{{ $imgUrl }}" data-session-img-alt="Violation image {{ $rowNum }}" aria-label="Open violation image">
+                                                <img src="{{ $imgUrl }}" alt="Violation image {{ $rowNum }}" class="w-10 h-10 object-cover" loading="lazy" onerror="this.style.display='none';">
+                                            </button>
+                                        @else
+                                            <span class="text-gray-400">—</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        @endif
                     </table>
                 </div>
+                @if($restCount > 0)
+                <script>
+                (function() {
+                    var btn = document.getElementById('violation-log-toggle');
+                    var more = document.getElementById('violation-log-more');
+                    var chevron = document.getElementById('violation-log-chevron');
+                    var text = document.getElementById('violation-log-toggle-text');
+                    if (btn && more) {
+                        btn.addEventListener('click', function() {
+                            var isHidden = more.hasAttribute('hidden') || more.classList.contains('hidden');
+                            if (isHidden) {
+                                more.removeAttribute('hidden');
+                                more.classList.remove('hidden');
+                                if (chevron) chevron.style.transform = 'rotate(180deg)';
+                                if (text) text.textContent = 'Show less';
+                                btn.setAttribute('aria-expanded', 'true');
+                            } else {
+                                more.setAttribute('hidden', '');
+                                more.classList.add('hidden');
+                                if (chevron) chevron.style.transform = '';
+                                if (text) text.textContent = 'Show {{ $restCount }} more violation{{ $restCount === 1 ? '' : 's' }}';
+                                btn.setAttribute('aria-expanded', 'false');
+                            }
+                        });
+                    }
+                })();
+                </script>
+                @endif
                 <p class="mt-2 text-xs text-gray-500">Critical violations trigger immediate auto-submit: phone detected, screenshot attempt, tab switch/minimize, multiple faces, resize/fullscreen exit, opening another window/app, copy/paste, and multiple IP.</p>
             @endif
         </section>
