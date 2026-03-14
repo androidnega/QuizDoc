@@ -167,13 +167,6 @@ class Setting extends Model
     /** Days to keep violation images before auto-deletion (secondary). Default 21. */
     public const KEY_VIOLATION_RETENTION_DAYS_SECONDARY = 'violation_retention_days_secondary';
 
-    /** Violation image storage: 'cloudinary' or 'server'. When 'server', images are stored under storage/app/public/violations. */
-    public const KEY_VIOLATION_STORAGE_DRIVER = 'violation_storage_driver';
-    /** Days to keep violation images before auto-delete (primary). Default 21. */
-    public const KEY_VIOLATION_RETENTION_DAYS_PRIMARY = 'violation_retention_days_primary';
-    /** Days to keep violation images before auto-delete (secondary). Default 21. */
-    public const KEY_VIOLATION_RETENTION_DAYS_SECONDARY = 'violation_retention_days_secondary';
-
     /** AI quiz generation: hours an examiner must wait after exhausting tokens before refill. Default 24. */
     public const KEY_AI_QUIZ_COOLDOWN_HOURS = 'ai_quiz_cooldown_hours';
 
