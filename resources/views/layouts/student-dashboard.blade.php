@@ -30,8 +30,7 @@
             </div>
             {{-- Desktop: logo --}}
             <a href="{{ route('dashboard') }}" class="hidden sm:flex items-center gap-2 shrink-0 no-underline text-slate-900" title="Dashboard">
-                <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/20 text-slate-800"><i class="fas fa-graduation-cap text-sm"></i></span>
-                <span class="text-sm font-bold text-slate-900">QuizSnap</span>
+                <img src="{{ asset('assets/mainlogo-quizsnap.png') }}" alt="QuizSnap" class="h-9 w-auto object-contain">
             </a>
 
             {{-- Desktop nav: black text on yellow; active = lighter yellow --}}

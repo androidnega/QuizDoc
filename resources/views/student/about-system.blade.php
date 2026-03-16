@@ -43,16 +43,8 @@
     <header class="shrink-0 bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div class="mx-auto max-w-7xl px-6">
             <div class="flex h-20 items-center justify-between">
-                <a href="{{ route('student.landing') }}" class="logo-text no-underline">
-                    <span class="logo-mark" aria-hidden="true">
-                        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
-                            <rect width="40" height="40" rx="10" fill="#3b82f6"/>
-                            <circle cx="20" cy="18" r="7" fill="#fbbf24"/>
-                            <circle cx="20" cy="18" r="3" fill="#3b82f6"/>
-                            <rect x="18" y="26" width="4" height="6" rx="1" fill="#fbbf24"/>
-                        </svg>
-                    </span>
-                    <span style="color: #3b82f6;">Quiz</span><span style="color: #fbbf24;">Snap</span>
+                <a href="{{ route('student.landing') }}" class="logo-text no-underline flex items-center gap-2">
+                    <img src="{{ asset('assets/mainlogo-quizsnap.png') }}" alt="QuizSnap" class="logo-mark h-8 w-auto object-contain">
                 </a>
                 <nav class="flex items-center gap-6">
                     <a href="{{ route('about-system') }}" class="text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors no-underline" style="text-decoration: none; color: #475569;">

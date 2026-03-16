@@ -9,7 +9,7 @@
     <header class="flex h-14 flex-shrink-0 items-center border-b border-gray-200 bg-white z-10">
         <div class="w-full px-4 md:px-6 flex h-14 items-center gap-4">
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2.5 min-w-0 flex-shrink-0">
-                <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-600 font-semibold text-sm">Q</span>
+                <img src="{{ asset('assets/mainlogo-quizsnap.png') }}" alt="QuizSnap" class="h-9 w-auto object-contain flex-shrink-0">
                 <span class="text-base font-semibold text-gray-900 truncate hidden sm:block">QuizSnap Admin</span>
             </a>
             <h1 class="min-w-0 flex-1 truncate text-lg font-semibold text-gray-900">@yield('admin_heading', 'Admin')</h1>

@@ -18,7 +18,7 @@
                     @if($inst && $inst->logo_url)
                         <img src="{{ $inst->logo_url }}" alt="{{ $inst->name }}" class="h-10 w-10 flex-shrink-0 object-contain rounded-lg border border-gray-200 bg-white">
                     @else
-                        <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary-600 text-white font-bold text-lg shadow-sm">Q</span>
+                        <img src="{{ asset('assets/mainlogo-quizsnap.png') }}" alt="QuizSnap" class="h-10 w-10 flex-shrink-0 object-contain">
                     @endif
                     <span class="examiner-sidebar-brand-text truncate text-lg font-bold">QuizSnap</span>
                 </a>

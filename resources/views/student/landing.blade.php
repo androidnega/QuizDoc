@@ -93,16 +93,8 @@
     <header class="shrink-0 bg-white border-b border-slate-200 z-50">
         <div class="site-container">
             <div class="flex h-12 md:h-14 items-center justify-between gap-2">
-                <a href="{{ route('student.landing') }}" class="logo-text no-underline text-xl md:text-2xl">
-                    <span class="logo-mark" aria-hidden="true">
-                        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
-                            <rect width="40" height="40" rx="10" fill="#3b82f6"/>
-                            <circle cx="20" cy="18" r="7" fill="#fbbf24"/>
-                            <circle cx="20" cy="18" r="3" fill="#3b82f6"/>
-                            <rect x="18" y="26" width="4" height="6" rx="1" fill="#fbbf24"/>
-                        </svg>
-                    </span>
-                    <span style="color: #3b82f6;">Quiz</span><span style="color: #fbbf24;">Snap</span>
+                <a href="{{ route('student.landing') }}" class="logo-text no-underline text-xl md:text-2xl flex items-center gap-2">
+                    <img src="{{ asset('assets/mainlogo-quizsnap.png') }}" alt="QuizSnap" class="logo-mark h-7 w-auto md:h-8 object-contain">
                 </a>
                 <button type="button" id="landing-mobile-menu-btn" class="landing-mobile-menu-btn flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-300 md:hidden" aria-label="Open menu" aria-expanded="false">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
