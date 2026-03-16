@@ -16,8 +16,8 @@
     .btn-home-cta.bt–––––n-cta-disabled, .btn-home-cta:disabled { background: #cbd5e1 !important; color: #fff !important; cursor: not-allowed; pointer-events: none; }
     .btn-home-cta:not(.btn-cta-disabled):not(:disabled) { background: #3b82f6; color: #fff !important; font-weight: 600; border: none; }
     .btn-home-cta:not(.btn-cta-disabled):not(:disabled):hover { background: #2563eb; }
-    .logo-text { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; display: inline-flex; align-items: center; gap: 0.375rem; }
-    .logo-mark { width: 2.25rem; height: 2.25rem; flex-shrink: 0; }
+    .logo-text { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; display: inline-flex; align-items: center; gap: 0.5rem; }
+    .logo-mark { width: 3rem; height: 3rem; flex-shrink: 0; }
     .home-container { width: 100%; max-width: 720px; margin: 0 auto; }
     .home-hero { width: 100%; text-align: center; }
     .home-quiz-row { display: flex; flex-wrap: wrap; gap: 0; justify-content: center; align-items: stretch; max-width: 480px; margin: 0 auto; }
@@ -92,9 +92,9 @@
 <div class="home-page-wrap min-h-screen flex flex-col font-sans antialiased @if(!($landingHeroEnabled ?? true)) landing-no-hero @endif">
     <header class="shrink-0 bg-white border-b border-slate-200 z-50">
         <div class="site-container">
-            <div class="flex h-14 md:h-16 items-center justify-between gap-2">
+            <div class="flex h-16 md:h-20 items-center justify-between gap-3">
                 <a href="{{ route('student.landing') }}" class="logo-text no-underline text-xl md:text-2xl flex items-center gap-2">
-                    <img src="{{ asset('assets/mainlogo-quizsnap.png') }}" alt="QuizSnap" class="logo-mark h-9 w-auto md:h-10 object-contain">
+                    <img src="{{ asset('assets/mainlogo-quizsnap.png') }}" alt="QuizSnap" class="logo-mark h-12 w-auto md:h-14 object-contain">
                 </a>
                 <button type="button" id="landing-mobile-menu-btn" class="landing-mobile-menu-btn flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-300 md:hidden" aria-label="Open menu" aria-expanded="false">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
