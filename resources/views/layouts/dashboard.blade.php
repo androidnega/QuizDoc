@@ -32,9 +32,9 @@
                         <span class="examiner-sidebar-brand-text truncate text-lg font-bold">Coordinator</span>
                     @else
                         @if($inst && $inst->logo_url)
-                            <img src="{{ $inst->logo_url }}" alt="{{ Str::upper($inst->name ?? '') }}" class="h-10 w-10 flex-shrink-0 object-contain rounded-lg border border-gray-200 bg-white">
+                            <img src="{{ $inst->logo_url }}" alt="{{ Str::upper($inst->name ?? '') }}" class="h-11 w-11 flex-shrink-0 object-contain rounded-lg border border-gray-200 bg-white">
                         @else
-                            <img src="{{ asset('assets/mainlogo-quizsnap.png') }}" alt="QuizSnap" class="h-10 w-10 flex-shrink-0 object-contain">
+                            <img src="{{ asset('assets/mainlogo-quizsnap.png') }}" alt="QuizSnap" class="h-11 w-11 flex-shrink-0 object-contain">
                         @endif
                         <span class="examiner-sidebar-brand-text truncate text-lg font-bold">QuizSnap</span>
                     @endif

@@ -29,8 +29,8 @@
                 </button>
             </div>
             {{-- Desktop: logo --}}
-            <a href="{{ route('dashboard') }}" class="hidden sm:flex items-center gap-2 shrink-0 no-underline text-slate-900" title="Dashboard">
-                <img src="{{ asset('assets/mainlogo-quizsnap.png') }}" alt="QuizSnap" class="h-9 w-auto object-contain">
+            <a href="{{ route('dashboard') }}" class="hidden sm:flex items-center gap-3 shrink-0 no-underline text-slate-900" title="Dashboard">
+                <img src="{{ asset('assets/mainlogo-quizsnap.png') }}" alt="QuizSnap" class="h-10 w-auto object-contain">
             </a>
 
             {{-- Desktop nav: black text on yellow; active = lighter yellow --}}
