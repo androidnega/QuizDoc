@@ -8,16 +8,11 @@
     body { background: #f8fafc !important; }
     .logo-text { 
         font-size: 1.75rem; 
-        font-weight: 700; 
-        letter-spacing: -0.02em; 
+        font-weight: 800; 
+        letter-spacing: -0.03em; 
         display: inline-flex; 
         align-items: center; 
-        gap: 0.5rem; 
-    }
-    .logo-mark { 
-        width: 3rem; 
-        height: 3rem; 
-        flex-shrink: 0; 
+        gap: 0.4rem; 
     }
     .section-icon-box {
         width: 64px;
@@ -44,7 +39,7 @@
         <div class="mx-auto max-w-7xl px-6">
             <div class="flex h-20 md:h-24 items-center justify-between">
                 <a href="{{ route('student.landing') }}" class="logo-text no-underline flex items-center gap-2">
-                    <img src="{{ asset('assets/mainlogo-quizsnap.png') }}" alt="QuizSnap" class="logo-mark h-12 w-auto object-contain">
+                    <span style="color: #2563eb;">Quiz</span><span style="color: #fbbf24;">Snap</span>
                 </a>
                 <nav class="flex items-center gap-6">
                     <a href="{{ route('about-system') }}" class="text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors no-underline" style="text-decoration: none; color: #475569;">
