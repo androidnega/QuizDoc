@@ -20,7 +20,6 @@
     let endTimeMs = null;
     let timerInterval = null;
     let timeSyncInterval = null;
-    const TIME_SYNC_INTERVAL_MS = 30000;
     const BLUR_RECORD_DELAY_MS = 0;
     let blurRecordTimer = null;
     let isUnloading = false;
@@ -30,8 +29,27 @@
     let cameraProtectionInterval = null;
     let cameraWarningShown = false;
     let proctorFeedInterval = null;
+    var periodicHeartbeatInterval = null;
+    var proctorFeedInFlight = false;
     let lastUserInputSample = '';
     const AI_KEYWORDS = ['chatgpt', 'openai', 'deepseek', 'gemini', 'google', 'ngrok', 'claude', 'copilot', 'perplexity'];
+
+    function isConstrainedDevice() {
+        try {
+            var cores = navigator.hardwareConcurrency || 8;
+            var conn = navigator.connection;
+            if (conn && conn.saveData === true) {
+                return true;
+            }
+            var narrowTouch = (navigator.maxTouchPoints > 0 || 'ontouchstart' in window) && window.innerWidth < 900;
+            return cores <= 4 || narrowTouch;
+        } catch (e) {
+            return false;
+        }
+    }
+    var constrainedDevice = isConstrainedDevice();
+    var SAVE_BATCH_CHUNK = 25;
+    var TIME_SYNC_INTERVAL_MS = constrainedDevice ? 45000 : 30000;
 
     /**
      * Request screen wake lock to prevent dimming
@@ -224,6 +242,10 @@
         if (remainingSeconds <= 0) {
             if (timerInterval) clearInterval(timerInterval);
             if (timeSyncInterval) clearInterval(timeSyncInterval);
+            if (periodicHeartbeatInterval) {
+                clearInterval(periodicHeartbeatInterval);
+                periodicHeartbeatInterval = null;
+            }
             playTimeUpSound();
             submitQuiz(true);
             return;
@@ -249,6 +271,10 @@
                     if (remainingSeconds <= 0) {
                         if (timerInterval) clearInterval(timerInterval);
                         if (timeSyncInterval) clearInterval(timeSyncInterval);
+                        if (periodicHeartbeatInterval) {
+                            clearInterval(periodicHeartbeatInterval);
+                            periodicHeartbeatInterval = null;
+                        }
                         submitQuiz(true);
                     }
                 }
@@ -258,7 +284,7 @@
 
     var savePending = {};
     var saveDebounceTimer = null;
-    var SAVE_DEBOUNCE_MS = 1500;
+    var SAVE_DEBOUNCE_MS = constrainedDevice ? 2800 : 1600;
     var offlineBanner = null;
 
     function showOfflineBanner(show) {
@@ -293,26 +319,46 @@
             showOfflineBanner(false);
             return Promise.resolve();
         }
-        var payload = list.map(function (p) { return { question_id: p.questionId, answer: p.answer }; });
         var h = { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf(), 'Accept': 'application/json' };
         if (!navigator.onLine) {
             persistPendingToStorage();
             showOfflineBanner(true);
             return Promise.resolve();
         }
-        var done = function () {
-            for (var i = 0; i < list.length; i++) delete savePending[list[i].questionId];
-            try { localStorage.removeItem(storagePrefix + '_pending'); } catch (e) {}
-            showOfflineBanner(false);
-        };
         var fail = function () {
             persistPendingToStorage();
             showOfflineBanner(true);
         };
+        var tryClearAllDone = function () {
+            var still = false;
+            for (var k in savePending) { still = true; break; }
+            if (!still) {
+                try { localStorage.removeItem(storagePrefix + '_pending'); } catch (e) {}
+                showOfflineBanner(false);
+            }
+        };
         if (saveAnswersBatchUrl && list.length > 0) {
-            return fetch(saveAnswersBatchUrl, { method: 'POST', headers: h, body: JSON.stringify({ answers: payload }) })
-                .then(function (r) { if (r.ok) done(); else fail(); })
-                .catch(fail);
+            var start = 0;
+            function sendNextBatch() {
+                var chunk = list.slice(start, start + SAVE_BATCH_CHUNK);
+                if (chunk.length === 0) {
+                    tryClearAllDone();
+                    return Promise.resolve();
+                }
+                var payload = chunk.map(function (p) { return { question_id: p.questionId, answer: p.answer }; });
+                return fetch(saveAnswersBatchUrl, { method: 'POST', headers: h, body: JSON.stringify({ answers: payload }) })
+                    .then(function (r) {
+                        if (!r.ok) {
+                            fail();
+                            return;
+                        }
+                        chunk.forEach(function (p) { delete savePending[p.questionId]; });
+                        start += SAVE_BATCH_CHUNK;
+                        return sendNextBatch();
+                    })
+                    .catch(fail);
+            }
+            return sendNextBatch();
         }
         var anyFail = false;
         return Promise.all(list.map(function (p) {
@@ -324,7 +370,7 @@
                 .catch(function () { anyFail = true; });
         })).then(function () {
             if (anyFail) fail();
-            else done();
+            else tryClearAllDone();
         });
     }
 
@@ -528,6 +574,13 @@
         if (timerStickyEl) timerStickyEl.textContent = text;
         applyTimerColor(remainingSeconds);
         timerInterval = setInterval(updateTimer, 1000);
+        if (heartbeatUrl) {
+            periodicHeartbeatInterval = setInterval(function () {
+                if (remainingSeconds <= 0 || isUnloading) return;
+                if (document.visibilityState !== 'visible') return;
+                sendHeartbeat();
+            }, 45000);
+        }
         if (timeSyncUrl) {
             syncTimeFromServer();
             timeSyncInterval = setInterval(syncTimeFromServer, TIME_SYNC_INTERVAL_MS);
@@ -546,6 +599,10 @@
         releaseWakeLock();
         stopCameraProtection();
         isUnloading = true;
+        if (periodicHeartbeatInterval) {
+            clearInterval(periodicHeartbeatInterval);
+            periodicHeartbeatInterval = null;
+        }
         if (window.QuizSnapQuiz && window.QuizSnapQuiz.navigatingToFinalPhoto) return;
         flushSavePending();
         e.preventDefault();
@@ -887,6 +944,7 @@
         }
     }
 
+    var windowStateCheckMs = constrainedDevice ? 1200 : 500;
     if (c.proctoringTabSwitch !== false) {
         window.addEventListener('resize', handleResizeOrFullscreenChange);
         document.addEventListener('fullscreenchange', handleResizeOrFullscreenChange);
@@ -895,7 +953,7 @@
             if (document.visibilityState === 'visible') checkWindowState();
         });
         window.addEventListener('focus', checkWindowState);
-        setInterval(checkWindowState, 500);
+        setInterval(checkWindowState, windowStateCheckMs);
     } else {
         hideResizeBlur();
     }
@@ -1059,11 +1117,14 @@
                     }
                 }
 
-                // Proctor feed: send camera frame to examiner every 2 seconds (skip too-dark frames so examiner sees live video, not black)
+                // Proctor feed: spaced frames, one request in flight at a time (avoids piling up on slow phones / networks)
                 var proctorFeedUrl = c.proctorFeedUrl;
                 if (proctorFeedUrl && c.liveProctorEnabled !== false && monitorVideo.videoWidth > 0) {
                     var proctorCanvas = document.createElement('canvas');
                     var proctorCtx = proctorCanvas.getContext('2d');
+                    var proctorFeedMs = constrainedDevice ? 5500 : 3200;
+                    var proctorMaxW = constrainedDevice ? 400 : 640;
+                    var proctorJpegQ = constrainedDevice ? 0.52 : 0.68;
                     var minBrightness = 18;
                     function isFrameTooDark(ctx, w, h) {
                         try {
@@ -1084,26 +1145,33 @@
                         } catch (e) { return false; }
                     }
                     function sendProctorFrame() {
-                        if (remainingSeconds <= 0 || isUnloading || !cameraStream) return;
+                        if (remainingSeconds <= 0 || isUnloading || !cameraStream || proctorFeedInFlight) return;
                         var track = cameraStream.getVideoTracks()[0];
                         if (!track || track.readyState !== 'live') return;
                         if (monitorVideo.readyState < 2 || monitorVideo.videoWidth <= 0) return;
                         try {
-                            proctorCanvas.width = monitorVideo.videoWidth;
-                            proctorCanvas.height = monitorVideo.videoHeight;
-                            proctorCtx.drawImage(monitorVideo, 0, 0);
-                            if (isFrameTooDark(proctorCtx, proctorCanvas.width, proctorCanvas.height)) return;
-                            var dataUrl = proctorCanvas.toDataURL('image/jpeg', 0.7);
+                            var vw = monitorVideo.videoWidth;
+                            var vh = monitorVideo.videoHeight;
+                            var tw = Math.min(vw, proctorMaxW);
+                            var th = Math.max(1, Math.round(vh * (tw / vw)));
+                            proctorCanvas.width = tw;
+                            proctorCanvas.height = th;
+                            proctorCtx.drawImage(monitorVideo, 0, 0, tw, th);
+                            if (isFrameTooDark(proctorCtx, tw, th)) return;
+                            var dataUrl = proctorCanvas.toDataURL('image/jpeg', proctorJpegQ);
+                            proctorFeedInFlight = true;
                             fetch(proctorFeedUrl, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf(), 'Accept': 'application/json' },
                                 body: JSON.stringify({ image_base64: dataUrl }),
-                            }).catch(function () {});
-                        } catch (e) {}
+                            })
+                                .catch(function () {})
+                                .finally(function () { proctorFeedInFlight = false; });
+                        } catch (e) { proctorFeedInFlight = false; }
                     }
                     if (proctorFeedInterval) clearInterval(proctorFeedInterval);
-                    proctorFeedInterval = setInterval(sendProctorFrame, 2000);
-                    setTimeout(sendProctorFrame, 800);
+                    proctorFeedInterval = setInterval(sendProctorFrame, proctorFeedMs);
+                    setTimeout(sendProctorFrame, 1200);
                 }
             }
 

@@ -43,8 +43,34 @@
     const MOTION_THRESHOLD = 0.01; // Minimum motion per frame to detect live face
     const FACE_PRESENCE_DURATION_MS = 3000; // 3 seconds of continuous face presence
     const CHALLENGE_TIMEOUT_MS = 5000; // 5 seconds to complete challenge
-    const MONITORING_INTERVAL_MS = 15000; // Check every 15 seconds during quiz
-    const DETECTION_INTERVAL_MS = 200; // Run detection every 200ms (~5 FPS)
+    function adaptiveMonitoringIntervalMs() {
+        try {
+            var cores = navigator.hardwareConcurrency || 8;
+            var mobileLike = (navigator.maxTouchPoints > 0 || 'ontouchstart' in window) && window.innerWidth < 900;
+            if (navigator.connection && navigator.connection.saveData) {
+                return 22000;
+            }
+            if (cores <= 4 || mobileLike) {
+                return 20000;
+            }
+        } catch (e) { /* ignore */ }
+        return 15000;
+    }
+    function adaptiveDetectionIntervalMs() {
+        try {
+            var cores = navigator.hardwareConcurrency || 8;
+            var mobileLike = (navigator.maxTouchPoints > 0 || 'ontouchstart' in window) && window.innerWidth < 900;
+            if (navigator.connection && navigator.connection.saveData) {
+                return 600;
+            }
+            if (cores <= 4 || mobileLike) {
+                return 480;
+            }
+        } catch (e) { /* ignore */ }
+        return 200;
+    }
+    const MONITORING_INTERVAL_MS = adaptiveMonitoringIntervalMs();
+    const DETECTION_INTERVAL_MS = adaptiveDetectionIntervalMs();
     const QUIZ_FRAME_MARGIN = 0.08; // Wider margin so head turns near edge don't count as "out of frame"
     const FACE_TOO_FAR_RATIO = 0.04;
     const OUT_OF_FRAME_EVENT_MIN_MS = 15000;

@@ -407,6 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     var submitting = false;
+    var MOBILE_SAVE_CHUNK = 25;
     function submitAllAnswersThenRedirect() {
         if (submitting) return;
         submitting = true;
@@ -420,28 +421,36 @@ document.addEventListener('DOMContentLoaded', function() {
             if (finalPhotoUrl) window.location.href = finalPhotoUrl;
             return;
         }
-        fetch(batchUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrfToken, 'Accept': 'application/json' },
-            body: JSON.stringify({ answers: payload })
-        })
-        .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
-        .then(function(result) {
-            clearLocalQuizData();
-            if (result.ok && result.data && result.data.success) {
+        function postChunk(startIdx) {
+            var chunk = payload.slice(startIdx, startIdx + MOBILE_SAVE_CHUNK);
+            if (chunk.length === 0) {
+                clearLocalQuizData();
                 if (window.QuizSnapQuiz) window.QuizSnapQuiz.navigatingToFinalPhoto = true;
                 window.location.href = finalPhotoUrl;
-            } else {
-                submitting = false;
-                if (completeBtn) completeBtn.disabled = false;
-                window.location.href = finalPhotoUrl;
+                return;
             }
-        })
-        .catch(function() {
-            submitting = false;
-            if (completeBtn) completeBtn.disabled = false;
-            window.location.href = finalPhotoUrl;
-        });
+            fetch(batchUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': c.csrfToken, 'Accept': 'application/json' },
+                body: JSON.stringify({ answers: chunk })
+            })
+                .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+                .then(function(result) {
+                    if (result.ok && result.data && result.data.success) {
+                        postChunk(startIdx + MOBILE_SAVE_CHUNK);
+                    } else {
+                        submitting = false;
+                        if (completeBtn) completeBtn.disabled = false;
+                        alert((result.data && result.data.message) ? result.data.message : 'Could not save all answers. Check your connection and try Finish again.');
+                    }
+                })
+                .catch(function() {
+                    submitting = false;
+                    if (completeBtn) completeBtn.disabled = false;
+                    alert('Network error while saving answers. Check your connection and try Finish again.');
+                });
+        }
+        postChunk(0);
     }
 
     function isAnswered(questionId) {
@@ -515,7 +524,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var endTimeMs = null;
     var timerInterval = null;
     var timeSyncInterval = null;
-    var TIME_SYNC_MS = 30000;
+    var TIME_SYNC_MS = 40000;
 
     // Restore timer from sessionStorage so global timer continues after page reload
     var persistedEnd = getPersistedTimerEnd();

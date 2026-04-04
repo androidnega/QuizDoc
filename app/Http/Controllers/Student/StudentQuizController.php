@@ -18,6 +18,7 @@ use App\Services\AiQuestionService;
 use App\Services\CloudinaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -346,7 +347,7 @@ class StudentQuizController extends Controller
             return response()->json(['success' => false, 'message' => 'Session expired.'], 401);
         }
         $request->validate([
-            'answers' => 'required|array',
+            'answers' => 'required|array|max:80',
             'answers.*.question_id' => 'required|exists:questions,id',
             'answers.*.answer' => 'nullable|string',
         ]);
@@ -893,7 +894,12 @@ class StudentQuizController extends Controller
 
         $session->update(['last_heartbeat_at' => now()]);
 
-        broadcast(new ProctorFrameUpdated($session->id))->toOthers();
+        // Throttle websocket fan-out: disk already has latest frame; avoids exhausting broadcast workers at scale
+        $broadcastKey = 'proctor_frame_broadcast:' . $session->id;
+        if (! Cache::has($broadcastKey)) {
+            Cache::put($broadcastKey, true, 3);
+            broadcast(new ProctorFrameUpdated($session->id))->toOthers();
+        }
 
         return response()->json(['success' => true]);
     }

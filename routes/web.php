@@ -177,8 +177,8 @@ Route::post('/student/verify-index', [StudentLoginController::class, 'verifyInde
 Route::get('/student/proctoring/capture', [ProctoringCaptureController::class, 'show'])->name('student.proctoring.capture')->middleware('rules.accepted');
 Route::post('/student/proctoring/capture', [ProctoringCaptureController::class, 'store'])->name('student.proctoring.store');
 
-// Quiz routes: throttle to 100 requests/minute per IP to protect server at scale (300–1000+ students)
-Route::middleware(['throttle:100,1'])->group(function () {
+// Quiz routes: generous throttle so bursty auto-save / proctor / retries do not 429 mid-quiz; client batches requests
+Route::middleware(['throttle:240,1'])->group(function () {
     Route::get('/quiz/ready', [StudentQuizController::class, 'ready'])->name('student.quiz.ready')->middleware('rules.accepted');
     Route::post('/quiz/session/start', [StudentQuizController::class, 'startSession'])->name('student.quiz.session.start')->middleware('rules.accepted');
     Route::get('/quiz/take', [StudentQuizController::class, 'show'])->name('student.quiz.show')->middleware('rules.accepted');

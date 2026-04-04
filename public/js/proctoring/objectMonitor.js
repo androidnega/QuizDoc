@@ -5,7 +5,20 @@
 (function () {
     'use strict';
 
-    const DETECTION_INTERVAL_MS = 2500;
+    function adaptiveObjectDetectionIntervalMs() {
+        try {
+            var cores = navigator.hardwareConcurrency || 8;
+            var mobileLike = (navigator.maxTouchPoints > 0 || 'ontouchstart' in window) && window.innerWidth < 900;
+            if (navigator.connection && navigator.connection.saveData) {
+                return 5500;
+            }
+            if (cores <= 4 || mobileLike) {
+                return 4000;
+            }
+        } catch (e) { /* ignore */ }
+        return 2500;
+    }
+    const DETECTION_INTERVAL_MS = adaptiveObjectDetectionIntervalMs();
     const OBJECT_CONFIDENCE_THRESHOLD = 0.60;
     const PHONE_CONFIDENCE_THRESHOLD = 0.72; // Higher bar for phone to reduce false positives; calculators are not in COCO-SSD and are allowed
     const ALERT_COOLDOWN_MS = 5000;
