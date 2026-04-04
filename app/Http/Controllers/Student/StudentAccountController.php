@@ -7,6 +7,7 @@ use App\Models\ClassGroupStudent;
 use App\Models\Otp;
 use App\Models\Student;
 use App\Services\ArkeselService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -93,33 +94,36 @@ class StudentAccountController extends Controller
         // Coordinator (who has the student's class groups) or examiner with SMS balance (for deducting); if none, we still send OTP so students can log in
         $smsOwner = $this->smsOwnerForIndex($cgStudent->index_number);
 
-        // STEP 1 — Check last OTP for this index (type = student_login)
+        // STEP 1 — If a code was just sent, avoid duplicate SMS (code itself does not auto-expire when expires_at is null)
         $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
 
-        // CASE A — OTP exists AND not expired: do not generate/send; allow use of existing OTP
-        if ($lastOtp && !$lastOtp->isExpired()) {
+        if ($lastOtp && ! $lastOtp->isExpired()
+            && $lastOtp->created_at
+            && $lastOtp->created_at->gt(now()->subMinutes(Otp::STUDENT_LOGIN_SMS_COOLDOWN_MINUTES))) {
             $daysRemaining = $lastOtp->daysRemaining();
-            $dayText = $daysRemaining === 1 ? '1 day' : $daysRemaining . ' days';
+
             return response()->json([
                 'success' => true,
                 'step' => 'otp',
                 'index_number' => $student->index_number,
-                'message' => 'Your existing OTP is still valid. Please use the OTP previously sent to you. It expires in ' . $dayText . '.',
-                'has_name' => !empty($student->student_name),
-                'can_resend' => false,
+                'message' => 'A code was already sent recently. Use the 6-digit code from your last SMS, or wait a few minutes and use Resend code.',
+                'has_name' => ! empty($student->student_name),
+                'can_resend' => true,
                 'days_remaining' => $daysRemaining,
+                'otp_never_expires' => $daysRemaining === null,
             ]);
         }
 
-        // CASE B — No OTP or older than 14 days: generate new OTP, save, send (even if no examiner with balance)
+        // CASE B — Issue a new login code (replace any previous SMS codes for this index)
         $code = (string) random_int(100000, 999999);
+        Otp::deleteStudentLoginOtpsForIndex($indexHash);
         Otp::create([
             'index_number_hash' => $indexHash,
             'type' => Otp::TYPE_STUDENT_LOGIN,
             'code' => $code,
-            'expires_at' => now()->addDays(Otp::STUDENT_LOGIN_VALID_DAYS),
+            'expires_at' => null,
         ]);
-        $message = 'Your QuizSnap login code is: ' . $code . '. Do not share. Valid for 14 days.';
+        $message = 'Your QuizSnap login code is: ' . $code . '. Do not share. This code stays valid until you receive a new one.';
         $result = ArkeselService::sendSms($student->phone_contact, $message);
         if (!$result['success']) {
             $msg = $result['message'] ?? 'We couldn\'t send the code.';
@@ -131,14 +135,17 @@ class StudentAccountController extends Controller
         if ($smsOwner) {
             $smsOwner->increment('sms_used');
         }
+        Cache::put('otp_resend:'.$indexHash, 1, now()->addSeconds(Otp::RESEND_COOLDOWN_SECONDS));
+
         return response()->json([
             'success' => true,
             'step' => 'otp',
             'index_number' => $student->index_number,
-            'message' => 'A code has been sent to your registered number. This code is valid for 14 days.',
-            'has_name' => !empty($student->student_name),
-            'can_resend' => false,
-            'days_remaining' => Otp::STUDENT_LOGIN_VALID_DAYS,
+            'message' => 'A code has been sent to your registered number. It stays valid until you request a new code.',
+            'has_name' => ! empty($student->student_name),
+            'can_resend' => true,
+            'days_remaining' => null,
+            'otp_never_expires' => true,
         ]);
     }
 
@@ -189,33 +196,27 @@ class StudentAccountController extends Controller
 
         $indexHash = $student->index_number_hash;
 
-        // Resend rule: if student already has phone, only allow new OTP after current one expires
-        $storedNormalized = $student->phone_contact ? Student::normalizePhoneForStorage($student->phone_contact) : '';
-        if ($storedNormalized !== '') {
-            $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
-            if ($lastOtp && !$lastOtp->isExpired()) {
-                $daysRemaining = $lastOtp->daysRemaining();
-                $dayText = $daysRemaining === 1 ? '1 day' : $daysRemaining . ' days';
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Your existing OTP is still valid. You can request a new code in ' . $dayText . '.',
-                    'can_resend' => false,
-                    'days_remaining' => $daysRemaining,
-                ], 422);
-            }
+        $resendKey = 'otp_resend:'.$indexHash;
+        if (Cache::has($resendKey)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please wait about a minute before requesting another code.',
+                'can_resend' => false,
+            ], 422);
         }
 
-        // Generate new OTP, save to DB, send SMS (replace old one — latest wins)
+        // Generate new OTP, save to DB, send SMS (replaces previous SMS codes for this index)
         $code = (string) random_int(100000, 999999);
+        Otp::deleteStudentLoginOtpsForIndex($indexHash);
         Otp::create([
             'index_number_hash' => $indexHash,
             'type' => Otp::TYPE_STUDENT_LOGIN,
             'code' => $code,
             'phone' => $phone,
-            'expires_at' => now()->addDays(Otp::STUDENT_LOGIN_VALID_DAYS),
+            'expires_at' => null,
         ]);
 
-        $message = 'Your QuizSnap login code is: ' . $code . '. Do not share. Valid for 14 days.';
+        $message = 'Your QuizSnap login code is: ' . $code . '. Do not share. This code stays valid until you receive a new one.';
         $result = ArkeselService::sendSms($phone, $message);
         if (!$result['success']) {
             $msg = $result['message'] ?? 'We couldn\'t send the code.';
@@ -227,14 +228,17 @@ class StudentAccountController extends Controller
         if ($smsOwner) {
             $smsOwner->increment('sms_used');
         }
+        Cache::put($resendKey, 1, now()->addSeconds(Otp::RESEND_COOLDOWN_SECONDS));
+
         return response()->json([
             'success' => true,
             'step' => 'otp',
             'index_number' => $student->index_number,
-            'message' => 'A code has been sent to your number. It is valid for 14 days.',
-            'has_name' => !empty($student->student_name),
-            'can_resend' => false,
-            'days_remaining' => Otp::STUDENT_LOGIN_VALID_DAYS,
+            'message' => 'A code has been sent to your number. It stays valid until you request a new code.',
+            'has_name' => ! empty($student->student_name),
+            'can_resend' => true,
+            'days_remaining' => null,
+            'otp_never_expires' => true,
         ]);
     }
 
@@ -308,11 +312,17 @@ class StudentAccountController extends Controller
         
         $request->validate([
             'index_number' => 'required|string|max:100',
-            'code' => 'required|string|size:6',
+            'code' => 'required|string',
             'student_name' => 'nullable|string|max:255',
         ]);
         $inputIndex = trim((string) $request->index_number);
-        $code = trim($request->code);
+        $code = preg_replace('/\D/', '', (string) $request->code);
+        if (strlen($code) !== 6) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please enter the 6-digit code.',
+            ], 422);
+        }
         $name = $request->filled('student_name') ? trim($request->student_name) : null;
 
         $indexHash = Student::hashIndexNumber($inputIndex);
@@ -325,24 +335,25 @@ class StudentAccountController extends Controller
         }
         $indexNumber = $student->index_number;
 
-        // Examiner fallback: one-time use; mark used_at and invalidate immediately
-        $fallbackOtp = Otp::latestValidExaminerFallbackForIndex($indexHash);
-        if ($fallbackOtp && $fallbackOtp->code === $code) {
+        // Examiner fallback: one-time use; mark used_at
+        $fallbackOtp = Otp::findValidExaminerFallbackForIndexAndCode($indexHash, $code);
+        if ($fallbackOtp) {
             $fallbackOtp->used_at = now();
             $fallbackOtp->save();
             $this->completeStudentLogin($student, null, $name);
+
             return response()->json([
                 'success' => true,
                 'redirect' => $this->studentLoginRedirect($student),
             ]);
         }
 
-        // Student login OTP: reusable until expires_at; do NOT set used_at
-        $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
-        if (!$lastOtp || $lastOtp->isExpired() || $lastOtp->code !== $code) {
+        // Student login SMS code: any matching non-expired row; do NOT set used_at
+        $lastOtp = Otp::findValidStudentLoginForIndexAndCode($indexHash, $code);
+        if (! $lastOtp) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid or expired code. Please request a new one.',
+                'message' => 'Invalid code. Check the digits or ask your examiner for a new login code.',
             ], 422);
         }
 

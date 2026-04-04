@@ -6,7 +6,7 @@ return [
 
     'driver' => env('SESSION_DRIVER', 'file'),
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 45), // 45 minutes (student dashboard/session timeout)
+    'lifetime' => (int) env('SESSION_LIFETIME', 480), // 8 hours — avoids CSRF expiry while students wait for SMS / enter OTP
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

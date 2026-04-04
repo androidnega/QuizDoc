@@ -195,6 +195,7 @@ Route::get('/quiz/final-photo', [PostQuizCaptureController::class, 'show'])->nam
 Route::post('/quiz/post-face', [PostQuizCaptureController::class, 'store'])->name('student.post-face.store');
 
 // Student account login (index → phone → OTP); no quiz link required
+Route::get('/student/account/csrf-token', fn () => response()->json(['token' => csrf_token()]))->name('student.account.csrf-token');
 Route::get('/student/account/login', [\App\Http\Controllers\Student\StudentAccountController::class, 'showLoginForm'])->name('student.account.login.form');
 Route::post('/student/account/verify-index', [\App\Http\Controllers\Student\StudentAccountController::class, 'verifyIndex'])->name('student.account.verify-index');
 Route::post('/student/account/send-otp', [\App\Http\Controllers\Student\StudentAccountController::class, 'sendOtp'])->name('student.account.send-otp');

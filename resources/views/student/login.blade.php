@@ -83,6 +83,28 @@
 <script>
 (function() {
     var csrf = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').content;
+    var csrfRefreshUrl = '{{ route("student.account.csrf-token") }}';
+    var jsonHeaders = function(token) {
+        return {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': token || csrf || '',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        };
+    };
+    function ensureFreshCsrf() {
+        if (!csrfRefreshUrl) return Promise.resolve(csrf);
+        return fetch(csrfRefreshUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data && data.token) {
+                    csrf = data.token;
+                    var m = document.querySelector('meta[name="csrf-token"]');
+                    if (m) m.setAttribute('content', csrf);
+                }
+                return csrf;
+            });
+    }
     var stepIndex = document.getElementById('step-index');
     var stepPhone = document.getElementById('step-phone');
     var stepOtp = document.getElementById('step-otp');
@@ -143,7 +165,8 @@
         btnText.textContent = 'Verifying...';
         fetch('{{ route("student.verify.index") }}', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+            credentials: 'same-origin',
+            headers: jsonHeaders(csrf),
             body: JSON.stringify({ index_number: (indexInput && indexInput.value) ? indexInput.value.trim().toUpperCase() : '' })
         })
         .then(function(r) { return r.json(); })
@@ -183,10 +206,13 @@
                         resendBtn.textContent = 'Resend code';
                     }
                 }
-                if (data.days_remaining != null && resendWrap) {
-                    var daysEl = document.getElementById('otp-days-remaining');
-                    if (daysEl) {
+                var daysEl = document.getElementById('otp-days-remaining');
+                if (daysEl) {
+                    if (data.days_remaining != null) {
                         daysEl.textContent = 'Valid for ' + data.days_remaining + ' more day(s).';
+                        daysEl.style.display = 'block';
+                    } else if (data.otp_never_expires) {
+                        daysEl.textContent = 'This code does not expire until you receive a new one.';
                         daysEl.style.display = 'block';
                     }
                 }
@@ -217,10 +243,13 @@
         showError('phone-error', '');
         setLoading(this, true);
         this.dataset.originalText = this.textContent;
-        fetch('{{ route("student.account.send-otp") }}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-            body: JSON.stringify({ index_number: currentIndexNumber, phone: phone })
+        ensureFreshCsrf().then(function() {
+            return fetch('{{ route("student.account.send-otp") }}', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: jsonHeaders(csrf),
+                body: JSON.stringify({ index_number: currentIndexNumber, phone: phone })
+            });
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
@@ -265,21 +294,33 @@
         if (lastPhoneUsed && lastPhoneUsed !== '__registered__') {
             payload.phone = lastPhoneUsed;
         }
-        fetch('{{ route("student.account.send-otp") }}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-            body: JSON.stringify(payload)
+        ensureFreshCsrf().then(function() {
+            return fetch('{{ route("student.account.send-otp") }}', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: jsonHeaders(csrf),
+                body: JSON.stringify(payload)
+            });
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
                 document.getElementById('otp-step-message').textContent = data.message || 'A new code has been sent. Enter it above.';
                 resendBtn.disabled = true;
-                resendBtn.textContent = 'Resend available in ' + (data.days_remaining || 14) + ' day(s)';
+                resendBtn.textContent = 'Wait ~1 min to resend';
+                setTimeout(function() {
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = 'Resend code';
+                }, 65000);
                 var daysEl = document.getElementById('otp-days-remaining');
-                if (daysEl && data.days_remaining != null) {
-                    daysEl.textContent = 'Valid for ' + data.days_remaining + ' more day(s).';
-                    daysEl.style.display = 'block';
+                if (daysEl) {
+                    if (data.days_remaining != null) {
+                        daysEl.textContent = 'Valid for ' + data.days_remaining + ' more day(s).';
+                        daysEl.style.display = 'block';
+                    } else if (data.otp_never_expires) {
+                        daysEl.textContent = 'This code does not expire until you receive a new one.';
+                        daysEl.style.display = 'block';
+                    }
                 }
                 initOtpBoxes();
             } else {
@@ -366,10 +407,21 @@
         this.dataset.originalText = this.textContent;
         var payload = { index_number: currentIndexNumber, code: code };
         if (nameInput && nameInput.value.trim()) payload.student_name = nameInput.value.trim();
-        fetch('{{ route("student.account.verify-otp") }}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-            body: JSON.stringify(payload)
+        var verifyUrl = '{{ route("student.account.verify-otp") }}';
+        function doVerify() {
+            return fetch(verifyUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: jsonHeaders(csrf),
+                body: JSON.stringify(payload)
+            });
+        }
+        ensureFreshCsrf().then(function() { return doVerify(); })
+        .then(function(r) {
+            if (r.status === 419) {
+                return ensureFreshCsrf().then(function() { return doVerify(); });
+            }
+            return r;
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {

@@ -836,13 +836,14 @@ class ClassGroupController extends Controller
                         continue;
                     }
                     $code = (string) random_int(100000, 999999);
+                    Otp::deleteStudentLoginOtpsForIndex($indexHash);
                     Otp::create([
                         'index_number_hash' => $indexHash,
                         'type' => Otp::TYPE_STUDENT_LOGIN,
                         'code' => $code,
-                        'expires_at' => now()->addDays(Otp::STUDENT_LOGIN_VALID_DAYS),
+                        'expires_at' => null,
                     ]);
-                    $smsMessage = 'Your QuizSnap login code is: ' . $code . '. Valid for 14 days. Do not share.';
+                    $smsMessage = 'Your QuizSnap login code is: ' . $code . '. Do not share. Stays valid until you get a new code.';
                     $result = ArkeselService::sendSms($studentAccount->phone_contact, $smsMessage);
                     if ($result['success']) {
                         $smsOwner->increment('sms_used');
@@ -948,15 +949,21 @@ class ClassGroupController extends Controller
 
         $code = (string) random_int(100000, 999999);
         $indexHash = Student::hashIndexNumber($student->index_number);
+
+        Otp::where('index_number_hash', $indexHash)
+            ->where('type', Otp::TYPE_EXAMINER_FALLBACK)
+            ->whereNull('used_at')
+            ->update(['used_at' => now()]);
+
         Otp::create([
             'index_number_hash' => $indexHash,
             'type' => Otp::TYPE_EXAMINER_FALLBACK,
             'code' => $code,
-            'expires_at' => now()->addDays(Otp::EXAMINER_FALLBACK_VALID_DAYS),
+            'expires_at' => null,
         ]);
 
         return redirect()->route($this->staffRoutePrefix() . '.class-groups.students.show', [$classGroup, $student])
-            ->with('success', 'One-time login code generated. Give it to the student. Valid for ' . Otp::EXAMINER_FALLBACK_VALID_DAYS . ' days.')
+            ->with('success', 'One-time login code generated. Give it to the student. It does not expire until they use it successfully.')
             ->with('fallback_code', $code);
     }
 
