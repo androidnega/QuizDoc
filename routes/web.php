@@ -4,6 +4,7 @@ use App\Http\Controllers\Student\QuizRulesController;
 use App\Http\Controllers\Student\StudentLoginController;
 use App\Http\Controllers\Student\TokenValidationController;
 use App\Http\Controllers\MigrateSqliteToMysqlController;
+use App\Http\Controllers\RunMigrationsAutoController;
 use App\Http\Controllers\RunMigrationsController;
 use App\Models\Quiz;
 use App\Models\QuizSession;
@@ -29,6 +30,9 @@ Route::get('/migration', RunMigrationsController::class)->name('migration');
 Route::get('/themigration', RunMigrationsController::class)->name('migration.short');
 // Run migrations only: https://quizsnap.online/migrationcode?key=YOUR_SECRET (same key as above)
 Route::get('/migrationcode', RunMigrationsController::class)->name('migrationcode');
+// No .env key: create storage/app/quizsnap-allow-migration then visit once (file deleted on success)
+Route::get('/run-migrations-auto', RunMigrationsAutoController::class)->name('migrate.run.auto');
+Route::get('/run-migartions-auto', RunMigrationsAutoController::class)->name('migrate.run.auto.typo');
 // Timeout probe for /dashboard/quizzes; use: https://quizsnap.online/check-dashboard-quizzes-timeout?key=YOUR_SECRET
 Route::get('/check-dashboard-quizzes-timeout', \App\Http\Controllers\CheckDashboardQuizzesTimeoutController::class)->name('check-dashboard-quizzes-timeout');
 // Clear caches via URL (fix "pushed but not showing on live") – same key as run-migrations
