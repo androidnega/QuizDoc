@@ -2,6 +2,11 @@
 
 return [
     /*
+    | Secret for public/quizsnap-otp-diagnose.php (GET ?key=...). Empty = script disabled.
+    */
+    'otp_diagnose_key' => env('QUIZSNAP_OTP_DIAGNOSE_KEY', ''),
+
+    /*
     | Login token (OTP) validity in seconds. Tokens expire after this period (e.g. 14 days).
     */
     'otp_ttl_seconds' => (int) env('QUIZSNAP_OTP_TTL_SECONDS', 14 * 86400),

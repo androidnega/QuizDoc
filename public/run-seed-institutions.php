@@ -1,11 +1,4 @@
 <?php
-/**
- * ONE-TIME: Seed institutions (Ghana Technical Universities) on the server.
- *
- * 1. Deploy so public/run-seed-institutions.php exists.
- * 2. Visit: https://quizsnap.ausweblabs.com/run-seed-institutions.php?key=QuizSnap2026Xk9m2p7&run=yes
- * 3. Script seeds institutions, then DELETES ITSELF.
- */
 $secret = 'QuizSnap2026Xk9m2p7';
 
 if (($_GET['key'] ?? '') !== $secret) {

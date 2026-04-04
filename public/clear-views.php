@@ -1,12 +1,5 @@
 <?php
-/**
- * ONE-TIME: Clear compiled Blade views so Laravel recompiles from fixed templates.
- * Use after deploy when you see "expecting elseif or else or endif" ParseError.
- *
- * 1. Set the secret below (e.g. $secret = 'clearviews123';).
- * 2. Visit: https://yoursite.com/clear-views.php?key=YOUR_SECRET&run=yes
- * 3. Delete this file after use (or leave; it only clears cache).
- */
+
 $secret = 'CHANGE_ME_BEFORE_USE';
 
 if (($_GET['key'] ?? '') !== $secret) {

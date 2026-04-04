@@ -1,11 +1,5 @@
 <?php
-/**
- * ONE-TIME: Create super admin account on the server (username: admin, password: admin123).
- *
- * 1. Set the secret below (e.g. $secret = 'seedadmin';).
- * 2. Deploy to public/ and visit: https://quizsnap.ausweblabs.com/run-seed-admin.php?key=YOUR_SECRET&run=yes
- * 3. Script creates/updates the admin user, then DELETES ITSELF. Visit only once.
- */
+
 $secret = 'CHANGE_ME_BEFORE_UPLOAD';
 
 if (($_GET['key'] ?? '') !== $secret) {

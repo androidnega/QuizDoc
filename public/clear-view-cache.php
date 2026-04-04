@@ -1,14 +1,5 @@
 <?php
-/**
- * Clear Laravel view cache from the server by visiting this URL.
- *
- * 1. Change the secret below to a random string (e.g. "a8f3k2m9x") if desired.
- * 2. Deploy so public/clear-view-cache.php exists on the server (e.g. git pull).
- * 3. Visit: https://quizsnap.ausweblabs.com/clear-view-cache.php?key=YOUR_SECRET&run=yes
- * 4. The script clears the view cache, then DELETES ITSELF. Visit only once.
- *
- * Keep this file in the repo until you have run it on the server; then remove or leave for future runs.
- */
+
 $secret = 'QuizSnap2026Xk9m2p7';
 
 if (($_GET['key'] ?? '') !== $secret) {

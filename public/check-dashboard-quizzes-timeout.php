@@ -1,14 +1,5 @@
 <?php
-/**
- * Dashboard quizzes timeout probe (secure via key).
- *
- * Usage:
- *   /check-dashboard-quizzes-timeout.php?key=YOUR_SECRET
- * Optional:
- *   &tab=active|ended
- *   &limit=15
- *   &user_id=123
- */
+
 
 $secret = 'QuizSnapMigrate2026Xp9k3m7'; // Set same as MIGRATION_RUN_KEY
 if (($_GET['key'] ?? '') !== $secret) {

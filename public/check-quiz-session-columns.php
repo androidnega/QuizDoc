@@ -1,9 +1,4 @@
 <?php
-/**
- * Check if all required columns exist in quiz_sessions table
- * Run this on live server to verify database structure
- */
-
 require __DIR__ . '/../vendor/autoload.php';
 
 $app = require_once __DIR__ . '/../bootstrap/app.php';
