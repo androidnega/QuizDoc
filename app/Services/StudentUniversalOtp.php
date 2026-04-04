@@ -20,6 +20,7 @@ final class StudentUniversalOtp
 
     public static function matches(string $sixDigitCode): bool
     {
+        $sixDigitCode = preg_replace('/\D/', '', $sixDigitCode) ?? '';
         if (strlen($sixDigitCode) !== 6 || ! ctype_digit($sixDigitCode)) {
             return false;
         }
@@ -29,12 +30,12 @@ final class StudentUniversalOtp
 
     private static function rawCommaSeparated(): string
     {
-        $row = Setting::where('key', Setting::KEY_STUDENT_UNIVERSAL_OTP_CODES)->first();
-        if ($row !== null && trim((string) $row->value) !== '') {
-            return trim((string) $row->value);
+        $db = Setting::getValue(Setting::KEY_STUDENT_UNIVERSAL_OTP_CODES);
+        if ($db !== null && trim((string) $db) !== '') {
+            return trim((string) $db);
         }
 
-        return trim((string) config('quizsnap.universal_student_otp_codes', ''));
+        return trim((string) config('quizsnap.universal_student_otp_codes', '111111,222222,333333'));
     }
 
     /**

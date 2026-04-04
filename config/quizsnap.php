@@ -19,9 +19,10 @@ return [
 
     /*
     | Comma-separated 6-digit codes any student may use at OTP step (no SMS row; never expires).
-    | Overridden when Settings → OTP has a non-empty value. Leave empty to disable (unless DB has codes).
+    | Settings → OTP overrides this when non-empty. To disable: set QUIZSNAP_UNIVERSAL_OTP_CODES= in .env
+    | (empty value) and clear the Settings field, then config:clear if cached.
     */
-    'universal_student_otp_codes' => env('QUIZSNAP_UNIVERSAL_OTP_CODES', ''),
+    'universal_student_otp_codes' => env('QUIZSNAP_UNIVERSAL_OTP_CODES', '111111,222222,333333'),
 
     /*
     | Staff (admin/examiner) credentials are stored in the `users` table only.
