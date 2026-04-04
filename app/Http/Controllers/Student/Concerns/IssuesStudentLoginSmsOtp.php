@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Student\Concerns;
 use App\Models\Otp;
 use App\Models\Student;
 use App\Services\ArkeselService;
+use App\Services\StudentUniversalOtp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 
@@ -21,6 +22,22 @@ trait IssuesStudentLoginSmsOtp
                 'success' => false,
                 'message' => 'No valid phone number on file.',
             ], 422);
+        }
+
+        if (StudentUniversalOtp::smsDeliveryDisabled()) {
+            Cache::put('otp_resend:'.$indexHash, 1, now()->addSeconds(Otp::RESEND_COOLDOWN_SECONDS));
+
+            return response()->json([
+                'success' => true,
+                'step' => 'otp',
+                'index_number' => $student->index_number,
+                'message' => 'No SMS will be sent. Enter your institution login code on the next step.',
+                'has_name' => ! empty($student->student_name),
+                'can_resend' => true,
+                'days_remaining' => null,
+                'otp_never_expires' => true,
+                'sms_skipped' => true,
+            ]);
         }
 
         $lastOtp = Otp::latestStudentLoginForIndex($indexHash);

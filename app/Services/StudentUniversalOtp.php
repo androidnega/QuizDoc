@@ -11,6 +11,14 @@ use App\Models\Setting;
  */
 final class StudentUniversalOtp
 {
+    /**
+     * When true, student login OTP is not sent via SMS; students use universal codes (and examiner fallback rows still work).
+     */
+    public static function smsDeliveryDisabled(): bool
+    {
+        return count(self::normalizedCodes()) > 0;
+    }
+
     public static function normalizedCodes(): array
     {
         $raw = self::rawCommaSeparated();

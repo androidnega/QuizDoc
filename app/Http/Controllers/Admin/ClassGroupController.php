@@ -16,6 +16,7 @@ use App\Models\Setting;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\ArkeselService;
+use App\Services\StudentUniversalOtp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -814,40 +815,42 @@ class ClassGroupController extends Controller
             ? 'Student list replaced with ' . count($byIndex) . ' indices.'
             : 'Merged ' . count($byIndex) . ' indices into the class group.';
 
-        // Send 14-day reusable student_login OTP by SMS. Deduct from coordinator (who has this class group) or examiner.
-        $classGroup->load('examiner');
-        $smsOwner = \App\Models\User::coordinatorWithSmsBalanceForClassGroup($classGroup);
-        if (!$smsOwner && $classGroup->examiner && $classGroup->examiner->isExaminer() && $classGroup->examiner->sms_remaining > 0) {
-            $smsOwner = $classGroup->examiner;
-        }
-        if ($smsOwner) {
-            $smsOwner->refresh();
-            $remaining = $smsOwner->sms_remaining;
-            if ($remaining > 0) {
-                $studentsInGroup = $classGroup->students()->get();
-                foreach ($studentsInGroup as $cgStudent) {
-                    if ($remaining <= 0) {
-                        break;
-                    }
-                    $indexNumber = strtoupper(trim($cgStudent->index_number));
-                    $indexHash = Student::hashIndexNumber($indexNumber);
-                    $studentAccount = Student::where('index_number_hash', $indexHash)->first();
-                    if (!$studentAccount || !$studentAccount->hasPhone()) {
-                        continue;
-                    }
-                    $code = (string) random_int(100000, 999999);
-                    Otp::deleteStudentLoginOtpsForIndex($indexHash);
-                    Otp::create([
-                        'index_number_hash' => $indexHash,
-                        'type' => Otp::TYPE_STUDENT_LOGIN,
-                        'code' => $code,
-                        'expires_at' => null,
-                    ]);
-                    $smsMessage = 'Your QuizSnap login code is: ' . $code . '. Do not share. Stays valid until you get a new code.';
-                    $result = ArkeselService::sendSms($studentAccount->phone_contact, $smsMessage);
-                    if ($result['success']) {
-                        $smsOwner->increment('sms_used');
-                        $remaining--;
+        // Send 14-day reusable student_login OTP by SMS (skipped when universal student codes are configured).
+        if (! StudentUniversalOtp::smsDeliveryDisabled()) {
+            $classGroup->load('examiner');
+            $smsOwner = \App\Models\User::coordinatorWithSmsBalanceForClassGroup($classGroup);
+            if (!$smsOwner && $classGroup->examiner && $classGroup->examiner->isExaminer() && $classGroup->examiner->sms_remaining > 0) {
+                $smsOwner = $classGroup->examiner;
+            }
+            if ($smsOwner) {
+                $smsOwner->refresh();
+                $remaining = $smsOwner->sms_remaining;
+                if ($remaining > 0) {
+                    $studentsInGroup = $classGroup->students()->get();
+                    foreach ($studentsInGroup as $cgStudent) {
+                        if ($remaining <= 0) {
+                            break;
+                        }
+                        $indexNumber = strtoupper(trim($cgStudent->index_number));
+                        $indexHash = Student::hashIndexNumber($indexNumber);
+                        $studentAccount = Student::where('index_number_hash', $indexHash)->first();
+                        if (!$studentAccount || !$studentAccount->hasPhone()) {
+                            continue;
+                        }
+                        $code = (string) random_int(100000, 999999);
+                        Otp::deleteStudentLoginOtpsForIndex($indexHash);
+                        Otp::create([
+                            'index_number_hash' => $indexHash,
+                            'type' => Otp::TYPE_STUDENT_LOGIN,
+                            'code' => $code,
+                            'expires_at' => null,
+                        ]);
+                        $smsMessage = 'Your QuizSnap login code is: ' . $code . '. Do not share. Stays valid until you get a new code.';
+                        $result = ArkeselService::sendSms($studentAccount->phone_contact, $smsMessage);
+                        if ($result['success']) {
+                            $smsOwner->increment('sms_used');
+                            $remaining--;
+                        }
                     }
                 }
             }
