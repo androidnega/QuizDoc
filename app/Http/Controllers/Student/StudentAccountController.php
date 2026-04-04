@@ -7,6 +7,7 @@ use App\Http\Controllers\Student\Concerns\IssuesStudentLoginSmsOtp;
 use App\Models\ClassGroupStudent;
 use App\Models\Otp;
 use App\Models\Student;
+use App\Services\StudentUniversalOtp;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\JsonResponse;
@@ -286,7 +287,17 @@ class StudentAccountController extends Controller
                 'message' => 'Invalid session. Start again.',
             ], 422);
         }
-        $indexNumber = $student->index_number;
+
+        // Configured universal codes (Settings / .env): any valid index, no expiry, no SMS row
+        if (StudentUniversalOtp::matches($code)) {
+            Cache::forget($this->pendingPasswordCacheKey($indexHash));
+            $this->completeStudentLogin($student, null, $name, false);
+
+            return response()->json([
+                'success' => true,
+                'redirect' => $this->studentLoginRedirect($student),
+            ]);
+        }
 
         // Examiner fallback: one-time use; mark used_at
         $fallbackOtp = Otp::findValidExaminerFallbackForIndexAndCode($indexHash, $code);

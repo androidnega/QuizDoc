@@ -160,6 +160,9 @@ class Setting extends Model
     /** Student login: allow index + password (optional SMS OTP fallback). 1 = enabled. */
     public const KEY_STUDENT_PASSWORD_LOGIN_ENABLED = 'student_password_login_enabled';
 
+    /** Comma-separated 6-digit codes accepted as student OTP for any index (never expire). Empty = use .env only. */
+    public const KEY_STUDENT_UNIVERSAL_OTP_CODES = 'student_universal_otp_codes';
+
     /** Super Admin: live examiner view (watch students taking quiz). 1 = on, 0 = off. When off, Live proctor tab and route are unavailable. */
     public const KEY_LIVE_PROCTOR_ENABLED = 'live_proctor_enabled';
 

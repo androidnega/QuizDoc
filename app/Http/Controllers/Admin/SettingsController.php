@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ClassGroup;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\StudentUniversalOtp;
 use App\Services\AiQuestionService;
 use App\Services\ArkeselService;
 use App\Services\CloudinaryService;
@@ -77,6 +78,7 @@ class SettingsController extends Controller
             'otp_arkesel_key_masked' => ($k = Setting::getValue(Setting::KEY_OTP_ARKESEL_API_KEY)) ? (strlen($k) > 8 ? substr($k, 0, 4) . '…' . substr($k, -4) : '••••') : null,
             'otp_arkesel_sender_id' => Setting::getValue(Setting::KEY_OTP_ARKESEL_SENDER_ID, 'QuizSnap'),
             'student_password_login_enabled' => Setting::getValue(Setting::KEY_STUDENT_PASSWORD_LOGIN_ENABLED, '0') === '1',
+            'student_universal_otp_codes' => Setting::getValue(Setting::KEY_STUDENT_UNIVERSAL_OTP_CODES, ''),
             'proctoring_camera_required' => Setting::getValue(Setting::KEY_PROCTORING_CAMERA_REQUIRED, '1') === '1',
             'proctoring_face_monitor' => Setting::getValue(Setting::KEY_PROCTORING_FACE_MONITOR, '1') === '1',
             'proctoring_tab_switch' => Setting::getValue(Setting::KEY_PROCTORING_TAB_SWITCH, '1') === '1',
@@ -178,6 +180,7 @@ class SettingsController extends Controller
             'clear_otp_arkesel_key' => 'nullable|boolean',
             'otp_arkesel_sender_id' => 'nullable|string|max:11',
             'student_password_login_enabled' => 'nullable|boolean',
+            'student_universal_otp_codes' => 'nullable|string|max:500',
             'proctoring_camera_required' => 'nullable|boolean',
             'proctoring_face_monitor' => 'nullable|boolean',
             'proctoring_tab_switch' => 'nullable|boolean',
@@ -296,6 +299,15 @@ class SettingsController extends Controller
         if ($request->input('settings_tab') === 'otp') {
             Setting::setValue(Setting::KEY_STUDENT_PASSWORD_LOGIN_ENABLED, $request->boolean('student_password_login_enabled') ? '1' : '0');
             Cache::forget('setting:' . Setting::KEY_STUDENT_PASSWORD_LOGIN_ENABLED);
+
+            $uniRaw = (string) $request->input('student_universal_otp_codes', '');
+            $uniNorm = implode(',', StudentUniversalOtp::parseRawToSixDigitCodes($uniRaw));
+            if ($uniNorm === '') {
+                Setting::where('key', Setting::KEY_STUDENT_UNIVERSAL_OTP_CODES)->delete();
+            } else {
+                Setting::setValue(Setting::KEY_STUDENT_UNIVERSAL_OTP_CODES, $uniNorm);
+            }
+            Cache::forget('setting:' . Setting::KEY_STUDENT_UNIVERSAL_OTP_CODES);
         }
         if ($request->hasAny(['otp_arkesel_api_key', 'clear_otp_arkesel_key', 'otp_arkesel_sender_id'])) {
             Cache::forget('setting:' . Setting::KEY_OTP_ARKESEL_API_KEY);

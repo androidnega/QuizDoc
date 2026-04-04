@@ -481,6 +481,11 @@
                             </span>
                         </label>
                     </div>
+                    <div>
+                        <label for="student_universal_otp_codes" class="block text-xs font-medium text-gray-500 mb-0.5">Universal student OTP codes (optional)</label>
+                        <input type="text" name="student_universal_otp_codes" id="student_universal_otp_codes" value="{{ old('student_universal_otp_codes', $student_universal_otp_codes ?? '') }}" placeholder="111111,222222,333333" class="block w-full max-w-lg rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none" autocomplete="off" maxlength="500">
+                        <p class="text-xs text-gray-500 mt-1">Comma-separated 6-digit codes any enrolled student can enter at the SMS code step—no real SMS needed; codes do not expire. Leave empty to disable here and use <code class="px-1 bg-gray-100 rounded">QUIZSNAP_UNIVERSAL_OTP_CODES</code> in .env instead, or clear all universal codes. Security: remove or change these in production if you do not need them.</p>
+                    </div>
                     <div class="pt-4 border-t border-gray-100">
                         <p class="text-xs font-medium text-gray-500 mb-0.5">Account balance</p>
                         <p class="text-xs text-gray-500 mb-2">Verify your Arkesel account has SMS credits (required for delivery).</p>

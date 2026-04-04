@@ -24,6 +24,7 @@ class OtpDiagnostics
         $push('Time (app): '.now()->toIso8601String());
         $push('PHP: '.PHP_VERSION);
         $push('DB default: '.config('database.default'));
+        $push('Universal student OTP codes configured: '.count(StudentUniversalOtp::normalizedCodes()).' (Settings / .env; never expire)');
         $push('');
 
         $inputIndex = trim($rawIndex);
