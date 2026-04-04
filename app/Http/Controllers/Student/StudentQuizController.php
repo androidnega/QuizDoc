@@ -17,6 +17,7 @@ use App\Models\Student;
 use App\Services\AiQuestionService;
 use App\Services\CloudinaryService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -61,10 +62,33 @@ class StudentQuizController extends Controller
     }
 
     /**
+     * Handle mistaken GET to /quiz/session/start (Safari, WhatsApp in-app browser, bookmarks, prefetch).
+     */
+    public function startSessionRedirect(Request $request): RedirectResponse
+    {
+        $token = session('quiz_session_token');
+        if (! $token) {
+            return redirect()->route('student.landing')->with('error', 'Error');
+        }
+        $session = QuizSession::where('session_token', $token)->first();
+        if (! $session) {
+            return redirect()->route('student.landing')->with('error', 'Error');
+        }
+        if ($session->ended_at) {
+            return redirect()->to($this->quizCompleteUrl());
+        }
+        if ($session->start_time !== null) {
+            return redirect()->route('student.quiz.show');
+        }
+
+        return redirect()->route('student.quiz.ready');
+    }
+
+    /**
      * Start quiz session with camera verification.
      * Marks camera_verified = true and camera_started_at = now().
      */
-    public function startSession(Request $request): JsonResponse|\Illuminate\Http\RedirectResponse
+    public function startSession(Request $request): JsonResponse|RedirectResponse
     {
         $token = session('quiz_session_token');
         if (!$token) {

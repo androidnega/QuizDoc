@@ -180,6 +180,8 @@ Route::post('/student/proctoring/capture', [ProctoringCaptureController::class, 
 // Quiz routes: generous throttle so bursty auto-save / proctor / retries do not 429 mid-quiz; client batches requests
 Route::middleware(['throttle:240,1'])->group(function () {
     Route::get('/quiz/ready', [StudentQuizController::class, 'ready'])->name('student.quiz.ready')->middleware('rules.accepted');
+    // GET: in-app browsers / shared links / refresh must not 405; send users back to Ready (POST still starts the session)
+    Route::get('/quiz/session/start', [StudentQuizController::class, 'startSessionRedirect'])->name('student.quiz.session.start.get')->middleware('rules.accepted');
     Route::post('/quiz/session/start', [StudentQuizController::class, 'startSession'])->name('student.quiz.session.start')->middleware('rules.accepted');
     Route::get('/quiz/take', [StudentQuizController::class, 'show'])->name('student.quiz.show')->middleware('rules.accepted');
     Route::get('/quiz/time-sync', [StudentQuizController::class, 'timeSync'])->name('student.quiz.time-sync')->middleware('rules.accepted');
