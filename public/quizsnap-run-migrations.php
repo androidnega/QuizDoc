@@ -14,6 +14,40 @@
 
 declare(strict_types=1);
 
+/**
+ * Read a single key from .env when config is cached (config() / env() often empty for new vars).
+ */
+function quizsnap_env_file_value(string $envPath, string $key): string
+{
+    if (! is_readable($envPath)) {
+        return '';
+    }
+    $raw = file_get_contents($envPath);
+    if ($raw === false) {
+        return '';
+    }
+    foreach (explode("\n", $raw) as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+        if (! str_starts_with($line, $key.'=')) {
+            continue;
+        }
+        $v = trim(substr($line, strlen($key) + 1));
+        if ($v !== '' && $v[0] === '"' && str_ends_with($v, '"')) {
+            return stripcslashes(substr($v, 1, -1));
+        }
+        if ($v !== '' && $v[0] === "'" && str_ends_with($v, "'")) {
+            return substr($v, 1, -1);
+        }
+
+        return preg_replace('/\s+#.*$/', '', $v) ?? $v;
+    }
+
+    return '';
+}
+
 header('Content-Type: text/plain; charset=utf-8');
 header('X-Robots-Tag: noindex, nofollow');
 
@@ -24,7 +58,20 @@ $kernel->bootstrap();
 
 $secret = (string) config('quizsnap.migrate_key', '');
 if ($secret === '') {
-    exit("Set QUIZSNAP_MIGRATE_KEY in .env (see config/quizsnap.php). If you use config:cache, run php artisan config:clear after changing .env.\n");
+    $secret = (string) (getenv('QUIZSNAP_MIGRATE_KEY') ?: '');
+}
+if ($secret === '') {
+    $secret = quizsnap_env_file_value(dirname(__DIR__).'/.env', 'QUIZSNAP_MIGRATE_KEY');
+}
+if ($secret === '') {
+    exit(
+        "QUIZSNAP_MIGRATE_KEY is not set.\n\n"
+        ."On the server, edit the .env file in the app root (same folder as artisan) and add one line, for example:\n"
+        ."QUIZSNAP_MIGRATE_KEY=QuizSnapMigrate2026Xp9k3m7\n\n"
+        ."No spaces around =. Then open again:\n"
+        ."https://yoursite.com/quizsnap-run-migrations.php?key=YOUR_SAME_VALUE\n\n"
+        ."If you use php artisan config:cache, run config:clear after changing .env (optional; this script also reads .env directly).\n"
+    );
 }
 
 if (($_GET['key'] ?? '') !== $secret) {
