@@ -472,6 +472,15 @@
                         <input type="text" name="otp_arkesel_sender_id" id="otp_arkesel_sender_id" value="{{ old('otp_arkesel_sender_id', $otp_arkesel_sender_id ?? 'QuizSnap') }}" placeholder="QuizSnap" maxlength="11" class="block w-full max-w-xs rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-300 focus:outline-none">
                         <p class="text-xs text-gray-500 mt-1">Max 11 characters. Shown as SMS sender (e.g. QuizSnap).</p>
                     </div>
+                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" name="student_password_login_enabled" value="1" class="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" {{ old('student_password_login_enabled', $student_password_login_enabled ?? false) ? 'checked' : '' }}>
+                            <span>
+                                <span class="block text-sm font-medium text-gray-800">Allow student password login</span>
+                                <span class="block text-xs text-gray-500 mt-1">Students can sign in with index + a password they set (after one SMS verification). They can still use “Get code by SMS” if needed. When off, only SMS / examiner codes apply.</span>
+                            </span>
+                        </label>
+                    </div>
                     <div class="pt-4 border-t border-gray-100">
                         <p class="text-xs font-medium text-gray-500 mb-0.5">Account balance</p>
                         <p class="text-xs text-gray-500 mb-2">Verify your Arkesel account has SMS credits (required for delivery).</p>

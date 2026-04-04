@@ -3,17 +3,15 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Student\Concerns\IssuesStudentLoginSmsOtp;
 use App\Models\ClassGroupStudent;
 use App\Models\Quiz;
 use App\Models\QuizSession;
 use App\Models\Setting;
-use App\Models\Otp;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
-use App\Services\ArkeselService;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +19,8 @@ use Illuminate\Http\RedirectResponse;
 
 class StudentLoginController extends Controller
 {
+    use IssuesStudentLoginSmsOtp;
+
     /**
      * Show index number entry. Quiz is fixed from the link (stored in session after rules acceptance).
      */
@@ -58,7 +58,10 @@ class StudentLoginController extends Controller
             }
             return redirect()->route('student.landing')->with('error', 'This quiz is not currently available.');
         }
-        return view('student.login', ['quiz' => $quiz]);
+        return view('student.login', [
+            'quiz' => $quiz,
+            'password_login_enabled' => Student::isPasswordLoginEnabled(),
+        ]);
     }
 
     /**
@@ -157,7 +160,33 @@ class StudentLoginController extends Controller
             ]
         );
 
-        if (!$student->hasPhone()) {
+        if (Student::isPasswordLoginEnabled()) {
+            if ($student->hasPassword()) {
+                return response()->json([
+                    'success' => true,
+                    'step' => 'password',
+                    'index_number' => $student->index_number,
+                    'message' => 'Enter the password you saved for your account.',
+                    'password_login_enabled' => true,
+                ]);
+            }
+
+            $payload = [
+                'success' => true,
+                'step' => 'phone',
+                'index_number' => $student->index_number,
+                'require_password_setup' => true,
+                'password_login_enabled' => true,
+                'message' => 'Enter your phone number and choose a password you will remember. We will send one SMS code to confirm your number; after that you can sign in with your password without SMS.',
+            ];
+            if ($student->hasPhone()) {
+                $payload['prefill_phone'] = $student->phone_contact;
+            }
+
+            return response()->json($payload);
+        }
+
+        if (! $student->hasPhone()) {
             return response()->json([
                 'success' => true,
                 'step' => 'phone',
@@ -166,61 +195,10 @@ class StudentLoginController extends Controller
             ]);
         }
 
-        // Coordinator (who has this class group) or examiner with SMS balance — used for deducting SMS; if none, we still send OTP so students can log in
         $quiz->load(['classGroup.examiner', 'examiner']);
         $smsOwner = $this->smsOwnerForQuiz($quiz);
 
-        $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
-
-        if ($lastOtp && ! $lastOtp->isExpired()
-            && $lastOtp->created_at
-            && $lastOtp->created_at->gt(now()->subMinutes(Otp::STUDENT_LOGIN_SMS_COOLDOWN_MINUTES))) {
-            $daysRemaining = $lastOtp->daysRemaining();
-
-            return response()->json([
-                'success' => true,
-                'step' => 'otp',
-                'index_number' => $student->index_number,
-                'message' => 'A code was already sent recently. Use the 6-digit code from your last SMS, or wait a few minutes and use Resend code.',
-                'has_name' => ! empty($student->student_name),
-                'can_resend' => true,
-                'days_remaining' => $daysRemaining,
-                'otp_never_expires' => $daysRemaining === null,
-            ]);
-        }
-
-        $code = (string) random_int(100000, 999999);
-        Otp::deleteStudentLoginOtpsForIndex($indexHash);
-        Otp::create([
-            'index_number_hash' => $indexHash,
-            'type' => Otp::TYPE_STUDENT_LOGIN,
-            'code' => $code,
-            'expires_at' => null,
-        ]);
-        $message = 'Your QuizSnap code is: ' . $code . '. Use it to continue the quiz. Do not share. This code stays valid until you receive a new one.';
-        $result = ArkeselService::sendSms($student->phone_contact, $message);
-        if (!$result['success']) {
-            $msg = $result['message'] ?? 'We couldn\'t send the code.';
-            if (strpos($msg, 'try again') === false && strpos($msg, 'Try again') === false) {
-                $msg .= ' Please try again.';
-            }
-            return response()->json(['success' => false, 'message' => $msg], 422);
-        }
-        if ($smsOwner) {
-            $smsOwner->increment('sms_used');
-        }
-        Cache::put('otp_resend:'.$indexHash, 1, now()->addSeconds(Otp::RESEND_COOLDOWN_SECONDS));
-
-        return response()->json([
-            'success' => true,
-            'step' => 'otp',
-            'index_number' => $student->index_number,
-            'message' => 'A code has been sent to your registered number. It stays valid until you request a new code.',
-            'has_name' => ! empty($student->student_name),
-            'can_resend' => true,
-            'days_remaining' => null,
-            'otp_never_expires' => true,
-        ]);
+        return $this->jsonAfterIssuingOrReusingSmsOtp($student, $indexHash, $smsOwner, null);
     }
 
     /**

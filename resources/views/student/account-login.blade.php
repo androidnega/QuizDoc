@@ -8,7 +8,7 @@
     <div class="max-w-md w-full">
         <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <h1 class="text-2xl font-bold text-gray-800 mb-2">Student login</h1>
-            <p class="text-gray-600 text-sm mb-6">Use your index number and phone to sign in. We'll send a one-time code by SMS. Keep this page open while you complete the steps.</p>
+            <p class="text-gray-600 text-sm mb-6">@if(!empty($password_login_enabled))Enter your index number. If this is your first time with a password, add your phone and choose a password; we’ll send one SMS to verify your number. After that you can sign in with your password. You can still get a code by SMS when needed.@else Use your index number and phone to sign in. We'll send a one-time code by SMS. Keep this page open while you complete the steps.@endif</p>
 
             {{-- Step 1: Index number (primary flow) --}}
             <div id="step-index" class="space-y-4">
@@ -25,6 +25,23 @@
                 <button type="button" id="btn-index" class="w-full py-2.5 px-4 text-sm font-semibold rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">Continue</button>
             </div>
 
+            @if(!empty($password_login_enabled))
+            {{-- Password sign-in (index already verified) --}}
+            <div id="step-password" class="space-y-4 hidden">
+                <p class="text-sm text-gray-600" id="password-step-message">Enter your password.</p>
+                <div>
+                    <label for="login_password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="login_password" name="login_password" autocomplete="current-password" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                </div>
+                <div id="password-error" class="hidden">
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800" id="password-error-text"></div>
+                </div>
+                <button type="button" id="btn-verify-password" class="w-full py-2.5 px-4 text-sm font-semibold rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">Sign in</button>
+                <button type="button" id="btn-password-use-sms" class="w-full py-2 px-4 text-sm font-medium rounded-lg text-primary-700 bg-primary-50 border border-primary-200 hover:bg-primary-100">Get a code by SMS instead</button>
+                <button type="button" id="btn-back-password-to-index" class="w-full py-2 px-4 text-sm font-medium rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300">← Back</button>
+            </div>
+            @endif
+
             {{-- Step 2: Phone (first-time or unregistered) --}}
             <div id="step-phone" class="space-y-4 hidden">
                 <p class="text-sm text-gray-600" id="phone-step-message">Enter your active phone number to receive a one-time code (e.g. 233XXXXXXXXX).</p>
@@ -32,6 +49,18 @@
                     <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone number</label>
                     <input type="tel" id="phone" name="phone" placeholder="233XXXXXXXXX" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" autocomplete="tel">
                 </div>
+                @if(!empty($password_login_enabled))
+                <div id="phone-password-setup-wrap" class="space-y-3 hidden">
+                    <div>
+                        <label for="setup_password" class="block text-sm font-medium text-gray-700 mb-1">Choose password (min 8 characters)</label>
+                        <input type="password" id="setup_password" autocomplete="new-password" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    </div>
+                    <div>
+                        <label for="setup_password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
+                        <input type="password" id="setup_password_confirmation" autocomplete="new-password" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    </div>
+                </div>
+                @endif
                 <div id="phone-error" class="hidden">
                     <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800" id="phone-error-text"></div>
                 </div>
@@ -99,22 +128,28 @@
                 return csrf;
             });
     }
+    var passwordLoginEnabled = @json(!empty($password_login_enabled));
     var stepIndex = document.getElementById('step-index');
     var stepPhone = document.getElementById('step-phone');
     var stepOtp = document.getElementById('step-otp');
+    var stepPassword = document.getElementById('step-password');
     var indexInput = document.getElementById('index_number');
     var phoneInput = document.getElementById('phone');
     var otpInput = document.getElementById('otp_code');
     var nameInput = document.getElementById('otp_name');
+    var setupPasswordWrap = document.getElementById('phone-password-setup-wrap');
     var currentIndexNumber = '';
     var lastPhoneUsed = '';
+    var requirePasswordSetup = false;
 
     function showStep(step) {
         stepIndex.classList.add('hidden');
         stepPhone.classList.add('hidden');
         stepOtp.classList.add('hidden');
+        if (stepPassword) stepPassword.classList.add('hidden');
         if (step === 'index') stepIndex.classList.remove('hidden');
         else if (step === 'phone') stepPhone.classList.remove('hidden');
+        else if (step === 'password' && stepPassword) stepPassword.classList.remove('hidden');
         else if (step === 'otp') {
             stepOtp.classList.remove('hidden');
             var enterWrap = document.getElementById('otp-enter-code-wrap');
@@ -190,10 +225,29 @@
             var btnIndex = document.getElementById('btn-index');
             if (btnIndex) btnIndex.dataset.originalText = 'Continue';
             currentIndexNumber = data.index_number || index;
-            if (data.step === 'phone') {
+            requirePasswordSetup = !!(data.require_password_setup && passwordLoginEnabled);
+            if (setupPasswordWrap) {
+                setupPasswordWrap.classList.toggle('hidden', !requirePasswordSetup);
+                if (requirePasswordSetup) {
+                    var sp = document.getElementById('setup_password');
+                    var spc = document.getElementById('setup_password_confirmation');
+                    if (sp) sp.value = '';
+                    if (spc) spc.value = '';
+                }
+            }
+            if (data.step === 'password' && passwordLoginEnabled && stepPassword) {
+                document.getElementById('password-step-message').textContent = data.message || 'Enter your password.';
+                showError('password-error', '');
+                var lp = document.getElementById('login_password');
+                if (lp) lp.value = '';
+                showStep('password');
+            } else if (data.step === 'phone') {
                 document.getElementById('phone-step-message').textContent = data.message || 'Enter your active phone number to receive a one-time code.';
                 showStep('phone');
-                if (phoneInput) phoneInput.value = '';
+                if (phoneInput) {
+                    phoneInput.value = (data.prefill_phone && requirePasswordSetup) ? data.prefill_phone : '';
+                    phoneInput.readOnly = !!(data.prefill_phone && requirePasswordSetup);
+                }
             } else if (data.step === 'otp') {
                 document.getElementById('otp-step-message').textContent = data.message || 'Enter the 6-digit code sent to your phone.';
                 if (data.can_resend) {
@@ -235,9 +289,88 @@
     document.getElementById('btn-back-to-index').addEventListener('click', function() {
         showStep('index');
         showError('phone-error', '');
+        requirePasswordSetup = false;
+        if (setupPasswordWrap) setupPasswordWrap.classList.add('hidden');
+        if (phoneInput) phoneInput.readOnly = false;
         var sendBtn = document.getElementById('btn-send-otp');
         if (sendBtn) { sendBtn.dataset.originalText = 'Send code'; sendBtn.textContent = 'Send code'; }
     });
+
+    if (passwordLoginEnabled && document.getElementById('btn-verify-password')) {
+        document.getElementById('btn-verify-password').addEventListener('click', function() {
+            var pw = document.getElementById('login_password');
+            var v = pw && pw.value ? pw.value : '';
+            if (!v) {
+                showError('password-error', 'Please enter your password.');
+                return;
+            }
+            showError('password-error', '');
+            setLoading(this, true);
+            var verifyPwUrl = '{{ route("student.account.verify-password") }}';
+            function doPw() {
+                return fetch(verifyPwUrl, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: jsonHeaders(csrf),
+                    body: JSON.stringify({ index_number: currentIndexNumber, password: v })
+                });
+            }
+            ensureFreshCsrf().then(function() { return doPw(); })
+            .then(function(r) {
+                if (r.status === 419) return ensureFreshCsrf().then(function() { return doPw(); });
+                return r;
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                setLoading(document.getElementById('btn-verify-password'), false);
+                if (!data.success) {
+                    showError('password-error', data.message || 'Sign-in failed.');
+                    return;
+                }
+                if (data.redirect) window.location.href = data.redirect;
+            })
+            .catch(function() {
+                setLoading(document.getElementById('btn-verify-password'), false);
+                showError('password-error', 'Network error. Please try again.');
+            });
+        });
+    }
+    if (passwordLoginEnabled && document.getElementById('btn-password-use-sms')) {
+        document.getElementById('btn-password-use-sms').addEventListener('click', function() {
+            if (!currentIndexNumber) return;
+            showError('password-error', '');
+            setLoading(this, true);
+            ensureFreshCsrf().then(function() {
+                return fetch('{{ route("student.account.request-otp-login") }}', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: jsonHeaders(csrf),
+                    body: JSON.stringify({ index_number: currentIndexNumber })
+                });
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                setLoading(document.getElementById('btn-password-use-sms'), false);
+                if (!data.success) {
+                    showError('password-error', data.message || 'Could not send SMS.');
+                    return;
+                }
+                document.getElementById('otp-step-message').textContent = data.message || 'Enter the code from your phone.';
+                if (data.has_name && nameInput) nameInput.closest('div').style.display = 'none';
+                showStep('otp');
+            })
+            .catch(function() {
+                setLoading(document.getElementById('btn-password-use-sms'), false);
+                showError('password-error', 'Network error.');
+            });
+        });
+    }
+    if (passwordLoginEnabled && document.getElementById('btn-back-password-to-index')) {
+        document.getElementById('btn-back-password-to-index').addEventListener('click', function() {
+            showStep('index');
+            showError('password-error', '');
+        });
+    }
 
     document.getElementById('btn-send-otp').addEventListener('click', function() {
         var phone = (phoneInput && phoneInput.value) ? phoneInput.value.trim() : '';
@@ -248,12 +381,29 @@
         showError('phone-error', '');
         setLoading(this, true);
         this.dataset.originalText = this.textContent;
+        var sendBody = { index_number: currentIndexNumber, phone: phone };
+        if (requirePasswordSetup) {
+            var sp = document.getElementById('setup_password');
+            var spc = document.getElementById('setup_password_confirmation');
+            sendBody.new_password = sp ? sp.value : '';
+            sendBody.new_password_confirmation = spc ? spc.value : '';
+            if (!sendBody.new_password || sendBody.new_password.length < 8) {
+                showError('phone-error', 'Choose a password of at least 8 characters.');
+                setLoading(document.getElementById('btn-send-otp'), false);
+                return;
+            }
+            if (sendBody.new_password !== sendBody.new_password_confirmation) {
+                showError('phone-error', 'Password confirmation does not match.');
+                setLoading(document.getElementById('btn-send-otp'), false);
+                return;
+            }
+        }
         ensureFreshCsrf().then(function() {
             return fetch('{{ route("student.account.send-otp") }}', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: jsonHeaders(csrf),
-                body: JSON.stringify({ index_number: currentIndexNumber, phone: phone })
+                body: JSON.stringify(sendBody)
             });
         })
         .then(function(r) { return r.json(); })

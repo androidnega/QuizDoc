@@ -76,6 +76,7 @@ class SettingsController extends Controller
             'otp_arkesel_key_set' => (bool) Setting::getValue(Setting::KEY_OTP_ARKESEL_API_KEY),
             'otp_arkesel_key_masked' => ($k = Setting::getValue(Setting::KEY_OTP_ARKESEL_API_KEY)) ? (strlen($k) > 8 ? substr($k, 0, 4) . '…' . substr($k, -4) : '••••') : null,
             'otp_arkesel_sender_id' => Setting::getValue(Setting::KEY_OTP_ARKESEL_SENDER_ID, 'QuizSnap'),
+            'student_password_login_enabled' => Setting::getValue(Setting::KEY_STUDENT_PASSWORD_LOGIN_ENABLED, '0') === '1',
             'proctoring_camera_required' => Setting::getValue(Setting::KEY_PROCTORING_CAMERA_REQUIRED, '1') === '1',
             'proctoring_face_monitor' => Setting::getValue(Setting::KEY_PROCTORING_FACE_MONITOR, '1') === '1',
             'proctoring_tab_switch' => Setting::getValue(Setting::KEY_PROCTORING_TAB_SWITCH, '1') === '1',
@@ -176,6 +177,7 @@ class SettingsController extends Controller
             'otp_arkesel_api_key' => 'nullable|string|max:512',
             'clear_otp_arkesel_key' => 'nullable|boolean',
             'otp_arkesel_sender_id' => 'nullable|string|max:11',
+            'student_password_login_enabled' => 'nullable|boolean',
             'proctoring_camera_required' => 'nullable|boolean',
             'proctoring_face_monitor' => 'nullable|boolean',
             'proctoring_tab_switch' => 'nullable|boolean',
@@ -291,6 +293,10 @@ class SettingsController extends Controller
             Setting::setValue(Setting::KEY_OTP_ARKESEL_API_KEY, trim($request->otp_arkesel_api_key));
         }
         Setting::setValue(Setting::KEY_OTP_ARKESEL_SENDER_ID, $request->filled('otp_arkesel_sender_id') ? substr(trim($request->otp_arkesel_sender_id), 0, 11) : 'QuizSnap');
+        if ($request->input('settings_tab') === 'otp') {
+            Setting::setValue(Setting::KEY_STUDENT_PASSWORD_LOGIN_ENABLED, $request->boolean('student_password_login_enabled') ? '1' : '0');
+            Cache::forget('setting:' . Setting::KEY_STUDENT_PASSWORD_LOGIN_ENABLED);
+        }
         if ($request->hasAny(['otp_arkesel_api_key', 'clear_otp_arkesel_key', 'otp_arkesel_sender_id'])) {
             Cache::forget('setting:' . Setting::KEY_OTP_ARKESEL_API_KEY);
             Cache::forget('setting:' . Setting::KEY_OTP_ARKESEL_SENDER_ID);

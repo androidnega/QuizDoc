@@ -10,6 +10,10 @@ class Student extends Model implements Authenticatable
 {
     protected $table = 'students';
 
+    protected $hidden = [
+        'password',
+    ];
+
     protected $fillable = ['index_number', 'index_number_hash', 'phone_contact', 'student_name', 'level'];
 
     /**
@@ -167,7 +171,20 @@ class Student extends Model implements Authenticatable
 
     public function getAuthPassword(): string
     {
-        return '';
+        return (string) ($this->attributes['password'] ?? '');
+    }
+
+    public function hasPassword(): bool
+    {
+        $p = $this->attributes['password'] ?? null;
+
+        return $p !== null && $p !== '';
+    }
+
+    /** When admin enables student password login (Settings → OTP). */
+    public static function isPasswordLoginEnabled(): bool
+    {
+        return Setting::getValue(Setting::KEY_STUDENT_PASSWORD_LOGIN_ENABLED, '0') === '1';
     }
 
     public function getAuthPasswordName(): string

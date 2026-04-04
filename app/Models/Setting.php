@@ -157,6 +157,9 @@ class Setting extends Model
     public const KEY_OTP_ARKESEL_API_KEY = 'otp_arkesel_api_key';
     public const KEY_OTP_ARKESEL_SENDER_ID = 'otp_arkesel_sender_id';
 
+    /** Student login: allow index + password (optional SMS OTP fallback). 1 = enabled. */
+    public const KEY_STUDENT_PASSWORD_LOGIN_ENABLED = 'student_password_login_enabled';
+
     /** Super Admin: live examiner view (watch students taking quiz). 1 = on, 0 = off. When off, Live proctor tab and route are unavailable. */
     public const KEY_LIVE_PROCTOR_ENABLED = 'live_proctor_enabled';
 

@@ -7,6 +7,12 @@ return [
     'otp_diagnose_key' => env('QUIZSNAP_OTP_DIAGNOSE_KEY', ''),
 
     /*
+    | Secret for public/quizsnap-run-migrations.php (GET ?key=...). Empty = script disabled.
+    | Use a long random value; never commit it. Example: QuizSnapMigrate2026Xp9k3m7
+    */
+    'migrate_key' => env('QUIZSNAP_MIGRATE_KEY', ''),
+
+    /*
     | Login token (OTP) validity in seconds. Tokens expire after this period (e.g. 14 days).
     */
     'otp_ttl_seconds' => (int) env('QUIZSNAP_OTP_TTL_SECONDS', 14 * 86400),

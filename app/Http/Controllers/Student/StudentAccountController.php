@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Student\Concerns\IssuesStudentLoginSmsOtp;
 use App\Models\ClassGroupStudent;
 use App\Models\Otp;
 use App\Models\Student;
-use App\Services\ArkeselService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,8 @@ use Illuminate\View\View;
 
 class StudentAccountController extends Controller
 {
+    use IssuesStudentLoginSmsOtp;
+
 
     /**
      * Student account login form (index → phone → OTP flow).
@@ -33,7 +36,9 @@ class StudentAccountController extends Controller
                 ->with('info', 'You are already logged in as staff. Please logout first to login as a student.');
         }
         
-        return view('student.account-login');
+        return view('student.account-login', [
+            'password_login_enabled' => Student::isPasswordLoginEnabled(),
+        ]);
     }
 
     /**
@@ -82,6 +87,32 @@ class StudentAccountController extends Controller
             ]
         );
 
+        if (Student::isPasswordLoginEnabled()) {
+            if ($student->hasPassword()) {
+                return response()->json([
+                    'success' => true,
+                    'step' => 'password',
+                    'index_number' => $student->index_number,
+                    'message' => 'Enter the password you saved for your account.',
+                    'password_login_enabled' => true,
+                ]);
+            }
+
+            $payload = [
+                'success' => true,
+                'step' => 'phone',
+                'index_number' => $student->index_number,
+                'require_password_setup' => true,
+                'password_login_enabled' => true,
+                'message' => 'Enter your phone number and choose a password you will remember. We will send one SMS code to confirm your number; after that you can sign in with your password without SMS.',
+            ];
+            if ($student->hasPhone()) {
+                $payload['prefill_phone'] = $student->phone_contact;
+            }
+
+            return response()->json($payload);
+        }
+
         if (!$student->hasPhone()) {
             return response()->json([
                 'success' => true,
@@ -94,59 +125,7 @@ class StudentAccountController extends Controller
         // Coordinator (who has the student's class groups) or examiner with SMS balance (for deducting); if none, we still send OTP so students can log in
         $smsOwner = $this->smsOwnerForIndex($cgStudent->index_number);
 
-        // STEP 1 — If a code was just sent, avoid duplicate SMS (code itself does not auto-expire when expires_at is null)
-        $lastOtp = Otp::latestStudentLoginForIndex($indexHash);
-
-        if ($lastOtp && ! $lastOtp->isExpired()
-            && $lastOtp->created_at
-            && $lastOtp->created_at->gt(now()->subMinutes(Otp::STUDENT_LOGIN_SMS_COOLDOWN_MINUTES))) {
-            $daysRemaining = $lastOtp->daysRemaining();
-
-            return response()->json([
-                'success' => true,
-                'step' => 'otp',
-                'index_number' => $student->index_number,
-                'message' => 'A code was already sent recently. Use the 6-digit code from your last SMS, or wait a few minutes and use Resend code.',
-                'has_name' => ! empty($student->student_name),
-                'can_resend' => true,
-                'days_remaining' => $daysRemaining,
-                'otp_never_expires' => $daysRemaining === null,
-            ]);
-        }
-
-        // CASE B — Issue a new login code (replace any previous SMS codes for this index)
-        $code = (string) random_int(100000, 999999);
-        Otp::deleteStudentLoginOtpsForIndex($indexHash);
-        Otp::create([
-            'index_number_hash' => $indexHash,
-            'type' => Otp::TYPE_STUDENT_LOGIN,
-            'code' => $code,
-            'expires_at' => null,
-        ]);
-        $message = 'Your QuizSnap login code is: ' . $code . '. Do not share. This code stays valid until you receive a new one.';
-        $result = ArkeselService::sendSms($student->phone_contact, $message);
-        if (!$result['success']) {
-            $msg = $result['message'] ?? 'We couldn\'t send the code.';
-            if (strpos($msg, 'try again') === false && strpos($msg, 'Try again') === false) {
-                $msg .= ' Please try again.';
-            }
-            return response()->json(['success' => false, 'message' => $msg], 422);
-        }
-        if ($smsOwner) {
-            $smsOwner->increment('sms_used');
-        }
-        Cache::put('otp_resend:'.$indexHash, 1, now()->addSeconds(Otp::RESEND_COOLDOWN_SECONDS));
-
-        return response()->json([
-            'success' => true,
-            'step' => 'otp',
-            'index_number' => $student->index_number,
-            'message' => 'A code has been sent to your registered number. It stays valid until you request a new code.',
-            'has_name' => ! empty($student->student_name),
-            'can_resend' => true,
-            'days_remaining' => null,
-            'otp_never_expires' => true,
-        ]);
+        return $this->jsonAfterIssuingOrReusingSmsOtp($student, $indexHash, $smsOwner, null);
     }
 
     /**
@@ -157,6 +136,8 @@ class StudentAccountController extends Controller
         $request->validate([
             'index_number' => 'required|string|max:100',
             'phone' => 'nullable|string|max:20',
+            'new_password' => 'nullable|string|max:128',
+            'new_password_confirmation' => 'nullable|string|max:128',
         ]);
         $inputIndex = trim((string) $request->index_number);
 
@@ -164,14 +145,12 @@ class StudentAccountController extends Controller
         if (!$student) {
             return response()->json(['success' => false, 'message' => 'Invalid session. Start again.'], 422);
         }
-        $indexNumber = $student->index_number;
         $inputPhone = trim((string) ($request->phone ?? ''));
         $phone = Student::normalizePhoneForStorage($inputPhone);
 
         if (!$phone) {
             $storedNormalized = $student->phone_contact ? Student::normalizePhoneForStorage($student->phone_contact) : '';
             if ($storedNormalized) {
-                // Registered students can request a new OTP without re-entering phone.
                 $phone = $storedNormalized;
             }
         }
@@ -182,7 +161,6 @@ class StudentAccountController extends Controller
             ], 422);
         }
 
-        // Phone must not be used by another student
         $otherStudent = Student::where('phone_contact', $phone)->where('id', '!=', $student->id)->first();
         if ($otherStudent) {
             return response()->json([
@@ -191,9 +169,18 @@ class StudentAccountController extends Controller
             ], 422);
         }
 
-        // Examiner with SMS balance (for deducting); if none, we still send OTP so students can log in
-        $smsOwner = $this->smsOwnerForIndex($student->index_number);
+        if (Student::isPasswordLoginEnabled() && ! $student->hasPassword()) {
+            $pwKey = $this->pendingPasswordCacheKey($student->index_number_hash);
+            if (! Cache::has($pwKey)) {
+                $request->validate([
+                    'new_password' => 'required|string|min:8|max:128',
+                    'new_password_confirmation' => 'required|same:new_password',
+                ]);
+                Cache::put($pwKey, Hash::make($request->new_password), now()->addMinutes(20));
+            }
+        }
 
+        $smsOwner = $this->smsOwnerForIndex($student->index_number);
         $indexHash = $student->index_number_hash;
 
         $resendKey = 'otp_resend:'.$indexHash;
@@ -205,41 +192,7 @@ class StudentAccountController extends Controller
             ], 422);
         }
 
-        // Generate new OTP, save to DB, send SMS (replaces previous SMS codes for this index)
-        $code = (string) random_int(100000, 999999);
-        Otp::deleteStudentLoginOtpsForIndex($indexHash);
-        Otp::create([
-            'index_number_hash' => $indexHash,
-            'type' => Otp::TYPE_STUDENT_LOGIN,
-            'code' => $code,
-            'phone' => $phone,
-            'expires_at' => null,
-        ]);
-
-        $message = 'Your QuizSnap login code is: ' . $code . '. Do not share. This code stays valid until you receive a new one.';
-        $result = ArkeselService::sendSms($phone, $message);
-        if (!$result['success']) {
-            $msg = $result['message'] ?? 'We couldn\'t send the code.';
-            if (strpos($msg, 'try again') === false && strpos($msg, 'Try again') === false) {
-                $msg .= ' Please try again.';
-            }
-            return response()->json(['success' => false, 'message' => $msg], 422);
-        }
-        if ($smsOwner) {
-            $smsOwner->increment('sms_used');
-        }
-        Cache::put($resendKey, 1, now()->addSeconds(Otp::RESEND_COOLDOWN_SECONDS));
-
-        return response()->json([
-            'success' => true,
-            'step' => 'otp',
-            'index_number' => $student->index_number,
-            'message' => 'A code has been sent to your number. It stays valid until you request a new code.',
-            'has_name' => ! empty($student->student_name),
-            'can_resend' => true,
-            'days_remaining' => null,
-            'otp_never_expires' => true,
-        ]);
+        return $this->jsonAfterIssuingOrReusingSmsOtp($student, $indexHash, $smsOwner, $phone);
     }
 
     /** User whose SMS balance is deducted for this index: coordinator (who has the student's class groups) first, then examiner (class group owner or lecturers). */
@@ -340,7 +293,8 @@ class StudentAccountController extends Controller
         if ($fallbackOtp) {
             $fallbackOtp->used_at = now();
             $fallbackOtp->save();
-            $this->completeStudentLogin($student, null, $name);
+            Cache::forget($this->pendingPasswordCacheKey($indexHash));
+            $this->completeStudentLogin($student, null, $name, false);
 
             return response()->json([
                 'success' => true,
@@ -367,15 +321,173 @@ class StudentAccountController extends Controller
                 ], 422);
             }
         }
-        $this->completeStudentLogin($student, $phone ?? null, $name);
+        $this->completeStudentLogin($student, $phone ?? null, $name, true);
         return response()->json([
             'success' => true,
             'redirect' => $this->studentLoginRedirect($student),
         ]);
     }
 
-    private function completeStudentLogin(Student $student, ?string $phone, ?string $name): void
+    /**
+     * Sign in with index + password when the feature is enabled and the student has set a password.
+     */
+    public function verifyPassword(Request $request): JsonResponse
     {
+        if (session('student_id')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are already logged in. Please logout first to login with a different account.',
+            ], 422);
+        }
+        if (session('admin_authenticated', false)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are already logged in as staff. Please logout first to login as a student.',
+            ], 422);
+        }
+        if (! Student::isPasswordLoginEnabled()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Password login is not enabled.',
+            ], 422);
+        }
+
+        $request->validate([
+            'index_number' => 'required|string|max:100',
+            'password' => 'required|string|max:128',
+        ]);
+        $inputIndex = trim((string) $request->index_number);
+        $indexHash = Student::hashIndexNumber($inputIndex);
+        $student = Student::where('index_number_hash', $indexHash)->first();
+        if (! $student || ! $student->hasPassword()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid index or password.',
+            ], 422);
+        }
+        if (! Hash::check($request->password, $student->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid index or password.',
+            ], 422);
+        }
+
+        $this->completeStudentLogin($student, null, null, false);
+
+        return response()->json([
+            'success' => true,
+            'redirect' => $this->studentLoginRedirect($student),
+        ]);
+    }
+
+    /**
+     * Send SMS OTP when the student chose "Use SMS code instead" from the password step.
+     */
+    public function requestOtpLogin(Request $request): JsonResponse
+    {
+        if (session('student_id')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are already logged in.',
+            ], 422);
+        }
+        if (! Student::isPasswordLoginEnabled()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Password login is not enabled.',
+            ], 422);
+        }
+
+        $request->validate(['index_number' => 'required|string|max:100']);
+        $inputIndex = trim((string) $request->index_number);
+        $inputNormalized = strtolower($inputIndex);
+        $indexHash = Student::hashIndexNumber($inputIndex);
+
+        $quizId = session('quiz_id');
+        if ($quizId) {
+            $sessionIndex = session('index_number');
+            if (! $sessionIndex || strtoupper(trim((string) $sessionIndex)) !== strtoupper(trim($inputIndex))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Session expired. Start from your quiz link again.',
+                ], 422);
+            }
+        } else {
+            $cgStudent = ClassGroupStudent::whereRaw('LOWER(TRIM(index_number)) = ?', [$inputNormalized])->first();
+            if (! $cgStudent) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Index number not found.',
+                ], 422);
+            }
+        }
+
+        $student = Student::where('index_number_hash', $indexHash)->first();
+        if (! $student || ! $student->hasPhone()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Add a phone number first using the setup steps.',
+            ], 422);
+        }
+
+        $smsOwner = $quizId
+            ? $this->smsOwnerForQuiz(\App\Models\Quiz::with('classGroup')->find((int) $quizId))
+            : $this->smsOwnerForIndex($student->index_number);
+
+        return $this->jsonAfterIssuingOrReusingSmsOtp($student, $indexHash, $smsOwner, null);
+    }
+
+    private function smsOwnerForQuiz(?\App\Models\Quiz $quiz): ?\App\Models\User
+    {
+        if (! $quiz) {
+            return null;
+        }
+        $quiz->load(['classGroup.examiner', 'examiner']);
+        $classGroup = $quiz->classGroup;
+        if ($classGroup) {
+            $coordinator = \App\Models\User::coordinatorWithSmsBalanceForClassGroup($classGroup);
+            if ($coordinator) {
+                return $coordinator;
+            }
+        }
+        $candidates = [];
+        if ($quiz->classGroup?->examiner) {
+            $candidates[] = $quiz->classGroup->examiner;
+        }
+        if ($quiz->examiner && ! $quiz->classGroup?->examiner?->is($quiz->examiner)) {
+            $candidates[] = $quiz->examiner;
+        }
+        foreach ($candidates as $examiner) {
+            if ($examiner && $examiner->isExaminer() && $examiner->sms_remaining > 0) {
+                return $examiner;
+            }
+        }
+        $classGroupId = $quiz->class_group_id;
+        if ($classGroupId && \Illuminate\Support\Facades\Schema::hasColumn('class_group_course', 'examiner_id')) {
+            $examinerIds = \Illuminate\Support\Facades\DB::table('class_group_course')
+                ->where('class_group_id', $classGroupId)
+                ->whereNotNull('examiner_id')
+                ->distinct()
+                ->pluck('examiner_id');
+            foreach ($examinerIds as $eid) {
+                $examiner = \App\Models\User::find($eid);
+                if ($examiner && $examiner->isExaminer() && $examiner->sms_remaining > 0) {
+                    return $examiner;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function completeStudentLogin(Student $student, ?string $phone, ?string $name, bool $applyPendingPassword = true): void
+    {
+        if ($applyPendingPassword) {
+            $pending = Cache::pull($this->pendingPasswordCacheKey($student->index_number_hash));
+            if ($pending) {
+                $student->password = $pending;
+            }
+        }
         if ($phone) {
             $student->phone_contact = $phone;
         }
