@@ -5,6 +5,7 @@
 /public/hot
 /public/storage
 /storage/*.key
+/storage/app/quizsnap-migrate.key
 .env
 .env.example
 .env.backup

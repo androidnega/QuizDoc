@@ -3,19 +3,22 @@
 /**
  * Run Laravel migrations via HTTP (for hosts without SSH). Protect with a strong secret.
  *
- * 1. In .env set: QUIZSNAP_MIGRATE_KEY=your_long_secret
- *    Example value (generate your own): QuizSnapMigrate2026Xp9k3m7
- * 2. If you use config:cache: php artisan config:clear after changing .env
- * 3. Visit (GET):
- *    https://yoursite.com/quizsnap-run-migrations.php?key=YOUR_SECRET
- * 4. Optional dry run (prints SQL, does not migrate): add &pretend=1
- * 5. Remove this file from public/ when you no longer need remote migrations, or keep the key private.
+ * Key resolution (first match wins):
+ * 1) config quizsnap.migrate_key (QUIZSNAP_MIGRATE_KEY in .env + config clear/cache)
+ * 2) getenv('QUIZSNAP_MIGRATE_KEY')
+ * 3) Line in base_path('.env') — flexible spacing: QUIZSNAP_MIGRATE_KEY=value
+ * 4) File base_path('storage/app/quizsnap-migrate.key') — single line, same secret as ?key=
+ *
+ * If .env is not readable by the web user, use (4): upload that file via FTP/cPanel.
  */
 
 declare(strict_types=1);
 
+header('Content-Type: text/plain; charset=utf-8');
+header('X-Robots-Tag: noindex, nofollow');
+
 /**
- * Read a single key from .env when config is cached (config() / env() often empty for new vars).
+ * Read KEY=value from .env (handles quotes, comments, optional spaces around =).
  */
 function quizsnap_env_file_value(string $envPath, string $key): string
 {
@@ -23,18 +26,23 @@ function quizsnap_env_file_value(string $envPath, string $key): string
         return '';
     }
     $raw = file_get_contents($envPath);
-    if ($raw === false) {
+    if ($raw === false || $raw === '') {
         return '';
     }
-    foreach (explode("\n", $raw) as $line) {
-        $line = trim($line);
-        if ($line === '' || str_starts_with($line, '#')) {
+    if (str_starts_with($raw, "\xEF\xBB\xBF")) {
+        $raw = substr($raw, 3);
+    }
+    $pattern = '/^\s*'.preg_quote($key, '/').'\s*=\s*(.*)$/';
+    foreach (explode("\n", str_replace("\r\n", "\n", $raw)) as $line) {
+        $line = rtrim($line, "\r");
+        $t = trim($line);
+        if ($t === '' || str_starts_with($t, '#')) {
             continue;
         }
-        if (! str_starts_with($line, $key.'=')) {
+        if (! preg_match($pattern, $line, $m)) {
             continue;
         }
-        $v = trim(substr($line, strlen($key) + 1));
+        $v = trim($m[1]);
         if ($v !== '' && $v[0] === '"' && str_ends_with($v, '"')) {
             return stripcslashes(substr($v, 1, -1));
         }
@@ -42,39 +50,70 @@ function quizsnap_env_file_value(string $envPath, string $key): string
             return substr($v, 1, -1);
         }
 
-        return preg_replace('/\s+#.*$/', '', $v) ?? $v;
+        return trim((string) (preg_replace('/\s+#.*$/', '', $v) ?? $v));
     }
 
     return '';
 }
 
-header('Content-Type: text/plain; charset=utf-8');
-header('X-Robots-Tag: noindex, nofollow');
+function quizsnap_read_key_file(string $path): string
+{
+    if (! is_readable($path)) {
+        return '';
+    }
+    $raw = file_get_contents($path);
+    if ($raw === false) {
+        return '';
+    }
+    $line = strtok(str_replace("\r\n", "\n", $raw), "\n");
+
+    return $line !== false ? trim($line) : '';
+}
 
 require __DIR__.'/../vendor/autoload.php';
 $app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
+$base = $app->basePath();
+$envPath = $base.'/.env';
+$keyFilePath = $base.'/storage/app/quizsnap-migrate.key';
+
 $secret = (string) config('quizsnap.migrate_key', '');
 if ($secret === '') {
     $secret = (string) (getenv('QUIZSNAP_MIGRATE_KEY') ?: '');
 }
 if ($secret === '') {
-    $secret = quizsnap_env_file_value(dirname(__DIR__).'/.env', 'QUIZSNAP_MIGRATE_KEY');
+    $secret = quizsnap_env_file_value($envPath, 'QUIZSNAP_MIGRATE_KEY');
 }
 if ($secret === '') {
+    $secret = quizsnap_read_key_file($keyFilePath);
+}
+
+if ($secret === '') {
+    $envExists = file_exists($envPath);
+    $envReadable = $envExists && is_readable($envPath);
+    $keyFileExists = file_exists($keyFilePath);
+    $keyFileReadable = $keyFileExists && is_readable($keyFilePath);
+
     exit(
-        "QUIZSNAP_MIGRATE_KEY is not set.\n\n"
-        ."On the server, edit the .env file in the app root (same folder as artisan) and add one line, for example:\n"
-        ."QUIZSNAP_MIGRATE_KEY=QuizSnapMigrate2026Xp9k3m7\n\n"
-        ."No spaces around =. Then open again:\n"
-        ."https://yoursite.com/quizsnap-run-migrations.php?key=YOUR_SAME_VALUE\n\n"
-        ."If you use php artisan config:cache, run config:clear after changing .env (optional; this script also reads .env directly).\n"
+        "QUIZSNAP_MIGRATE_KEY is empty — the server never found a secret.\n\n"
+        ."Laravel base path (where artisan lives):\n  {$base}\n\n"
+        .".env expected at:\n  {$envPath}\n"
+        .'  exists: '.($envExists ? 'yes' : 'no').', readable by PHP: '.($envReadable ? 'yes' : 'no')."\n\n"
+        ."Alternative — one-line secret file (create via FTP if .env is not readable):\n  {$keyFilePath}\n"
+        .'  exists: '.($keyFileExists ? 'yes' : 'no').', readable: '.($keyFileReadable ? 'yes' : 'no')."\n\n"
+        ."Fix A — in .env add (no spaces around =):\n"
+        ."  QUIZSNAP_MIGRATE_KEY=YourSecretHere\n\n"
+        ."Fix B — create the file above with only your secret on the first line (same value as ?key= in the URL).\n\n"
+        ."Then run:\n  https://yoursite.com/quizsnap-run-migrations.php?key=YourSecretHere\n\n"
+        ."After it works, delete quizsnap-run-migrations.php or remove the key from the server.\n"
     );
 }
 
-if (($_GET['key'] ?? '') !== $secret) {
+$secret = trim($secret);
+$given = trim((string) ($_GET['key'] ?? ''));
+if ($given === '' || ! hash_equals($secret, $given)) {
     header('HTTP/1.1 403 Forbidden');
     exit("Invalid or missing key.\n");
 }
