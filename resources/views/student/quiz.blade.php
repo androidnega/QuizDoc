@@ -360,6 +360,7 @@ window.QuizSnapQuiz = {
     proctoringBlockRightClick: {{ ($proctoringBlockRightClick ?? true) ? 'true' : 'false' }},
     proctoringBlockCopyPaste: {{ ($proctoringBlockCopyPaste ?? true) ? 'true' : 'false' }},
     liveProctorEnabled: {{ ($liveProctorEnabled ?? true) ? 'true' : 'false' }},
+    questionIds: @json($questions->pluck('id')->values()->all()),
     studentIndex: @json($session->student_index ?? null),
     studentName: @json($matchedStudentName ?? null),
     studentNameLinked: {{ ($studentNameLinked ?? false) ? 'true' : 'false' }}
@@ -416,12 +417,10 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     var totalPages = window.QuizSnapQuiz.totalPages || 1;
+    var perPage = parseInt(window.QuizSnapQuiz.perPage, 10) || 10;
+    var questionIds = window.QuizSnapQuiz.questionIds || [];
     var storageKey = 'quizsnap_quiz_page_{{ $session->id ?? 0 }}';
     var currentPage = 1;
-    try {
-        var saved = sessionStorage.getItem(storageKey);
-        if (saved) { currentPage = Math.max(1, Math.min(totalPages, parseInt(saved, 10))); }
-    } catch (e) {}
 
     function isQuestionAnswered(questionId) {
         var form = document.getElementById('quiz-form');
@@ -433,6 +432,51 @@ document.addEventListener('DOMContentLoaded', function() {
         if (ta && ta.value && ta.value.trim() !== '') return true;
         return false;
     }
+
+    /** First index (0-based) of an unanswered question, or -1 if all answered. */
+    function getFirstUnansweredIndex() {
+        for (var i = 0; i < questionIds.length; i++) {
+            if (!isQuestionAnswered(questionIds[i])) return i;
+        }
+        return -1;
+    }
+
+    /** Highest page the student may open (sequential order; no skipping ahead). */
+    function getMaxAllowedPage() {
+        var idx = getFirstUnansweredIndex();
+        if (idx < 0) return totalPages;
+        return Math.floor(idx / perPage) + 1;
+    }
+
+    function allQuestionsOnPageAnswered(pageNum) {
+        var start = (pageNum - 1) * perPage;
+        var end = Math.min(start + perPage, questionIds.length);
+        for (var i = start; i < end; i++) {
+            if (!isQuestionAnswered(questionIds[i])) return false;
+        }
+        return true;
+    }
+
+    function updateSideNavLockState() {
+        var maxP = getMaxAllowedPage();
+        document.querySelectorAll('.quiz-side-num').forEach(function(a) {
+            var p = parseInt(a.getAttribute('data-page'), 10);
+            var locked = p > maxP;
+            a.classList.toggle('quiz-side-nav-locked', locked);
+            a.setAttribute('aria-disabled', locked ? 'true' : 'false');
+            a.style.pointerEvents = locked ? 'none' : '';
+            a.style.opacity = locked ? '0.45' : '';
+        });
+    }
+
+    try {
+        var saved = sessionStorage.getItem(storageKey);
+        if (saved) {
+            var want = parseInt(saved, 10);
+            var maxP = getMaxAllowedPage();
+            currentPage = Math.max(1, Math.min(want, maxP));
+        }
+    } catch (e) {}
 
     function updateAnsweredSummary() {
         var total = parseInt(document.getElementById('quiz-answered-summary')?.getAttribute('data-total') || '0', 10);
@@ -465,10 +509,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 a.removeAttribute('aria-label');
             }
         });
+        updateSideNavLockState();
+        var nextBottomEl = document.getElementById('quiz-next-bottom');
+        if (nextBottomEl && totalPages > 1) {
+            nextBottomEl.disabled = currentPage >= totalPages || !allQuestionsOnPageAnswered(currentPage);
+        }
     }
 
     function showPage(page) {
-        currentPage = Math.max(1, Math.min(totalPages, page));
+        var maxP = getMaxAllowedPage();
+        currentPage = Math.max(1, Math.min(totalPages, Math.min(page, maxP)));
         try { sessionStorage.setItem(storageKey, String(currentPage)); } catch (e) {}
         var questions = document.querySelectorAll('.quiz-page-question');
         questions.forEach(function(el) {
@@ -486,7 +536,9 @@ document.addEventListener('DOMContentLoaded', function() {
         var prevBottom = document.getElementById('quiz-prev-bottom');
         var nextBottom = document.getElementById('quiz-next-bottom');
         if (prevBottom) prevBottom.disabled = currentPage <= 1;
-        if (nextBottom) nextBottom.disabled = currentPage >= totalPages;
+        if (nextBottom) {
+            nextBottom.disabled = currentPage >= totalPages || !allQuestionsOnPageAnswered(currentPage);
+        }
 
         document.querySelectorAll('.quiz-side-num').forEach(function(a) {
             var p = parseInt(a.getAttribute('data-page'), 10);
@@ -494,6 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
             a.classList.toggle('bg-primary-50', p === currentPage);
             a.classList.toggle('text-primary-700', p === currentPage);
         });
+        updateSideNavLockState();
     }
 
     var form = document.getElementById('quiz-form');
@@ -506,11 +559,21 @@ document.addEventListener('DOMContentLoaded', function() {
         var prevBtn = document.getElementById('quiz-prev-bottom');
         var nextBtn = document.getElementById('quiz-next-bottom');
         if (prevBtn) prevBtn.addEventListener('click', function() { showPage(currentPage - 1); });
-        if (nextBtn) nextBtn.addEventListener('click', function() { showPage(currentPage + 1); });
+        if (nextBtn) nextBtn.addEventListener('click', function() {
+            if (currentPage < totalPages && !allQuestionsOnPageAnswered(currentPage)) {
+                return;
+            }
+            showPage(currentPage + 1);
+        });
         document.querySelectorAll('.quiz-side-num').forEach(function(a) {
             a.addEventListener('click', function(e) {
                 var p = parseInt(a.getAttribute('data-page'), 10);
-                if (p) { e.preventDefault(); showPage(p); }
+                if (!p) return;
+                e.preventDefault();
+                if (p > getMaxAllowedPage()) {
+                    return;
+                }
+                showPage(p);
             });
         });
     }

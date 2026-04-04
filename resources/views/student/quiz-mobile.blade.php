@@ -294,7 +294,6 @@ document.addEventListener('DOMContentLoaded', function() {
     var questionIds = @json($questions->pluck('id')->values()->all());
     var currentPage = 1;
     var storageKey = 'quizsnap_quiz_mobile_page_' + sessionId;
-    try { var s = sessionStorage.getItem(storageKey); if (s) currentPage = Math.max(1, Math.min(totalPages, parseInt(s, 10))); } catch (e) {}
 
     var form = document.getElementById('quiz-mobile-form');
     var pages = form ? form.querySelectorAll('.quiz-mobile-page[data-page]') : [];
@@ -462,6 +461,23 @@ document.addEventListener('DOMContentLoaded', function() {
         return ta && ta.value && String(ta.value).trim() !== '';
     }
 
+    /** 1-based page of first unanswered question, or totalPages+1 when all answered (submit step). */
+    function getFirstUnansweredPage() {
+        for (var i = 0; i < questionIds.length; i++) {
+            if (!isAnswered(questionIds[i])) return i + 1;
+        }
+        return totalPages + 1;
+    }
+
+    function updateMobileNextButton() {
+        if (!nextBtn) return;
+        if (currentPage > totalPages) {
+            nextBtn.disabled = true;
+            return;
+        }
+        nextBtn.disabled = !isAnswered(questionIds[currentPage - 1]);
+    }
+
     function updateAnsweredSummary() {
         var total = questionIds.length;
         var seen = {};
@@ -474,10 +490,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         var el = document.getElementById('quiz-mobile-answered-summary');
         if (el) el.textContent = answered + ' of ' + total + ' questions answered.';
+        updateMobileNextButton();
     }
 
     function showPage(page) {
-        currentPage = Math.max(1, Math.min(totalPages + 1, page));
+        var maxAllow = getFirstUnansweredPage();
+        var target = Math.max(1, Math.min(totalPages + 1, page));
+        target = Math.min(target, maxAllow);
+        currentPage = target;
         try { sessionStorage.setItem(storageKey, String(currentPage)); } catch (e) {}
         saveAnswersToStorage();
         var isSubmit = currentPage > totalPages;
@@ -495,11 +515,24 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nextBtn) nextBtn.disabled = isSubmit;
         if (completeBtn) completeBtn.style.display = isSubmit ? 'block' : 'none';
         if (isSubmit) updateAnsweredSummary();
+        updateMobileNextButton();
     }
+
+    try {
+        var s = sessionStorage.getItem(storageKey);
+        if (s) {
+            var want = Math.max(1, Math.min(totalPages + 1, parseInt(s, 10)));
+            var maxAllow = getFirstUnansweredPage();
+            currentPage = Math.min(want, maxAllow);
+        }
+    } catch (e) {}
 
     if (prevBtn) prevBtn.addEventListener('click', function() { if (currentPage > 1) showPage(currentPage - 1); });
     if (nextBtn) nextBtn.addEventListener('click', function() {
-        if (currentPage <= totalPages) showPage(currentPage + 1);
+        if (currentPage <= totalPages) {
+            if (!isAnswered(questionIds[currentPage - 1])) return;
+        }
+        showPage(currentPage + 1);
     });
     if (completeBtn) completeBtn.addEventListener('click', function() {
         submitAllAnswersThenRedirect();
