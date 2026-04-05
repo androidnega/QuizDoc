@@ -1,132 +1,16 @@
 /**
  * ProctoringCapture: WebRTC face capture, then POST to backend.
- * Fullscreen required before camera step; gate and camera are on the same page.
- * Uses a single root element as fullscreen target for stable behavior on Safari/macOS.
+ * On success, redirects to the next quiz step (no browser full-screen gate).
  */
 (function () {
     const root = document.getElementById('proctoring-capture-root');
-    const fullscreenGate = document.getElementById('fullscreen-gate');
     const captureMain = document.getElementById('proctoring-capture-main');
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
-    const startQuizBlock = document.getElementById('start-quiz-block');
-    const startQuizBtn = document.getElementById('start-quiz-btn');
-    const fullscreenPromptBlock = document.getElementById('fullscreen-prompt-block');
     const faceVerifiedPopup = document.getElementById('face-verified-popup');
-    const fullscreenHintText = fullscreenGate ? fullscreenGate.querySelector('[data-fullscreen-hint]') : null;
 
-    var phase = 'face_check';
-    var pendingRedirectUrl = null;
-
-    function isFullscreen() {
-        const el = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
-        if (!el) return false;
-        return el === root || el === document.documentElement;
-    }
-
-    function applyFullscreenState() {
-        const fullscreen = isFullscreen();
-        if (root) {
-            if (phase === 'fullscreen_before_start') {
-                root.classList.add('bg-gray-900');
-                root.classList.remove('bg-gray-50');
-            } else {
-                root.classList.add('bg-gray-50');
-                root.classList.remove('bg-gray-900');
-            }
+    function initLayout() {
+        if (captureMain) {
+            captureMain.classList.remove('hidden');
         }
-        if (phase === 'face_check') {
-            if (fullscreenGate) fullscreenGate.classList.add('hidden');
-            if (captureMain) captureMain.classList.remove('hidden');
-            if (startQuizBlock) startQuizBlock.classList.add('hidden');
-            return;
-        }
-        if (phase === 'fullscreen_before_start') {
-            if (captureMain) captureMain.classList.add('hidden');
-            if (fullscreenGate) {
-                fullscreenGate.classList.remove('hidden');
-                if (!fullscreenGate.classList.contains('flex')) fullscreenGate.classList.add('flex');
-            }
-            if (fullscreen) {
-                if (fullscreenPromptBlock) fullscreenPromptBlock.classList.add('hidden');
-                if (startQuizBlock) startQuizBlock.classList.remove('hidden');
-            } else {
-                if (fullscreenPromptBlock) fullscreenPromptBlock.classList.remove('hidden');
-                if (startQuizBlock) startQuizBlock.classList.add('hidden');
-            }
-        }
-    }
-
-    function showFullscreenBeforeStart(redirectUrl) {
-        phase = 'fullscreen_before_start';
-        pendingRedirectUrl = redirectUrl || null;
-        if (faceVerifiedPopup) {
-            faceVerifiedPopup.classList.add('hidden');
-            faceVerifiedPopup.classList.remove('flex');
-        }
-        if (captureMain) captureMain.classList.add('hidden');
-        if (fullscreenGate) {
-            fullscreenGate.classList.remove('hidden');
-            fullscreenGate.classList.add('flex');
-        }
-        applyFullscreenState();
-    }
-
-    function requestFullscreen() {
-        const el = root || document.documentElement;
-        function onEnter() {
-            applyFullscreenState();
-        }
-        if (el.requestFullscreen) {
-            el.requestFullscreen().then(onEnter).catch(function (err) { console.warn('Fullscreen request failed:', err); });
-        } else if (el.webkitRequestFullscreen) {
-            el.webkitRequestFullscreen();
-            setTimeout(onEnter, 100);
-        } else if (el.mozRequestFullScreen) {
-            el.mozRequestFullScreen();
-            setTimeout(onEnter, 100);
-        } else if (el.msRequestFullscreen) {
-            el.msRequestFullscreen();
-            setTimeout(onEnter, 100);
-        } else {
-            onEnter();
-        }
-    }
-
-    // Set OS-specific fullscreen shortcut hint text (Windows vs macOS vs other)
-    (function setFullscreenHint() {
-        if (!fullscreenHintText) return;
-        var ua = navigator.userAgent || '';
-        var isMac = /Macintosh|Mac OS X/i.test(ua);
-        var isWindows = /Windows NT/i.test(ua);
-        var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|Tablet/i.test(ua);
-        if (isMobile) {
-            fullscreenHintText.textContent = 'On mobile, use your browser controls to enter full screen. Keep the quiz page visible until you submit.';
-        } else if (isMac) {
-            fullscreenHintText.textContent = 'On Mac, you can also click the green window button or press Control + Command + F to toggle full screen.';
-        } else if (isWindows) {
-            fullscreenHintText.textContent = 'On Windows, you can also press F11 to toggle full screen in most browsers.';
-        } else {
-            fullscreenHintText.textContent = 'Use your browser’s full screen control (for example F11 or a maximize/full screen button) to enter full screen.';
-        }
-    })();
-
-    if (fullscreenBtn) {
-        fullscreenBtn.addEventListener('click', function () {
-            requestFullscreen();
-        });
-    }
-    if (startQuizBtn) {
-        startQuizBtn.addEventListener('click', function () {
-            if (pendingRedirectUrl) window.location.href = pendingRedirectUrl;
-        });
-    }
-    document.addEventListener('fullscreenchange', applyFullscreenState);
-    document.addEventListener('webkitfullscreenchange', applyFullscreenState);
-
-    function initFullscreenState() {
-        phase = 'face_check';
-        if (fullscreenGate) fullscreenGate.classList.add('hidden');
-        if (captureMain) captureMain.classList.remove('hidden');
         if (root) {
             root.classList.add('bg-gray-50');
             root.classList.remove('bg-gray-900');
@@ -134,12 +18,11 @@
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
-            setTimeout(initFullscreenState, 0);
+            setTimeout(initLayout, 0);
         });
     } else {
-        setTimeout(initFullscreenState, 0);
+        setTimeout(initLayout, 0);
     }
-    window.QuizSnapProctoringShowFullscreenBeforeStart = showFullscreenBeforeStart;
 
     const video = document.getElementById('camera-video');
     const canvas = document.getElementById('capture-canvas');
@@ -816,11 +699,7 @@
                     if (data.success && data.redirect) {
                         setFaceStatus('Success!', 'ok');
                         stopCamera();
-                        if (window.QuizSnapProctoringShowFullscreenBeforeStart) {
-                            window.QuizSnapProctoringShowFullscreenBeforeStart(data.redirect);
-                        } else {
-                            window.location.href = data.redirect;
-                        }
+                        window.location.href = data.redirect;
                     } else {
                         showError(data.message || 'Failed to start quiz. Please try again.');
                         captureBtn.disabled = false;

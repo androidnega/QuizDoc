@@ -4,33 +4,8 @@
 @section('body_class', 'bg-offwhite')
 
 @section('content')
-{{-- Single container: face verification first (no fullscreen), then fullscreen gate before Start. --}}
+{{-- Face capture only; after verify the app redirects to the next quiz step (no full-screen gate). --}}
 <div id="proctoring-capture-root" class="min-h-screen w-full flex flex-col bg-gray-50" style="min-height: 100vh;">
-    {{-- Fullscreen gate: shown only AFTER face verification; user must enter full screen before clicking Start --}}
-    <div id="fullscreen-gate" class="hidden flex flex-1 flex-col items-center justify-center text-white px-6 py-8 min-h-0 bg-gray-900">
-    <div class="max-w-md text-center">
-        <div id="fullscreen-prompt-block">
-            <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-amber-500/20 flex items-center justify-center">
-                <svg class="w-10 h-10 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
-                </svg>
-            </div>
-            <h2 class="text-xl font-bold text-white mb-2">Enter full screen to start</h2>
-            <p class="text-gray-300 text-sm mb-4">Face verified. You must enter full screen mode before starting the quiz.</p>
-            <p class="text-gray-400 text-xs mb-4" data-fullscreen-hint>Use your browser’s full screen control (for example F11) to enter full screen.</p>
-            <button type="button" id="fullscreen-btn" class="w-full py-3.5 px-6 rounded-xl font-semibold text-gray-900 bg-amber-400 hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-colors">
-                Enter full screen
-            </button>
-        </div>
-        <div id="start-quiz-block" class="hidden mt-6">
-            <p class="text-gray-300 text-sm mb-3">You are in full screen. Click below to start the quiz.</p>
-            <button type="button" id="start-quiz-btn" class="w-full py-3.5 px-6 rounded-xl font-semibold text-white bg-emerald-600 hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-colors">
-                Start quiz
-            </button>
-        </div>
-    </div>
-    </div>
-
     {{-- Face verified success popup (shown when face check passes) --}}
     <div id="face-verified-popup" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/60 px-4" aria-modal="true" role="alertdialog" aria-labelledby="face-verified-title">
         <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center animate-[fadeIn_0.3s_ease-out]">
@@ -44,8 +19,8 @@
         </div>
     </div>
 
-    {{-- Camera + face check: same page, shown after fullscreen; camera permission here --}}
-    <div id="proctoring-capture-main" class="hidden flex-1 flex flex-col items-start justify-start overflow-auto min-h-0 w-full bg-gray-50 px-4 py-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+    {{-- Camera + face check --}}
+    <div id="proctoring-capture-main" class="flex flex-1 flex-col items-start justify-start overflow-auto min-h-0 w-full bg-gray-50 px-4 py-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
     <div class="max-w-md mx-auto w-full">
         <h1 class="text-base font-semibold text-gray-900 mb-1">Quick face check</h1>
         <p class="text-gray-600 text-xs mb-3">Tap <span class="font-semibold">Start camera</span> and keep your face inside the circle.</p>
@@ -117,15 +92,6 @@
 <style>
 @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 #face-verified-popup.flex { display: flex !important; }
-/* Fullscreen target: ensure it fills the viewport (Safari/macOS) */
-#proctoring-capture-root:fullscreen,
-#proctoring-capture-root:-webkit-full-screen,
-#proctoring-capture-root:-moz-full-screen,
-#proctoring-capture-root:-ms-fullscreen {
-    width: 100%;
-    height: 100%;
-    min-height: 100%;
-}
 </style>
 
 @push('scripts')
