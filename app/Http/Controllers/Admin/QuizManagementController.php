@@ -2002,16 +2002,33 @@ class QuizManagementController extends Controller
     }
 
     /**
-     * Export the full question pool: all approved bank questions (used for random selection) plus
-     * any pending pool rows not yet approved. This is not per-student; each student only receives a subset of the approved bank.
+     * Normalize question text so we can match pool rows to Question rows without duplicating.
+     */
+    private function normalizeQuestionTextForDedup(?string $text): string
+    {
+        $t = trim(strip_tags((string) $text));
+        $t = preg_replace('/\s+/u', ' ', $t) ?? $t;
+
+        return mb_strtolower($t);
+    }
+
+    /**
+     * Export the full question pool: every row in question_pools (pending + approved) is the canonical
+     * generator pool, plus any Question rows that were never stored as a pool (legacy direct AI).
+     * Random selection for students still uses only the approved bank (questions table); each student gets a subset.
      */
     public function exportFullQuestionPoolTxt(Quiz $quiz): Response
     {
         $this->authorize('view', $quiz);
         $quiz->load(['course', 'classGroup', 'questions', 'academicClass']);
 
-        $approved = $quiz->questions()->orderBy('id')->get();
-        $pending = $quiz->questionPools()->where('is_approved', false)->orderBy('id')->get();
+        $allPools = $quiz->questionPools()->orderBy('id')->get();
+        $approvedBank = $quiz->questions()->orderBy('id')->get();
+
+        $poolTextHashes = [];
+        foreach ($allPools as $pool) {
+            $poolTextHashes[hash('sha256', $this->normalizeQuestionTextForDedup((string) $pool->question_text))] = true;
+        }
 
         $courseName = '—';
         $courseCode = '—';
@@ -2050,6 +2067,8 @@ class QuizManagementController extends Controller
         $nextYear = now()->addYear()->format('y');
         $examYear = $currentYear.'/'.$nextYear;
         $perStudent = $quiz->getQuestionsPerStudent();
+        $pendingPoolCount = $allPools->where('is_approved', false)->count();
+        $approvedPoolCount = $allPools->where('is_approved', true)->count();
 
         try {
             $content = [];
@@ -2063,66 +2082,95 @@ class QuizManagementController extends Controller
             $content[] = 'COURSE TITLE: '.strtoupper($courseName).str_pad('COURSE CODE: '.strtoupper($courseCode), 80 - strlen('COURSE TITLE: '.strtoupper($courseName)), ' ', STR_PAD_LEFT);
             $content[] = 'DATE: '.strtoupper($examDate).str_pad('DURATION: '.strtoupper($duration), 80 - strlen('DATE: '.strtoupper($examDate)), ' ', STR_PAD_LEFT);
             $content[] = '';
-            $content[] = 'FULL QUESTION POOL EXPORT (approved bank + pending pool)';
+            $content[] = 'FULL QUESTION POOL EXPORT (all question_pools rows + bank-only questions)';
             $content[] = 'Questions per student (random draw from approved bank only): '.$perStudent;
-            $content[] = 'Approved bank: '.$approved->count().' question(s). Pending pool (not yet in draws): '.$pending->count().'.';
+            $content[] = 'question_pools table: '.$allPools->count().' row(s) (pending: '.$pendingPoolCount.', approved: '.$approvedPoolCount.').';
+            $content[] = 'Approved bank (questions table, used for draws): '.$approvedBank->count().' row(s).';
             $content[] = '';
 
-            $answerKeyApproved = [];
-            $content[] = str_repeat('=', 80);
-            $content[] = 'SECTION A — APPROVED QUESTION BANK ('.$approved->count().' questions; source for random selection)';
-            $content[] = str_repeat('=', 80);
-            $content[] = '';
-            foreach ($approved as $idx => $question) {
-                $this->appendQuizQuestionTextBlock(
-                    $content,
-                    $answerKeyApproved,
-                    $idx + 1,
-                    (string) $question->text,
-                    is_array($question->options) ? $question->options : null,
-                    $question->correct_answer
-                );
-            }
+            $answerKeyAll = [];
+            $num = 0;
 
-            $answerKeyPending = [];
-            $content[] = '';
-            $content[] = str_repeat('=', 80);
-            $content[] = 'SECTION B — PENDING POOL ('.$pending->count().' — not yet approved; not used in student draws)';
-            $content[] = str_repeat('=', 80);
-            $content[] = '';
-            if ($pending->isEmpty()) {
-                $content[] = '(No pending pool questions.)';
+            if ($allPools->isNotEmpty()) {
+                $content[] = str_repeat('=', 80);
+                $content[] = 'SECTION A — COMPLETE POOL (question_pools: '.$allPools->count().' row(s); pending + approved)';
+                $content[] = str_repeat('=', 80);
                 $content[] = '';
-            } else {
-                foreach ($pending as $idx => $pool) {
+                foreach ($allPools as $pool) {
+                    $num++;
+                    $tag = $pool->is_approved
+                        ? '[Approved — in student draw pool]'
+                        : '[Pending — not in draws until approved]';
+                    $stem = $tag.' '.(string) $pool->question_text;
                     $this->appendQuizQuestionTextBlock(
                         $content,
-                        $answerKeyPending,
-                        $idx + 1,
-                        (string) $pool->question_text,
+                        $answerKeyAll,
+                        $num,
+                        $stem,
                         is_array($pool->options) ? $pool->options : null,
                         $pool->correct_answer
                     );
                 }
             }
 
-            $content[] = '';
-            $content[] = str_repeat('=', 80);
-            $content[] = 'ANSWER KEY — APPROVED BANK';
-            $content[] = str_repeat('=', 80);
-            $content[] = '';
-            foreach ($answerKeyApproved as $line) {
-                $content[] = $line;
+            $orphanQuestions = $approvedBank->filter(function ($question) use ($poolTextHashes) {
+                $h = hash('sha256', $this->normalizeQuestionTextForDedup((string) $question->text));
+
+                return ! isset($poolTextHashes[$h]);
+            })->values();
+
+            if ($orphanQuestions->isNotEmpty()) {
+                $content[] = '';
+                $content[] = str_repeat('=', 80);
+                $content[] = 'SECTION B — QUESTIONS IN BANK ONLY (no matching question_pools row; '.$orphanQuestions->count().' item(s))';
+                $content[] = str_repeat('=', 80);
+                $content[] = '';
+                foreach ($orphanQuestions as $question) {
+                    $num++;
+                    $stem = '[Bank row — no pool duplicate] '.(string) $question->text;
+                    $this->appendQuizQuestionTextBlock(
+                        $content,
+                        $answerKeyAll,
+                        $num,
+                        $stem,
+                        is_array($question->options) ? $question->options : null,
+                        $question->correct_answer
+                    );
+                }
             }
+
+            if ($allPools->isEmpty() && $orphanQuestions->isEmpty()) {
+                $content[] = str_repeat('=', 80);
+                $content[] = 'NO POOL ROWS — APPROVED BANK ONLY (questions table: '.$approvedBank->count().' item(s))';
+                $content[] = str_repeat('=', 80);
+                $content[] = '';
+                if ($approvedBank->isEmpty()) {
+                    $content[] = '(No questions in this quiz.)';
+                    $content[] = '';
+                } else {
+                    foreach ($approvedBank as $question) {
+                        $num++;
+                        $this->appendQuizQuestionTextBlock(
+                            $content,
+                            $answerKeyAll,
+                            $num,
+                            (string) $question->text,
+                            is_array($question->options) ? $question->options : null,
+                            $question->correct_answer
+                        );
+                    }
+                }
+            }
+
             $content[] = '';
             $content[] = str_repeat('=', 80);
-            $content[] = 'ANSWER KEY — PENDING POOL';
+            $content[] = 'ANSWER KEY (all items above in order)';
             $content[] = str_repeat('=', 80);
             $content[] = '';
-            if (count($answerKeyPending) === 0) {
+            if (count($answerKeyAll) === 0) {
                 $content[] = '(None)';
             } else {
-                foreach ($answerKeyPending as $line) {
+                foreach ($answerKeyAll as $line) {
                     $content[] = $line;
                 }
             }
