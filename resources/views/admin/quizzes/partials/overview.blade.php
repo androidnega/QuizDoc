@@ -23,6 +23,12 @@
                 Download questions TXT
             </span>
             @endif
+            @if(($approvedQuestionsTotal ?? 0) > 0 || ($unapprovedPoolsTotal ?? 0) > 0)
+            <a href="{{ route('dashboard.quizzes.questions.export.full-pool-txt', $quiz) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-800 bg-primary-50 hover:bg-primary-100 rounded-lg border border-primary-200 transition-colors" download>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Download full pool TXT (approved + pending, with answers)
+            </a>
+            @endif
             <div class="flex-1 min-w-[200px] max-w-sm">
                 <label for="questions-search" class="sr-only">Search questions</label>
                 <input type="text" id="questions-search" placeholder="Type to filter by question text, topic, type…" class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500" autocomplete="off">

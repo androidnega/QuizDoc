@@ -1831,6 +1831,36 @@ class QuizManagementController extends Controller
     }
 
     /**
+     * Append one MCQ/short item to TXT export buffers (used for Question and QuestionPool rows).
+     *
+     * @param  array<int, string>  $content
+     * @param  array<int, string>  $answerKey
+     */
+    private function appendQuizQuestionTextBlock(array &$content, array &$answerKey, int $displayNumber, string $stem, ?array $options, ?string $correctAnswer): void
+    {
+        $content[] = $displayNumber.'. '.$stem;
+        if ($options && is_array($options) && count($options) > 0) {
+            foreach ($options as $option) {
+                if (isset($option['key'], $option['text'])) {
+                    $isCorrect = $correctAnswer !== null && $correctAnswer !== '' && $option['key'] === $correctAnswer;
+                    $marker = $isCorrect ? ' ***' : '';
+                    $content[] = '   '.$option['key'].'. '.$option['text'].$marker;
+                }
+            }
+        } else {
+            if ($correctAnswer) {
+                $content[] = '   Answer: '.$correctAnswer;
+            }
+        }
+        if ($correctAnswer) {
+            $answerKey[] = $displayNumber.'. '.$correctAnswer;
+        } else {
+            $answerKey[] = $displayNumber.'. (No answer specified)';
+        }
+        $content[] = '';
+    }
+
+    /**
      * Export quiz questions as TXT in exam format.
      */
     public function exportQuestionsTxt(Quiz $quiz): Response
@@ -1911,31 +1941,14 @@ class QuizManagementController extends Controller
             // Questions
             $answerKey = [];
             foreach ($questions as $idx => $question) {
-                $content[] = ($idx + 1) . '. ' . $question->text;
-                
-                if ($question->options && is_array($question->options) && count($question->options) > 0) {
-                    foreach ($question->options as $option) {
-                        if (isset($option['key']) && isset($option['text'])) {
-                            $isCorrect = isset($question->correct_answer) && $option['key'] === $question->correct_answer;
-                            $marker = $isCorrect ? ' ***' : '';
-                            $content[] = '   ' . $option['key'] . '. ' . $option['text'] . $marker;
-                        }
-                    }
-                } else {
-                    // For non-MCQ questions, show the correct answer directly
-                    if ($question->correct_answer) {
-                        $content[] = '   Answer: ' . $question->correct_answer;
-                    }
-                }
-                
-                // Add to answer key
-                if ($question->correct_answer) {
-                    $answerKey[] = ($idx + 1) . '. ' . $question->correct_answer;
-                } else {
-                    $answerKey[] = ($idx + 1) . '. (No answer specified)';
-                }
-                
-                $content[] = '';
+                $this->appendQuizQuestionTextBlock(
+                    $content,
+                    $answerKey,
+                    $idx + 1,
+                    (string) $question->text,
+                    is_array($question->options) ? $question->options : null,
+                    $question->correct_answer
+                );
             }
             
             // Answer Key Section
@@ -1985,6 +1998,161 @@ class QuizManagementController extends Controller
                 @unlink($tempFile);
             }
             abort(500, 'Failed to generate TXT file: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Export the full question pool: all approved bank questions (used for random selection) plus
+     * any pending pool rows not yet approved. This is not per-student; each student only receives a subset of the approved bank.
+     */
+    public function exportFullQuestionPoolTxt(Quiz $quiz): Response
+    {
+        $this->authorize('view', $quiz);
+        $quiz->load(['course', 'classGroup', 'questions', 'academicClass']);
+
+        $approved = $quiz->questions()->orderBy('id')->get();
+        $pending = $quiz->questionPools()->where('is_approved', false)->orderBy('id')->get();
+
+        $courseName = '—';
+        $courseCode = '—';
+        if ($quiz->course) {
+            $courseCode = trim($quiz->course->code ?? '');
+            $courseName = trim($quiz->course->name ?? '');
+        }
+
+        if ($quiz->ends_at) {
+            $examDate = $quiz->ends_at->format('F j, Y');
+        } elseif ($quiz->starts_at) {
+            $examDate = $quiz->starts_at->format('F j, Y');
+        } else {
+            $examDate = now()->format('F j, Y');
+        }
+
+        $durationMinutes = $quiz->duration_minutes ?? 120;
+        if ($durationMinutes < 60) {
+            $duration = $durationMinutes.' MINUTE'.($durationMinutes > 1 ? 'S' : '');
+        } else {
+            $hours = floor($durationMinutes / 60);
+            $minutes = $durationMinutes % 60;
+            if ($hours > 0 && $minutes > 0) {
+                $duration = $hours.' HOUR'.($hours > 1 ? 'S' : '').' '.$minutes.' MINUTE'.($minutes > 1 ? 'S' : '');
+            } elseif ($hours > 0) {
+                $duration = $hours.' HOUR'.($hours > 1 ? 'S' : '');
+            } else {
+                $duration = $minutes.' MINUTE'.($minutes > 1 ? 'S' : '');
+            }
+        }
+
+        $institutionName = Setting::getValue(Setting::KEY_INSTITUTION_NAME, 'TAKORADI TECHNICAL UNIVERSITY');
+        $classGroupName = $quiz->classGroup ? $quiz->classGroup->name : ($quiz->academicClass ? $quiz->academicClass->display_label : '—');
+        $programme = $classGroupName !== '—' ? strtoupper($classGroupName) : '—';
+        $currentYear = now()->format('Y');
+        $nextYear = now()->addYear()->format('y');
+        $examYear = $currentYear.'/'.$nextYear;
+        $perStudent = $quiz->getQuestionsPerStudent();
+
+        try {
+            $content = [];
+            $content[] = str_pad('', 80, ' ', STR_PAD_BOTH);
+            $content[] = strtoupper($institutionName);
+            $content[] = 'FACULTY OF APPLIED ARTS AND TECHNOLOGY';
+            $content[] = 'DEPARTMENT OF COMPUTER SCIENCE';
+            $content[] = 'END OF FIRST SEMESTER EXAMINATIONS, '.$examYear;
+            $content[] = 'PROGRAMME: '.$programme;
+            $content[] = '';
+            $content[] = 'COURSE TITLE: '.strtoupper($courseName).str_pad('COURSE CODE: '.strtoupper($courseCode), 80 - strlen('COURSE TITLE: '.strtoupper($courseName)), ' ', STR_PAD_LEFT);
+            $content[] = 'DATE: '.strtoupper($examDate).str_pad('DURATION: '.strtoupper($duration), 80 - strlen('DATE: '.strtoupper($examDate)), ' ', STR_PAD_LEFT);
+            $content[] = '';
+            $content[] = 'FULL QUESTION POOL EXPORT (approved bank + pending pool)';
+            $content[] = 'Questions per student (random draw from approved bank only): '.$perStudent;
+            $content[] = 'Approved bank: '.$approved->count().' question(s). Pending pool (not yet in draws): '.$pending->count().'.';
+            $content[] = '';
+
+            $answerKeyApproved = [];
+            $content[] = str_repeat('=', 80);
+            $content[] = 'SECTION A — APPROVED QUESTION BANK ('.$approved->count().' questions; source for random selection)';
+            $content[] = str_repeat('=', 80);
+            $content[] = '';
+            foreach ($approved as $idx => $question) {
+                $this->appendQuizQuestionTextBlock(
+                    $content,
+                    $answerKeyApproved,
+                    $idx + 1,
+                    (string) $question->text,
+                    is_array($question->options) ? $question->options : null,
+                    $question->correct_answer
+                );
+            }
+
+            $answerKeyPending = [];
+            $content[] = '';
+            $content[] = str_repeat('=', 80);
+            $content[] = 'SECTION B — PENDING POOL ('.$pending->count().' — not yet approved; not used in student draws)';
+            $content[] = str_repeat('=', 80);
+            $content[] = '';
+            if ($pending->isEmpty()) {
+                $content[] = '(No pending pool questions.)';
+                $content[] = '';
+            } else {
+                foreach ($pending as $idx => $pool) {
+                    $this->appendQuizQuestionTextBlock(
+                        $content,
+                        $answerKeyPending,
+                        $idx + 1,
+                        (string) $pool->question_text,
+                        is_array($pool->options) ? $pool->options : null,
+                        $pool->correct_answer
+                    );
+                }
+            }
+
+            $content[] = '';
+            $content[] = str_repeat('=', 80);
+            $content[] = 'ANSWER KEY — APPROVED BANK';
+            $content[] = str_repeat('=', 80);
+            $content[] = '';
+            foreach ($answerKeyApproved as $line) {
+                $content[] = $line;
+            }
+            $content[] = '';
+            $content[] = str_repeat('=', 80);
+            $content[] = 'ANSWER KEY — PENDING POOL';
+            $content[] = str_repeat('=', 80);
+            $content[] = '';
+            if (count($answerKeyPending) === 0) {
+                $content[] = '(None)';
+            } else {
+                foreach ($answerKeyPending as $line) {
+                    $content[] = $line;
+                }
+            }
+
+            $content[] = '';
+            $content[] = str_pad('Generated '.now()->format('M d, Y H:i').' — QuizSnap', 80, ' ', STR_PAD_BOTH);
+
+            $textContent = implode("\n", $content);
+            $tempDir = sys_get_temp_dir();
+            $tempFile = $tempDir.DIRECTORY_SEPARATOR.'full_pool_'.uniqid().'.txt';
+            file_put_contents($tempFile, $textContent);
+
+            if (! file_exists($tempFile)) {
+                throw new \Exception('Failed to create TXT file');
+            }
+
+            $classSlug = $classGroupName !== '—' ? \Illuminate\Support\Str::slug($classGroupName) : 'class';
+            $courseSlug = \Illuminate\Support\Str::slug($courseName ?: 'course');
+            $dateStr = now()->format('Y-m-d');
+            $filename = $classSlug.'-'.$courseSlug.'-full-pool-'.$dateStr.'.txt';
+
+            return response()->download($tempFile, $filename, [
+                'Content-Type' => 'text/plain',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            ])->deleteFileAfterSend(true);
+        } catch (\Throwable $e) {
+            if (isset($tempFile) && file_exists($tempFile)) {
+                @unlink($tempFile);
+            }
+            abort(500, 'Failed to generate TXT file: '.$e->getMessage());
         }
     }
 
