@@ -58,6 +58,21 @@ class ClassGroup extends Model
         return $tagMap[$key] ?? 'bg-gray-200 text-gray-900';
     }
 
+    /**
+     * Level tag classes with group-hover: prefix for each token (card uses Tailwind "group").
+     * Used when the card is neutral by default and accent level colors apply on row hover.
+     */
+    public function getLevelTagGroupHoverClassesAttribute(): string
+    {
+        $raw = trim($this->level_tag_classes);
+        if ($raw === '') {
+            return '';
+        }
+        $parts = preg_split('/\s+/', $raw);
+
+        return implode(' ', array_map(static fn (string $c): string => 'group-hover:' . $c, $parts));
+    }
+
     /** Pick next accent from palette (round-robin) for auto-assign. */
     public static function nextAccentColor(): string
     {

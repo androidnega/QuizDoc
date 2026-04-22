@@ -1,16 +1,18 @@
 @php
     $isExaminer = session('admin_role') === 'examiner';
     $accent = $g->accent_classes ?? ['bg' => 'bg-sky-50', 'border' => 'border-sky-200', 'text' => 'text-sky-800'];
-    $levelTagClasses = $g->level_tag_classes ?? 'bg-gray-200 text-gray-900';
+    $levelTagGroupHover = $g->level_tag_group_hover_classes ?? '';
+    /** Distinct from accent palette so the level badge stays readable on off-white cards. */
+    $levelTagIdleClasses = 'bg-zinc-700 text-white border border-zinc-800/30';
     $levelLabel = $g->level ? 'L' . (int) $g->level->value : null;
     $hasLiveSessions = isset($classGroupIdsWithLiveSessions) && in_array($g->id, $classGroupIdsWithLiveSessions);
 @endphp
-<div class="group rounded-lg {{ $accent['bg'] }} border {{ $accent['border'] }} p-3 hover:opacity-95 transition-opacity text-left flex flex-col min-w-0 overflow-hidden">
+<div class="group rounded-lg bg-offwhite border border-gray-200 p-3 text-left flex flex-col min-w-0 overflow-hidden transition-colors duration-150 hover:{{ $accent['bg'] }} hover:{{ $accent['border'] }}">
     <div class="flex items-start justify-between gap-2 min-h-0">
         <a href="{{ route('dashboard.class-groups.show', $g) }}" class="flex-1 min-w-0">
             <h3 class="font-display text-sm font-semibold text-gray-900 tracking-tight break-words line-clamp-2 group-hover:text-primary-600" title="{{ $g->name }}">{{ $g->name }}</h3>
             @if($levelLabel)
-                <span class="inline-block mt-1.5 px-2 py-0.5 rounded text-xs font-bold {{ $levelTagClasses }}">{{ $levelLabel }}</span>
+                <span class="inline-block mt-1.5 px-2 py-0.5 rounded text-xs font-bold transition-colors duration-150 {{ $levelTagIdleClasses }} {{ $levelTagGroupHover }}">{{ $levelLabel }}</span>
             @endif
         </a>
         <div class="flex items-center gap-1 shrink-0 flex-shrink-0" onclick="event.stopPropagation();">
