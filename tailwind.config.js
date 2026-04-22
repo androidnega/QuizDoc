@@ -57,6 +57,16 @@ module.exports = {
     'group-hover:bg-indigo-200', 'group-hover:text-indigo-900',
     'group-hover:bg-slate-200', 'group-hover:text-slate-900',
     'group-hover:bg-gray-200', 'group-hover:text-gray-900',
+    'group-hover:text-sky-600', 'group-hover:text-sky-800',
+    'group-hover:text-emerald-600', 'group-hover:text-emerald-800',
+    'group-hover:text-amber-600', 'group-hover:text-amber-800',
+    'group-hover:text-violet-600', 'group-hover:text-violet-800',
+    'group-hover:text-rose-600', 'group-hover:text-rose-800',
+    'group-hover:text-teal-600', 'group-hover:text-teal-800',
+    'group-hover:text-indigo-600', 'group-hover:text-indigo-800',
+    'group-hover:text-slate-600', 'group-hover:text-slate-800',
+    'group-hover:text-gray-600',
+    'bg-white',
   ],
   theme: {
     extend: {

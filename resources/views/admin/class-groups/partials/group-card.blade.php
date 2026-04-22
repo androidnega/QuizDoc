@@ -1,16 +1,18 @@
 @php
     $isExaminer = session('admin_role') === 'examiner';
     $accent = $g->accent_classes ?? ['bg' => 'bg-sky-50', 'border' => 'border-sky-200', 'text' => 'text-sky-800'];
+    $accentTitleHover = $g->accent_group_hover_title_classes ?? '';
+    $accentMetaHover = $g->accent_group_hover_meta_classes ?? '';
     $levelTagGroupHover = $g->level_tag_group_hover_classes ?? '';
     /** Distinct from accent palette so the level badge stays readable on off-white cards. */
     $levelTagIdleClasses = 'bg-zinc-700 text-white border border-zinc-800/30';
     $levelLabel = $g->level ? 'L' . (int) $g->level->value : null;
     $hasLiveSessions = isset($classGroupIdsWithLiveSessions) && in_array($g->id, $classGroupIdsWithLiveSessions);
 @endphp
-<div class="group rounded-lg bg-offwhite border border-gray-200 p-3 text-left flex flex-col min-w-0 overflow-hidden transition-colors duration-150 hover:{{ $accent['bg'] }} hover:{{ $accent['border'] }}">
+<div class="group rounded-lg bg-white border border-gray-200 p-3 text-left flex flex-col min-w-0 overflow-hidden transition-colors duration-150 hover:{{ $accent['bg'] }} hover:{{ $accent['border'] }}">
     <div class="flex items-start justify-between gap-2 min-h-0">
         <a href="{{ route('dashboard.class-groups.show', $g) }}" class="flex-1 min-w-0">
-            <h3 class="font-display text-sm font-semibold text-gray-900 tracking-tight break-words line-clamp-2 group-hover:text-primary-600" title="{{ $g->name }}">{{ $g->name }}</h3>
+            <h3 class="font-display text-sm font-semibold text-gray-900 tracking-tight break-words line-clamp-2 transition-colors duration-150 {{ $accentTitleHover }}" title="{{ $g->name }}">{{ $g->name }}</h3>
             @if($levelLabel)
                 <span class="inline-block mt-1.5 px-2 py-0.5 rounded text-xs font-bold transition-colors duration-150 {{ $levelTagIdleClasses }} {{ $levelTagGroupHover }}">{{ $levelLabel }}</span>
             @endif
@@ -33,9 +35,9 @@
             @endif
         </div>
     </div>
-    <a href="{{ route('dashboard.class-groups.show', $g) }}" class="mt-2 flex flex-col gap-y-1 text-xs text-gray-500">
+    <a href="{{ route('dashboard.class-groups.show', $g) }}" class="mt-2 flex flex-col gap-y-1 text-xs text-gray-500 transition-colors duration-150 {{ $accentMetaHover }}">
         @if($isExaminer && isset($g->my_courses) && $g->my_courses->isNotEmpty())
-            <span class="font-medium text-gray-700">Your course{{ $g->my_courses->count() > 1 ? 's' : '' }}: {{ $g->my_courses->pluck('name')->join(', ') }}</span>
+            <span class="font-medium text-gray-700 transition-colors duration-150 {{ $accentTitleHover }}">Your course{{ $g->my_courses->count() > 1 ? 's' : '' }}: {{ $g->my_courses->pluck('name')->join(', ') }}</span>
             <span>{{ $g->my_quizzes_count ?? 0 }} quiz(zes) for your course(s)</span>
         @else
             <span>{{ $g->students_count ?? 0 }} students</span>

@@ -73,6 +73,41 @@ class ClassGroup extends Model
         return implode(' ', array_map(static fn (string $c): string => 'group-hover:' . $c, $parts));
     }
 
+    /** Prefix each accent text utility with group-hover: (card title on hover). */
+    public function getAccentGroupHoverTitleClassesAttribute(): string
+    {
+        $raw = trim($this->accent_classes['text'] ?? '');
+        if ($raw === '') {
+            return '';
+        }
+        $parts = preg_split('/\s+/', $raw);
+
+        return implode(' ', array_map(static fn (string $c): string => 'group-hover:' . $c, $parts));
+    }
+
+    /** Softer group-hover text for stats/meta under the title. */
+    public function getAccentGroupHoverMetaClassesAttribute(): string
+    {
+        $keys = array_keys(self::ACCENT_COLORS);
+        $key = $this->accent_color && isset(self::ACCENT_COLORS[$this->accent_color])
+            ? $this->accent_color
+            : $keys[((int) $this->id) % count($keys)];
+        $metaMap = [
+            'sky' => 'text-sky-600',
+            'emerald' => 'text-emerald-600',
+            'amber' => 'text-amber-600',
+            'violet' => 'text-violet-600',
+            'rose' => 'text-rose-600',
+            'teal' => 'text-teal-600',
+            'indigo' => 'text-indigo-600',
+            'slate' => 'text-slate-600',
+        ];
+        $cls = trim($metaMap[$key] ?? 'text-gray-600');
+        $parts = preg_split('/\s+/', $cls);
+
+        return implode(' ', array_map(static fn (string $c): string => 'group-hover:' . $c, $parts));
+    }
+
     /** Pick next accent from palette (round-robin) for auto-assign. */
     public static function nextAccentColor(): string
     {
